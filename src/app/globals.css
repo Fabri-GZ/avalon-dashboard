@@ -5,15 +5,3 @@ body {
   padding: 0;
   font-family: Poppins, Arial, sans-serif;
 }
-
-.bg-avalon {
-  background: linear-gradient(
-    to top,
-    #ec9a84 0%,
-    #cb94be 25%,
-    #c2a6ef 50%,
-    #b69cf4 100%
-  );
-  position: relative;
-  overflow: hidden;
-}

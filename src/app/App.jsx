@@ -1,22 +1,27 @@
-"use client"
+"use client";
 
 import { useState } from "react";
-import Login from "./components/Login";
-import Dashboard from "./components/Dashboard";
+import { useRouter } from "next/navigation";
+import AuthWrapper from "./components/Login/AuthWrapper";
+import Dashboard from "./components/Dashboard/DashboardContent";
 
 const App = () => {
-
+  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+  };
 
   return (
     <div>
       {!isLoggedIn ? (
-        <Login onLogin={() => setIsLoggedIn(true)} />
+        <AuthWrapper onLogin={handleLogin} />
       ) : (
-        <Dashboard onLogout={() => setIsLoggedIn(false)} />
+        <Dashboard onLogout={() => router.push("/")} />
       )}
     </div>
   );
-}
+};
 
 export default App;

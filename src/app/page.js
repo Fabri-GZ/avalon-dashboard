@@ -1,9 +1,14 @@
-import App from "./App";
+"use client";
+
+import { useRouter } from "next/navigation";
+import AuthWrapper from "./components/Login/AuthWrapper";
 
 export default function Home() {
-  return (
-    <main className="flex flex-col min-h-screen">
-      <App />
-    </main>
-  );
+  const router = useRouter();
+  
+  const handleLogin = () => {
+    router.push("/dashboard"); 
+  };
+
+  return <AuthWrapper onLogin={handleLogin} />;
 }
