@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { MdLock, MdMail } from "react-icons/md"
 
 const Login = ({ onRegister, onForgot, onLogin }) => {
   const [email, setEmail] = useState("");
@@ -21,22 +22,26 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          required
-          className="w-full px-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in"
-        />
-        <div className="relative mb-1.5">
+        <div className="relative mb-3">
+          <MdMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            required
+            className="w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in"
+          />
+        </div>
+        <div className="relative mb-3">
+          <MdLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18}/>
           <input
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Contraseña"
             required
-            className="w-full px-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in" 
+            className="w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in" 
             />
           <button
               type="button"
