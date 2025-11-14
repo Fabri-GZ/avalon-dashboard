@@ -17,6 +17,7 @@ const AuthWrapper = ({ onLogin }) => {
         {view === "login" && (
           <motion.div
             key="login"
+            className="w-full flex justify-center"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -30 }}
@@ -29,6 +30,7 @@ const AuthWrapper = ({ onLogin }) => {
         {view === "register" && (
           <motion.div
             key="register"
+            className="w-full flex justify-center"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -30 }}
@@ -41,6 +43,7 @@ const AuthWrapper = ({ onLogin }) => {
         {view === "forgot" && (
           <motion.div
             key="forgot"
+            className="w-full flex justify-center"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -30 }}

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { MdLock, MdMail, MdPerson } from "react-icons/md";
 
 const Register = ({ onBack, onLogin }) => {
   const [name, setName] = useState("");
@@ -8,43 +9,50 @@ const Register = ({ onBack, onLogin }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-
   const handleSubmit = (e) => {
     e.preventDefault();
     onBack();
   };
 
   return (
-    <div className="rounded-lg p-8 w-full max-w-md bg-[#f4f1f8] shadow-[20px_20px_60px_#cfcdd3,-20px_-20px_60px_#ffffff]">
+    <div className="rounded-lg p-8 w-full max-w-md mx-auto bg-[#f4f1f8] shadow-[20px_20px_60px_#cfcdd3,-20px_-20px_60px_#ffffff]">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-[#A047FF] mb-2">Crear cuenta</h1>
+        <h1 className="text-5xl font-bold text-[#A047FF] mb-2">Crear Cuenta</h1>
         <p className="text-gray-700">Unite al Dashboard de Avalon</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="relative mb-3">
+          <MdPerson className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nombre completo"
-          className="w-full px-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in"
-        />
+          className="w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in"
+          />
+        </div>
 
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          className="w-full px-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in"
-        />
-
-        <div className="relative mb-5">
-           <input
+        <div className="relative mb-3">
+          <MdMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            required
+            className="w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in"
+          />
+        </div>
+       <div className="relative mb-3">
+          <MdLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18}/>
+          <input
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Contraseña"
-            className="w-full px-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in" 
+            required
+            className="w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in" 
             />
           <button
               type="button"
