@@ -9,7 +9,7 @@ const DashboardHeader = ({ activeTab, setSidebarOpen, navigation }) => {
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ type: "spring", damping: 15 }}
-      className="bg-black border-b border-gray-800 p-4 lg:p-6 sticky top-0 z-40"
+      className="bg-[#f4f1f8] p-4 lg:p-6 sticky top-0 z-40"
     >
       <div className="flex items-center justify-between">
         <button
