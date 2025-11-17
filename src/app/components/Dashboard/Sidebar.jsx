@@ -20,7 +20,7 @@ const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, na
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-[#f4f1f8]"
+          className="fixed inset-0 bg-white"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -29,12 +29,12 @@ const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, na
         animate={{ x: 0 }}
         exit={mobile ? { x: -80 } : {}}
         transition={{ type: "spring", damping: 20 }}
-        className={`${mobile ? 'fixed left-0 top-0 bottom-0 w-20' : 'w-60 h-screen'} bg-[#f4f1f8] flex flex-col items-center py-6 ${mobile ? 'z-50' : ''}`}
+        className={`${mobile ? 'fixed left-0 top-0 bottom-0 w-20' : 'w-60 h-screen sticky top-0'} bg-white flex flex-col items-center py-6 ${mobile ? 'z-50' : ''}`}
       >
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", delay: 0.2 }}
+          initial={{ opacity: 0, y:-20 }}
+          animate={{ opacity: 1, y:0 }}
+          transition={{ duration: 0.5, delay: 0.2, ease: "easeIn" }}
           className="mb-8 w-full flex items-center justify-start px-4"
         >
           <div className="flex items-center gap-3">
@@ -57,9 +57,9 @@ const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, na
             return (
               <motion.button
                 key={item.id}
-                initial={{ opacity: 0, x: -10 }}
+                initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
+                transition={{ delay: idx * 0.1, duration: 0.2, ease: "easeIn" }}
                 whileHover={{ x: 5 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
@@ -68,13 +68,13 @@ const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, na
                 }}
                 className={`relative group flex flex-row items-center gap-4 p-3 rounded-md transition-all ${
                   activeTab === item.id
-                    ? "bg-[#A047FF] text-white"
-                    : "text-gray-600 hover:bg-[#e8d9ff] hover:text-[#A047FF]"
+                    ? "bg-gray-50 text-[#a047ff] font-semibold"
+                    : "text-gray-600 hover:bg-[#e8d9ff] hover:text-[#A047FF] font-medium"
                 }`}
               >
                 <Icon className="w-5 h-5" />
               
-                <span className="text-md font-medium">{item.name}</span>
+                <span className="text-md">{item.name}</span>
               
                 <AnimatePresence>
                   {activeTab === item.id && (
@@ -93,8 +93,11 @@ const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, na
         </nav>
         <div className="flex flex-col w-full px-3 mt-auto">
           <motion.button
-            whileHover={{ x: 4 }}
+            initial={{ opacity: 0, y: 20}}
+            animate={{ opacity: 1, y: 0}}           
+            whileHover={{ x: 2 }}
             whileTap={{ scale: 0.97 }}
+            transition={{delay: 0.1, duration: 0.2, ease: "easeIn"}}
             onClick={onLogout}
             className="mt-auto flex flex-row items-center justify-start gap-1 p-3 rounded-md text-gray-400 hover:bg-red-500/10 hover:text-red-500 transition-colors w-full"
             title="Cerrar Sesión"

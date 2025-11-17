@@ -1,4 +1,3 @@
-// app/components/Dashboard/Accordion.jsx
 "use client";
 
 import { useState } from "react";
@@ -16,13 +15,13 @@ const Accordion = ({ items }) => {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.1 }}
-          className="border border-gray-800 rounded-lg overflow-hidden"
+          className="border border-gray-200 rounded-lg overflow-hidden"
         >
           <button
             onClick={() => setOpenIndex(openIndex === index ? null : index)}
-            className="w-full flex items-center justify-between p-4 bg-black hover:bg-[#2b2b2b] transition-colors text-left"
+            className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors text-left"
           >
-            <span className="text-white font-medium">{item.title}</span>
+            <span className="text-gray-700 font-medium">{item.title}</span>
             <motion.div
               animate={{ rotate: openIndex === index ? 180 : 0 }}
               transition={{ duration: 0.3 }}
@@ -39,7 +38,7 @@ const Accordion = ({ items }) => {
                 transition={{ duration: 0.3, ease: "easeInOut" }}
               >
                 <div className="p-4 bg-[#A047FF]/10 border-t border-[#A047FF]/20">
-                  <p className="text-white">{item.content}</p>
+                  <p className="text-gray-700">{item.content}</p>
                 </div>
               </motion.div>
             )}

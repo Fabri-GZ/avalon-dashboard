@@ -27,27 +27,27 @@ const WebsiteSection = () => {
       <motion.div
         variants={cardVariants}
         whileHover={{ scale: 1.02 }}
-        className="bg-black rounded-xl p-6 border border-gray-800"
+        className="bg-white rounded-xl p-6 border border-gray-200"
       >
-        <h3 className="text-xl font-bold text-white mb-4">Tráfico Mensual</h3>
+        <h3 className="text-xl font-bold text-[#a047ff] mb-4">Tráfico Mensual</h3>
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={websiteData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2b2b2b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis dataKey="month" stroke="#9ca3af" />
             <YAxis stroke="#9ca3af" />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#000', border: '1px solid #2b2b2b' }}
-              labelStyle={{ color: '#fff' }}
+              contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb' }}
+              labelStyle={{ color: '#374151' }}
             />
             <Legend />
             <Bar dataKey="sessions" fill="#A047FF" name="Sesiones" />
-            <Bar dataKey="users" fill="#10b981" name="Usuarios" />
+            <Bar dataKey="users" fill="#ff8fa3" name="Usuarios" />
           </BarChart>
         </ResponsiveContainer>
       </motion.div>
 
-      <motion.div variants={cardVariants} className="bg-black rounded-xl p-6 border border-gray-800">
-        <h3 className="text-xl font-bold text-white mb-4">Recomendaciones IA</h3>
+      <motion.div variants={cardVariants} className="bg-white rounded-xl p-6 border border-gray-200">
+        <h3 className="text-xl font-bold text-[#a047ff] mb-4">Recomendaciones IA</h3>
         <Accordion items={[
           {
             title: "🚀 Optimización de velocidad",

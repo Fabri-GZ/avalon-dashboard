@@ -2,16 +2,50 @@
 import { useState } from "react";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { MdLock, MdMail, MdPerson } from "react-icons/md";
+import { ToastContainer, toast, Flip } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import motion from "framer-motion"
+
 
 const Register = ({ onBack, onLogin }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
+
+  const validateEmail = (email) => {
+    return email.includes("@") && email.includes(".");
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onBack();
+    
+    let hasError = false;
+
+    if (!validateEmail(email)) {
+      setEmailError(true);
+      hasError = true;
+      toast.error("Por favor, ingrese una dirección de correo válida");
+      setTimeout(() => setEmailError(false), 1000);
+    }
+
+    if (password.length < 6) {
+      setPasswordError(true);
+      hasError = true;
+      toast.error("La contraseña debe tener al menos 6 caracteres");
+      setTimeout(() => setPasswordError(false), 1000);
+    }
+
+    if (!hasError) {
+      onLogin();
+    }
+  };
+
+  const shakeAnimation = {
+    x: [0, -10, 10, -10, 10, 0],
+    transition: { duration: 0.4 }
   };
 
   return (
@@ -27,6 +61,7 @@ const Register = ({ onBack, onLogin }) => {
         <input
           type="text"
           value={name}
+          required
           onChange={(e) => setName(e.target.value)}
           placeholder="Nombre completo"
           className="w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in"
@@ -38,9 +73,9 @@ const Register = ({ onBack, onLogin }) => {
           <input
             type="email"
             value={email}
+            required
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            required
             className="w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in"
           />
         </div>
@@ -64,7 +99,7 @@ const Register = ({ onBack, onLogin }) => {
         </div>
 
         <button
-          type="submit"
+          onClick={handleSubmit}
           className="w-full bg-[#A047FF] hover:bg-[#8c3de6] text-white font-semibold py-3 rounded-lg transition-colors duration-300 ease-in"
         >
           Registrarse

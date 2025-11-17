@@ -50,40 +50,37 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
       className="rounded-lg p-8 w-full max-w-md bg-[#f4f1f8] shadow-[20px_20px_60px_#cfcdd3,-20px_-20px_60px_#ffffff]"
     >
-      <motion.div 
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1 }}
+      <div 
         className="text-center mb-8"
       >
         <motion.h1 
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", delay: 0.2 }}
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
           className="text-5xl font-bold text-[#A047FF] mb-2"
         >
           Avalon
         </motion.h1>
         <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
           className="text-gray-700"
         >
           Dashboard de Marketing
         </motion.p>
-      </motion.div>
+      </div>
 
       <div className="space-y-4">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
           className="relative mb-3"
         >
           <motion.div
@@ -113,7 +110,7 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{duration: 0.8, ease: "easeOut", delay: 0.2 }}
           className="relative mb-3"
         >
           <motion.div
@@ -153,18 +150,17 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.2 }}
-          whileHover={{ x: 4 }}
           type="button"
           onClick={onForgot}
-          className="w-fit text-gray-700 text-sm text-left hover:text-[#A047FF] pb-3"
+          className="w-fit text-gray-700 text-sm text-left hover:text-[#A047FF] ease-in duration-200 pb-3"
         >
           ¿Olvidaste tu contraseña?
         </motion.button>
 
         <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.2 }}
+          initial={{ opacity: 0, x: -40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleSubmit}
@@ -174,9 +170,9 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
         </motion.button>
 
         <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.2 }}
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
           whileHover={{ scale: 1.02, backgroundColor: "rgba(140, 61, 230, 0.44)" }}
           whileTap={{ scale: 0.98 }}
           type="button"
