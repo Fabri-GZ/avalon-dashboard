@@ -1,14 +1,12 @@
 "use client";
-
 import { useRouter } from "next/navigation";
-import AuthWrapper from "./components/Login/AuthWrapper";
+import { useEffect } from "react";
 
 export default function Home() {
   const router = useRouter();
+  useEffect(() => {
+    router.push("/login");
+  }, [router]);
   
-  const handleLogin = () => {
-    router.push("/dashboard"); 
-  };
-
-  return <AuthWrapper onLogin={handleLogin} />;
+return null; 
 }

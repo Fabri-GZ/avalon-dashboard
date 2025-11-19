@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-const ForgotPassword = ({ onBack }) => {
+const ForgotPasswordForm = ({ onBack }) => {
   const [email, setEmail] = useState("");
 
   const handleSubmit = (e) => {
@@ -43,4 +43,4 @@ const ForgotPassword = ({ onBack }) => {
   );
 };
 
-export default ForgotPassword;
+export default ForgotPasswordForm;

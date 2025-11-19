@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Login from "./Login";
-import Register from "./Register";
-import ForgotPassword from "./ForgotPassword"
+import Register from "../../signup/components/Register";
+import ForgotPassword from "../../forgot-password/components/ForgotPassword"
     
 const AuthWrapper = ({ onLogin }) => {
   const [view, setView] = useState("login");

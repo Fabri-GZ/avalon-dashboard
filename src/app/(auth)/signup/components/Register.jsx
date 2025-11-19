@@ -4,7 +4,8 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { MdLock, MdMail, MdPerson } from "react-icons/md";
 import { ToastContainer, toast, Flip } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import motion from "framer-motion"
+import { motion } from "framer-motion";
+import { signup } from "../../../../../lib/auth-actions";
 
 
 const Register = ({ onBack, onLogin }) => {
@@ -19,9 +20,9 @@ const Register = ({ onBack, onLogin }) => {
     return email.includes("@") && email.includes(".");
   };
 
-  const handleSubmit = (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     let hasError = false;
 
     if (!validateEmail(email)) {
@@ -38,8 +39,18 @@ const Register = ({ onBack, onLogin }) => {
       setTimeout(() => setPasswordError(false), 1000);
     }
 
-    if (!hasError) {
-      onLogin();
+    if (hasError) return;
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("email", email);
+    formData.append("password", password);
+
+    try {
+      await signup(formData);
+      onLogin(); 
+    } catch (error) {
+      toast.error("Hubo un error al registrarte. Intenta nuevamente.");
     }
   };
 
@@ -61,6 +72,7 @@ const Register = ({ onBack, onLogin }) => {
         <input
           type="text"
           value={name}
+          name="name"
           required
           onChange={(e) => setName(e.target.value)}
           placeholder="Nombre completo"
@@ -73,22 +85,29 @@ const Register = ({ onBack, onLogin }) => {
           <input
             type="email"
             value={email}
+            name="email"
             required
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in"
+            className={`w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border ${
+              emailError ? "border-red-500" : "border-[#D4BBFC]"
+            } rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in`}
           />
         </div>
        <div className="relative mb-3">
-          <MdLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18}/>
+          <MdLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
           <input
             type={showPassword ? "text" : "password"}
             value={password}
+            name="password"
+            required
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Contraseña"
-            required
-            className="w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in" 
+            className={`w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border ${
+              passwordError ? "border-red-500" : "border-[#D4BBFC]"
+            } rounded-lg text-black focus:border-[#A047FF] hover:border-[#A047FF] outline-none transition-colors duration-300 ease-in`}
             />
+
           <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
@@ -99,7 +118,7 @@ const Register = ({ onBack, onLogin }) => {
         </div>
 
         <button
-          onClick={handleSubmit}
+          type="submit"
           className="w-full bg-[#A047FF] hover:bg-[#8c3de6] text-white font-semibold py-3 rounded-lg transition-colors duration-300 ease-in"
         >
           Registrarse
@@ -132,6 +151,8 @@ const Register = ({ onBack, onLogin }) => {
           Registrarse con Google
         </button>
       </form>
+
+      <ToastContainer transition={Flip} />
     </div>
   );
 };

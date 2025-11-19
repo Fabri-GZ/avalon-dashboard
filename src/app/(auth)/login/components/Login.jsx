@@ -1,25 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { MdLock, MdMail } from "react-icons/md";
 import { ToastContainer, toast, Flip } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Image from "next/image";
+import { login } from "../../../../../lib/auth-actions"
+import SignInWithGoogleButton from "./SignInWithGoogleButton";
 
-const Login = ({ onRegister, onForgot, onLogin }) => {
+const Login = ({ onRegister, onForgot }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateEmail = (email) => {
     return email.includes("@") && email.includes(".");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     let hasError = false;
@@ -39,7 +41,18 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
     }
 
     if (!hasError) {
-      onLogin();
+      setIsLoading(true);
+      
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("password", password);
+      
+      try {
+        await login(formData);
+      } catch (error) {
+        toast.error("Error al iniciar sesión. Verifica tus credenciales.");
+        setIsLoading(false);
+      }
     }
   };
 
@@ -55,9 +68,7 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
       transition={{ duration: 0.8, ease: "easeOut" }}
       className="rounded-lg p-8 w-full max-w-md bg-[#f4f1f8] shadow-[20px_20px_60px_#cfcdd3,-20px_-20px_60px_#ffffff]"
     >
-      <div 
-        className="text-center mb-8"
-      >
+      <div className="text-center mb-8">
         <motion.h1 
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -76,16 +87,14 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
         </motion.p>
       </div>
 
-      <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           whileInView={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
           className="relative mb-3"
         >
-          <motion.div
-            animate={emailError ? shakeAnimation : {}}
-          >
+          <motion.div animate={emailError ? shakeAnimation : {}}>
             <motion.div
               animate={emailError ? { color: "#ef4444" } : { color: "#6b7280" }}
               transition={{ duration: 0.3 }}
@@ -95,9 +104,11 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
             </motion.div>
             <input
               type="email"
+              name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
+              disabled={isLoading}
               className={`w-full pl-10 pr-4 py-3 bg-[#f4f1f8] rounded-lg text-black outline-none ${
                 emailError
                   ? "border-2 border-red-500"
@@ -110,12 +121,10 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{duration: 0.8, ease: "easeOut", delay: 0.2 }}
+          transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
           className="relative mb-3"
         >
-          <motion.div
-            animate={passwordError ? shakeAnimation : {}}
-          >
+          <motion.div animate={passwordError ? shakeAnimation : {}}>
             <motion.div
               animate={passwordError ? { color: "#ef4444" } : { color: "#6b7280" }}
               transition={{ duration: 0.3 }}
@@ -126,8 +135,10 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
             <input
               type={showPassword ? "text" : "password"}
               value={password}
+              name="password"
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Contraseña"
+              disabled={isLoading}
               className={`w-full pl-10 pr-4 py-3 bg-[#f4f1f8] rounded-lg text-black outline-none ${
                 passwordError
                   ? "border-2 border-red-500"
@@ -163,10 +174,11 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
           transition={{ delay: 0.2, duration: 0.4 }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={handleSubmit}
-          className="w-full bg-[#A047FF] hover:bg-[#8c3de6] text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl"
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-[#A047FF] hover:bg-[#8c3de6] text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Iniciar sesión
+          {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
         </motion.button>
 
         <motion.button
@@ -193,25 +205,16 @@ const Login = ({ onRegister, onForgot, onLogin }) => {
           <hr className="grow border-t border-gray-700" />
         </motion.div>
 
-        <motion.button
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.2 }}
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
-          type="button"
-          onClick={() => console.log("Google login")}
-          className="w-full flex items-center justify-center gap-2 border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-medium py-2 rounded-lg shadow-md hover:shadow-lg"
         >
-          <Image
-            src="https://www.svgrepo.com/show/475656/google-color.svg"
-            alt="Google logo"
-            width={20}
-            height={20}
-          />
-          Iniciar sesión con Google
-        </motion.button>
-      </div>
+          <SignInWithGoogleButton /> 
+        </motion.div>
+      </form>
       <ToastContainer 
         position="top-right"
         autoClose={2000}
