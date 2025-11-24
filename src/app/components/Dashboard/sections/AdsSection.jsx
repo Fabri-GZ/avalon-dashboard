@@ -27,28 +27,27 @@ const AdsSection = () => {
       <motion.div
         variants={cardVariants}
         whileHover={{ scale: 1.02 }}
-        className="bg-white rounded-xl p-6 border border-gray-200"
+        className="bg-background rounded-xl p-6 border border-secondary"
       >
-        <h3 className="text-xl font-bold text-[#a047ff] mb-4">Inversión vs Conversiones</h3>
+        <h3 className="text-xl font-bold text-primary mb-4">Inversión vs Conversiones</h3>
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={adsData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="month" stroke="#9ca3af" />
-            <YAxis yAxisId="left" stroke="#9ca3af" />
-            <YAxis yAxisId="right" orientation="right" stroke="#9ca3af" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--secondary)" />
+            <XAxis dataKey="month" stroke="var(--muted-foreground)" />
+            <YAxis yAxisId="left" stroke="var(--muted-foreground)" />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb' }}
-              labelStyle={{ color: '#374151' }}
+              contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--secondary)' }}
+              labelStyle={{ color: 'var(--muted-foreground)' }}
             />
             <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="spent" stroke="#A047FF" strokeWidth={2} name="Inversión ($)" />
-            <Line yAxisId="right" type="monotone" dataKey="conversions" stroke="#ff8fa3" strokeWidth={2} name="Conversiones" />
+            <Line yAxisId="left" type="monotone" dataKey="spent" stroke="var(--chart-1)" strokeWidth={2} name="Inversión ($)" />
+            <Line yAxisId="right" type="monotone" dataKey="conversions" stroke="var(--chart-2)" strokeWidth={2} name="Conversiones" />
           </LineChart>
         </ResponsiveContainer>
       </motion.div>
 
-      <motion.div variants={cardVariants} className="bg-white rounded-xl p-6 border border-gray-200">
-        <h3 className="text-xl font-bold text-[#a047ff] mb-4">Recomendaciones IA</h3>
+      <motion.div variants={cardVariants} className="bg-background rounded-xl p-6 border border-secondary">
+        <h3 className="text-xl font-bold text-primary mb-4">Recomendaciones IA</h3>
         <Accordion items={[
           {
             title: "💰 Costo por conversión optimizado",

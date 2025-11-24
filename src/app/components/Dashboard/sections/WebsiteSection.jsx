@@ -27,27 +27,27 @@ const WebsiteSection = () => {
       <motion.div
         variants={cardVariants}
         whileHover={{ scale: 1.02 }}
-        className="bg-white rounded-xl p-6 border border-gray-200"
+        className="bg-background rounded-xl p-6 border border-secondary"
       >
-        <h3 className="text-xl font-bold text-[#a047ff] mb-4">Tráfico Mensual</h3>
+        <h3 className="text-xl font-bold text-primary mb-4">Tráfico Mensual</h3>
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={websiteData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="month" stroke="#9ca3af" />
-            <YAxis stroke="#9ca3af" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--secondary)" />
+            <XAxis dataKey="month" stroke="var(--muted-foreground)" />
+            <YAxis stroke="var(--muted-foreground)" />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb' }}
-              labelStyle={{ color: '#374151' }}
+              contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--secondary)' }}
+              labelStyle={{ color: 'var(--muted-foreground)' }}
             />
             <Legend />
-            <Bar dataKey="sessions" fill="#A047FF" name="Sesiones" />
-            <Bar dataKey="users" fill="#ff8fa3" name="Usuarios" />
+            <Bar dataKey="sessions" fill="var(--chart-1)" name="Sesiones" />
+            <Bar dataKey="users" fill="var(--chart-2)" name="Usuarios" />
           </BarChart>
         </ResponsiveContainer>
       </motion.div>
 
-      <motion.div variants={cardVariants} className="bg-white rounded-xl p-6 border border-gray-200">
-        <h3 className="text-xl font-bold text-[#a047ff] mb-4">Recomendaciones IA</h3>
+      <motion.div variants={cardVariants} className="bg-background rounded-xl p-6 border border-secondary">
+        <h3 className="text-xl font-bold text-primary mb-4">Recomendaciones IA</h3>
         <Accordion items={[
           {
             title: "🚀 Optimización de velocidad",

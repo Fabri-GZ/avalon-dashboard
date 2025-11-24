@@ -6,7 +6,7 @@ import { FiMenu } from "react-icons/fi";
 const DashboardHeader = ({ activeTab, setSidebarOpen, navigation }) => {
   return (
     <header
-      className="bg-white p-4 lg:p-6 sticky top-0 z-40"
+      className="bg-background p-4 lg:p-6 sticky top-0 z-40"
     >
       <div className="flex items-center justify-between">
         <motion.button
@@ -14,7 +14,7 @@ const DashboardHeader = ({ activeTab, setSidebarOpen, navigation }) => {
           animate={{opacity: 1, x: 0}}
           transition={{duration: 0.5, delay: 0.2, ease: "easeIn"}}
           onClick={() => setSidebarOpen(true)}
-          className="lg:hidden text-gray-700 hover:text-black"
+          className="lg:hidden text-muted-foreground hover:text-foreground"
         >
           <FiMenu className="w-6 h-6" />
         </motion.button>
@@ -23,7 +23,7 @@ const DashboardHeader = ({ activeTab, setSidebarOpen, navigation }) => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{duration: 0.5, delay: 0.2, ease: "easeIn"}}
-          className="text-2xl font-bold text-gray-700"
+          className="text-2xl font-bold text-foreground"
         >
           {navigation.find(item => item.id === activeTab)?.name}
         </motion.h2>

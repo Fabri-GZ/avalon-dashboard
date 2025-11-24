@@ -15,18 +15,18 @@ const Accordion = ({ items }) => {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.1 }}
-          className="border border-gray-200 rounded-lg overflow-hidden"
+          className="border border-secondary rounded-lg overflow-hidden"
         >
           <button
             onClick={() => setOpenIndex(openIndex === index ? null : index)}
-            className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors text-left"
+            className="w-full flex items-center justify-between p-4 bg-background hover:bg-input transition-colors text-left"
           >
-            <span className="text-gray-700 font-medium">{item.title}</span>
+            <span className="text-foreground font-medium">{item.title}</span>
             <motion.div
               animate={{ rotate: openIndex === index ? 180 : 0 }}
               transition={{ duration: 0.3 }}
             >
-              <FiChevronDown className="w-5 h-5 text-[#A047FF]" />
+              <FiChevronDown className="w-5 h-5 text-primary" />
             </motion.div>
           </button>
           <AnimatePresence>
@@ -37,8 +37,8 @@ const Accordion = ({ items }) => {
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
               >
-                <div className="p-4 bg-[#A047FF]/10 border-t border-[#A047FF]/20">
-                  <p className="text-gray-700">{item.content}</p>
+                <div className="p-4 bg-primary/10 border-t border-primary/20">
+                  <p className="text-foreground">{item.content}</p>
                 </div>
               </motion.div>
             )}

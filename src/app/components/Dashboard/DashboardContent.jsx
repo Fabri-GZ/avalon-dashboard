@@ -15,7 +15,7 @@ const DashboardContent = ({ onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#dee2e6] lg:flex flex-row">
+    <div className="min-h-screen bg-secondary lg:flex flex-row">
       <Sidebar 
         mobile={false} 
         activeTab={activeTab} 
