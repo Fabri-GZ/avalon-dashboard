@@ -77,5 +77,7 @@ export async function signInWithGoogle() {
     redirect("/error");
   }
 
-  redirect(data.url);
+  if (data.url) {
+    redirect(data.url);
+  }
 }
