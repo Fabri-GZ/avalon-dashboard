@@ -6,7 +6,7 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { MdLock, MdMail } from "react-icons/md";
 import { ToastContainer, toast, Flip } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { login } from "../../../../../lib/auth-actions"
+import { login } from "@/lib/auth-actions"
 import SignInWithGoogleButton from "./SignInWithGoogleButton";
 
 const Login = ({ onRegister, onForgot }) => {

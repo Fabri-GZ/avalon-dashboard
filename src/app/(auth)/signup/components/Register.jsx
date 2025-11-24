@@ -6,7 +6,7 @@ import { MdLock, MdMail, MdPerson } from "react-icons/md";
 import { ToastContainer, toast, Flip } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
-import { signup } from "../../../../../lib/auth-actions";
+import { signup } from "@/lib/auth-actions";
 import SignInWithGoogleButton from "../../login/components/SignInWithGoogleButton";
 
 const Register = ({ onBack, onLogin }) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { signInWithGoogle } from "../../../../../lib/auth-actions";
+import { signInWithGoogle } from "@/lib/auth-actions";
 
 const SignInWithGoogleButton = () => {
     return (
