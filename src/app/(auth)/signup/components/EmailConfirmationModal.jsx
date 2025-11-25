@@ -12,12 +12,11 @@ const EmailConfirmationModal = ({ isOpen, email, onClose }) => {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-foreground/50 backdrop-blur-sm z-50"
             onClick={onClose}
           />
 
@@ -29,7 +28,7 @@ const EmailConfirmationModal = ({ isOpen, email, onClose }) => {
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
+            <div className="bg-background rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
               {/* Icono de éxito con animación */}
               <motion.div
                 initial={{ scale: 0 }}

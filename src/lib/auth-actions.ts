@@ -86,3 +86,35 @@ export async function signInWithGoogle() {
     redirect(data.url);
   }
 }
+
+export async function resetPassword(formData: FormData) {
+  const supabase = await createClient();
+  const email = formData.get("email") as string;
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/reset-password`,
+  });
+
+  if (error) {
+    console.error("Reset password error:", error);
+    throw error;
+  }
+
+  return { success: true };
+}
+
+export async function updatePassword(formData: FormData) {
+  const supabase = await createClient();
+  const newPassword = formData.get("password") as string;
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) {
+    console.error("Update password error:", error);
+    throw error;
+  }
+
+  return { success: true };
+}
