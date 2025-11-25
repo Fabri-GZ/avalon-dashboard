@@ -17,7 +17,7 @@ const Register = ({ onBack, onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
-  const [showConfirmationModal, setShowConfirmationmodal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
   const validateEmail = (email) => {
     return email.includes("@") && email.includes(".");
