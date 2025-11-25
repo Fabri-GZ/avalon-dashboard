@@ -26,7 +26,7 @@ export async function login(formData: FormData) {
 export async function signup(formData: FormData) {
   const supabase = await createClient();
 
-  const data = {
+  const payload = {
     email: formData.get("email") as string,
     password: formData.get("password") as string,
     options: {
@@ -34,18 +34,23 @@ export async function signup(formData: FormData) {
         full_name: formData.get("name") as string,
         email: formData.get("email") as string,
       },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/confirm`,
     },
   };
 
-  const { error } = await supabase.auth.signUp(data);
+  const { data, error } = await supabase.auth.signUp(payload);
 
   if (error) {
-    console.error("Signup error:", error);
-    redirect("/error");
+    return {
+      ok: false,
+      message: error.message,
+    };
   }
 
-  revalidatePath("/", "layout");
-  redirect("/dashboard");
+  return {
+    ok: true,
+    user: data.user,
+  };
 }
 
 export async function signout() {

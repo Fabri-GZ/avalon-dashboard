@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
 import { signup } from "@/lib/auth-actions";
 import SignInWithGoogleButton from "../../login/components/SignInWithGoogleButton";
+import EmailConfirmationModal from "./EmailConfirmationModal";
 
 const Register = ({ onBack, onLogin }) => {
   const [name, setName] = useState("");
@@ -16,6 +17,7 @@ const Register = ({ onBack, onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+  const [showConfirmationModal, setShowConfirmationmodal] = useState(false);
 
   const validateEmail = (email) => {
     return email.includes("@") && email.includes(".");
@@ -49,7 +51,7 @@ const Register = ({ onBack, onLogin }) => {
 
     try {
       await signup(formData);
-      onLogin(); 
+      setShowConfirmationModal(true); 
     } catch (error) {
       toast.error("Hubo un error al registrarte. Intenta nuevamente.");
     }
@@ -61,6 +63,7 @@ const Register = ({ onBack, onLogin }) => {
   };
 
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -120,7 +123,6 @@ const Register = ({ onBack, onLogin }) => {
             >
               <MdMail size={18} />
             </motion.div>
-
           <input
             type="email"
             value={email}
@@ -151,7 +153,6 @@ const Register = ({ onBack, onLogin }) => {
             >
               <MdLock size={18} />
             </motion.div>
-
           <input
             type={showPassword ? "text" : "password"}
             value={password}
@@ -165,7 +166,6 @@ const Register = ({ onBack, onLogin }) => {
                   : "border border-[#D4BBFC] focus:border-[#A047FF] hover:border-[#A047FF]"
                 }`}
             />
-
             <motion.button
               type="button"
               whileHover={{ scale: 1.1 }}
@@ -203,7 +203,6 @@ const Register = ({ onBack, onLogin }) => {
               </motion.div>
             )}
           </motion.div>
-          
           <span
             className={`text-sm ${
               password.length >= 8 ? "text-green-600" : "text-gray-500"
@@ -262,6 +261,12 @@ const Register = ({ onBack, onLogin }) => {
 
       <ToastContainer transition={Flip} />
     </motion.div>
+      <EmailConfirmationModal
+        isOpen={showConfirmationModal}
+        email={email}
+        onClose={() => setShowConfirmationModal(false)}
+      />
+    </>
   );
 };
 
