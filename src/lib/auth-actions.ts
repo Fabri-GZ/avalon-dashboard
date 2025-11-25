@@ -7,20 +7,101 @@ import { createClient } from "../app/utils/supabase/server";
 export async function login(formData: FormData) {
   const supabase = await createClient();
 
-  const data = {
+  const credentials = {
     email: formData.get("email") as string,
     password: formData.get("password") as string,
   };
 
-  const { error } = await supabase.auth.signInWithPassword(data);
+  const { error } = await supabase.auth.signInWithPassword(credentials);
 
-  if (error) {
-    console.error("Login error:", error);
-    redirect("/error");
+  if (error) redirect("/error");
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile, error: profileError } = await supabase
+      .from("user_profiles")
+      .select(`client_id`)
+      .eq("id", user.id)
+      .single();
+
+     if (profileError || !profile?.client_id) {
+      revalidatePath("/", "layout");
+      redirect("/onboarding");
+    }
+    const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('onboarding_completed')
+        .eq('id', profile.client_id)
+        .single();
+      if (clientError || !client?.onboarding_completed) {
+        revalidatePath("/", "layout");
+        redirect("/onboarding");
+      }
+    }
+    revalidatePath("/", "layout");
+    redirect("/dashboard");
+}
+
+export async function completeOnboarding(formData: FormData) {
+  const supabase = await createClient();
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    redirect("/login");
+  }
+
+  const companyName = formData.get("companyName") as string;
+  const industry = formData.get("industry") as string;
+  const services = JSON.parse(formData.get("services") as string);
+
+  const { data: client, error: clientError } = await supabase
+    .from('clients')
+    .insert({
+      company_name: companyName,
+      industry: industry,
+      services_contracted: services,
+      onboarding_completed: false, 
+    })
+    .select()
+    .single();
+
+  if (clientError) {
+    console.error("Error creating client:", clientError);
+    throw clientError;
+  }
+
+  const { error: profileError } = await supabase
+    .from('user_profiles')
+    .update({ client_id: client.id })
+    .eq('id', user.id);
+
+  if (profileError) {
+    console.error("Error updating profile:", profileError);
+    throw profileError;
+  }
+
+  const webhookUrl = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL;
+  
+  if (webhookUrl) {
+    try {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: client.id,
+          company_name: companyName,
+          services: services,
+          user_id: user.id,
+        }),
+      });
+    } catch (error) {
+      console.error("Error calling n8n:", error);
+    }
   }
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
 }
 
 export async function signup(formData: FormData) {
@@ -118,3 +199,4 @@ export async function updatePassword(formData: FormData) {
 
   return { success: true };
 }
+
