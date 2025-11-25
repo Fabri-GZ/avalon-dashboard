@@ -21,17 +21,32 @@ const iconMap = {
   FiMessageSquare,
 };
 
-const UserMenu = ({ onLogout, theme, setTheme }) => {
+const UserMenu = ({ onLogout, theme, setTheme, profile }) => {
+  
+  const name = profile?.full_name || "Usuario";
+  const email = profile?.email || "";
+  const avatar = profile?.avatar_url;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="w-full focus:outline-none">
-        <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted  transition-colors cursor-pointer">
-          <div className="w-10 h-10 rounded-full bg-linear-to-br from-primary to-primary/80 flex items-center justify-center shadow-md">
-            <User className="w-5 h-5 text-primary-foreground" />
-          </div>
+        <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer">
+          
+          {avatar ? (
+            <img
+              src={avatar}
+              alt="Logo de la empresa"
+              className="w-10 h-10 rounded-full object-cover shadow"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-linear-to-br from-primary to-primary/80 flex items-center justify-center shadow-md">
+              <User className="w-5 h-5 text-primary-foreground" />
+            </div>
+          )}
+
           <div className="flex-1 text-left">
-            <p className="text-sm font-semibold text-foreground">Usuario</p>
-            <p className="text-xs text-muted-foreground truncate">user@email.com</p>
+            <p className="text-sm font-semibold text-foreground">{name}</p>
+            <p className="text-xs text-muted-foreground truncate">{email}</p>
           </div>
         </div>
       </DropdownMenuTrigger>
@@ -73,7 +88,7 @@ const UserMenu = ({ onLogout, theme, setTheme }) => {
   );
 };
 
-const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, navigation }) => {
+const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, navigation, profile }) => {
   const [theme, setTheme] = useState("light");
 
   useEffect(() => {
@@ -169,7 +184,7 @@ const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, na
         </nav>
 
         <div className="px-4 py-4 border-t border-border">
-          <UserMenu onLogout={onLogout} theme={theme} setTheme={setTheme} />
+          <UserMenu onLogout={onLogout} theme={theme} setTheme={setTheme} profile={profile} />
         </div>
       </motion.div>
     </div>

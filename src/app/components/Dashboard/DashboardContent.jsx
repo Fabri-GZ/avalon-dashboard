@@ -9,10 +9,12 @@ import WebsiteSection from "./sections/WebsiteSection";
 import AdsSection from "./sections/AdsSection";
 import ChatbotSection from "./sections/ChatbotSection";
 import { navigation } from "./data/mockData";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const DashboardContent = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const profile = useUserProfile();
 
   return (
     <div className="min-h-screen bg-secondary lg:flex flex-row">
@@ -23,6 +25,7 @@ const DashboardContent = ({ onLogout }) => {
         setSidebarOpen={setSidebarOpen}
         onLogout={onLogout}
         navigation={navigation}
+        profile={profile}
       />
       
       <AnimatePresence>
@@ -34,6 +37,7 @@ const DashboardContent = ({ onLogout }) => {
             setSidebarOpen={setSidebarOpen}
             onLogout={onLogout}
             navigation={navigation}
+            profile={profile}
           />
         )}
       </AnimatePresence>

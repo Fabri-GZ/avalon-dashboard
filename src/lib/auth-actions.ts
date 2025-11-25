@@ -6,7 +6,7 @@ import { createClient } from "../app/utils/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createAdminClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
@@ -58,11 +58,18 @@ export async function completeOnboarding(formData: FormData) {
   const companyName = formData.get("companyName") as string;
   const phone = formData.get("phone") as string;
   const industry = formData.get("industry") as string;
-  const services = JSON.parse(formData.get("services") as string);
+  let services: any[] = [];
+  try {
+    const raw = formData.get("services");
+    services = raw ? JSON.parse(raw as string) : [];
+  } catch (err) {
+    console.error("Error parsing services:", err);
+    services = [];
+  }
 
   const logoFile = formData.get("logo") as File | null;
 
-  let logoUrl = null;
+  let logoUrl: string | null = null;
 
   if (logoFile) {
     const fileExt = logoFile.name.split(".").pop();
@@ -94,7 +101,6 @@ export async function completeOnboarding(formData: FormData) {
     .upsert({
       id: user.id,
       company_name: companyName,
-      phone: phone,
       industry: industry,
       logo_url: logoUrl,
       services_contracted: services,
@@ -110,7 +116,12 @@ export async function completeOnboarding(formData: FormData) {
 
   const { error: profileError } = await supabaseAdmin
     .from("user_profiles")
-    .update({ client_id: client.id })
+    .update({ 
+      client_id: client.id,
+      phone: phone,
+      email: user.email,
+      avatar_url: logoUrl,
+    })
     .eq("id", user.id);
 
   if (profileError) {
@@ -118,10 +129,23 @@ export async function completeOnboarding(formData: FormData) {
     throw profileError;
   }
 
+  const webhookUrl = process.env.N8N_WEBHOOK_URL;
+  if (webhookUrl) {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: client.id,
+        company_name: companyName,
+        services,
+        user_id: user.id,
+      }),
+    });
+  }
+
   revalidatePath("/", "layout");
   redirect("/dashboard");
 }
-
 
 export async function signup(formData: FormData) {
   const supabase = await createClient();
@@ -140,17 +164,16 @@ export async function signup(formData: FormData) {
 
   const { data, error } = await supabase.auth.signUp(payload);
 
-  if (error) {
-    return {
-      ok: false,
-      message: error.message,
-    };
+  if (!error && data.user) {
+    await supabaseAdmin
+      .from("user_profiles")
+      .insert({
+        id: data.user.id,
+        full_name: formData.get("name"),
+        email: formData.get("email"),
+        role: "client_user",
+      });
   }
-
-  return {
-    ok: true,
-    user: data.user,
-  };
 }
 
 export async function signout() {
