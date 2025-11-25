@@ -56,7 +56,9 @@ export async function completeOnboarding(formData: FormData) {
   const industry = formData.get("industry") as string;
   const services = JSON.parse(formData.get("services") as string);
 
-  const { data: client, error: clientError } = await supabase
+  const { supabaseAdmin } = await import("../app/utils/supabase/admin");
+  
+  const { data: client, error: clientError } = await supabaseAdmin
     .from('clients')
     .insert({
       company_name: companyName,
@@ -72,7 +74,7 @@ export async function completeOnboarding(formData: FormData) {
     throw clientError;
   }
 
-  const { error: profileError } = await supabase
+  const { error: profileError } = await supabaseAdmin
     .from('user_profiles')
     .update({ client_id: client.id })
     .eq('id', user.id);
@@ -102,6 +104,8 @@ export async function completeOnboarding(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
+  redirect("/dashboard");
+
 }
 
 export async function signup(formData: FormData) {
