@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "../app/utils/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createAdminClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -45,26 +51,54 @@ export async function login(formData: FormData) {
 
 export async function completeOnboarding(formData: FormData) {
   const supabase = await createClient();
-  
+
   const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    redirect("/login");
-  }
+  if (!user) redirect("/login");
 
   const companyName = formData.get("companyName") as string;
+  const phone = formData.get("phone") as string;
   const industry = formData.get("industry") as string;
   const services = JSON.parse(formData.get("services") as string);
 
-  const { supabaseAdmin } = await import("../app/utils/supabase/admin");
-  
+  const logoFile = formData.get("logo") as File | null;
+
+  let logoUrl = null;
+
+  if (logoFile) {
+    const fileExt = logoFile.name.split(".").pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabaseAdmin
+      .storage
+      .from("company-logos")
+      .upload(fileName, logoFile, {
+        contentType: logoFile.type,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Error uploading logo:", uploadError);
+      throw uploadError;
+    }
+
+    const { data: publicUrlData } = supabaseAdmin
+      .storage
+      .from("company-logos")
+      .getPublicUrl(fileName);
+
+    logoUrl = publicUrlData.publicUrl;
+  }
+
   const { data: client, error: clientError } = await supabaseAdmin
-    .from('clients')
-    .insert({
+    .from("clients")
+    .upsert({
+      id: user.id,
       company_name: companyName,
+      phone: phone,
       industry: industry,
+      logo_url: logoUrl,
       services_contracted: services,
-      onboarding_completed: false, 
+      onboarding_completed: false,
     })
     .select()
     .single();
@@ -75,38 +109,19 @@ export async function completeOnboarding(formData: FormData) {
   }
 
   const { error: profileError } = await supabaseAdmin
-    .from('user_profiles')
+    .from("user_profiles")
     .update({ client_id: client.id })
-    .eq('id', user.id);
+    .eq("id", user.id);
 
   if (profileError) {
     console.error("Error updating profile:", profileError);
     throw profileError;
   }
 
-  const webhookUrl = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL;
-  
-  if (webhookUrl) {
-    try {
-      await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_id: client.id,
-          company_name: companyName,
-          services: services,
-          user_id: user.id,
-        }),
-      });
-    } catch (error) {
-      console.error("Error calling n8n:", error);
-    }
-  }
-
   revalidatePath("/", "layout");
   redirect("/dashboard");
-
 }
+
 
 export async function signup(formData: FormData) {
   const supabase = await createClient();
