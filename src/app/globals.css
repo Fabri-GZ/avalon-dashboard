@@ -50,7 +50,7 @@ body {
   --popover-foreground: #161619;
   --primary: #a047ff; 
   --primary-foreground: #fff;
-  --secondary: #d1d5dc; /* gris muy claro */
+  --secondary: #f4f1f8; /* gris muy claro */
   --secondary-foreground: #161619;
   --muted: #f1f1f8; 
   --muted-foreground: #364153; /* gris medio */
@@ -65,6 +65,8 @@ body {
   --success-background: #0d542b;
   --danger-foreground: #ffa2a2;
   --danger-background: #82181a;
+  --shadow-light: #cfcdd3;
+  --shadow-dark: #ffffff;
 
   
   /* Charts */
@@ -96,6 +98,8 @@ body {
   --border: #2d2c38;
   --input: #2d2c38;
   --ring: #a047ff;
+  --shadow-light: #1a1a1f;
+  --shadow-dark: #0f0f14;   
   
   /* Charts para dark mode */
   --chart-1: #a047ff;

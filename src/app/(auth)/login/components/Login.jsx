@@ -66,14 +66,14 @@ const Login = ({ onRegister, onForgot }) => {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className="rounded-lg p-8 w-full max-w-md bg-[#f4f1f8] shadow-[20px_20px_60px_#cfcdd3,-20px_-20px_60px_#ffffff]"
+      className="rounded-lg p-8 w-full max-w-md bg-secondary shadow-[20px_20px_60px_var(--shadow-light),-20px_-20px_60px_var(--shadow-dark)]"
     >
       <div className="text-center mb-8">
         <motion.h1 
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-5xl font-bold text-[#A047FF] mb-2"
+          className="text-5xl font-bold text-primary mb-2"
         >
           Avalon
         </motion.h1>
@@ -81,13 +81,13 @@ const Login = ({ onRegister, onForgot }) => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-gray-700"
+          className="text-muted-foreground"
         >
           Dashboard de Marketing
         </motion.p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form className="space-y-4" onSubmit={handleSubmit}>
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           whileInView={{ opacity: 1, x: 0 }}
@@ -96,7 +96,7 @@ const Login = ({ onRegister, onForgot }) => {
         >
           <motion.div animate={emailError ? shakeAnimation : {}}>
             <motion.div
-              animate={emailError ? { color: "#ef4444" } : { color: "#6b7280" }}
+              animate={emailError ? { color: "var(--destructive)" } : { color: "var(--muted-foreground)" }}
               transition={{ duration: 0.3 }}
               className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10"
             >
@@ -109,10 +109,10 @@ const Login = ({ onRegister, onForgot }) => {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
               disabled={isLoading}
-              className={`w-full pl-10 pr-4 py-3 bg-[#f4f1f8] rounded-lg text-black outline-none ${
+              className={`w-full pl-10 pr-4 py-3 bg-secondary rounded-lg text-foreground outline-none transition-colors ease-in duration-200 ${
                 emailError
-                  ? "border-2 border-red-500"
-                  : "border border-[#D4BBFC] focus:border-[#A047FF] hover:border-[#A047FF]"
+                  ? "border-2 border-destructive"
+                  : "border border-primary/30 focus:border-primary"
               }`}
             />
           </motion.div>
@@ -126,7 +126,7 @@ const Login = ({ onRegister, onForgot }) => {
         >
           <motion.div animate={passwordError ? shakeAnimation : {}}>
             <motion.div
-              animate={passwordError ? { color: "#ef4444" } : { color: "#6b7280" }}
+              animate={passwordError ? { color: "var(--destructive)" } : { color: "var(--muted-foreground)" }}
               transition={{ duration: 0.3 }}
               className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10"
             >
@@ -139,10 +139,10 @@ const Login = ({ onRegister, onForgot }) => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Contraseña"
               disabled={isLoading}
-              className={`w-full pl-10 pr-4 py-3 bg-[#f4f1f8] rounded-lg text-black outline-none ${
+              className={`w-full pl-10 pr-4 py-3 bg-secondary rounded-lg text-foreground outline-none transition-colors ease-in duration-200 ${
                 passwordError
-                  ? "border-2 border-red-500"
-                  : "border border-[#D4BBFC] focus:border-[#A047FF] hover:border-[#A047FF]"
+                  ? "border-2 border-destructive"
+                  : "border border-primary/30 focus:border-primary"
               }`}
             />
             <motion.button
@@ -150,7 +150,7 @@ const Login = ({ onRegister, onForgot }) => {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-[#A047FF] z-10"
+              className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-primary z-10 transition-colors"
             >
               {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
             </motion.button>
@@ -163,7 +163,7 @@ const Login = ({ onRegister, onForgot }) => {
           transition={{ delay: 0.2, duration: 0.2 }}
           type="button"
           onClick={onForgot}
-          className="w-fit text-gray-700 text-sm text-left hover:text-[#A047FF] ease-in duration-200 pb-3"
+          className="w-fit text-muted-foreground text-sm text-left hover:text-primary ease-in duration-200 pb-3 transition-colors"
         >
           ¿Olvidaste tu contraseña?
         </motion.button>
@@ -176,7 +176,7 @@ const Login = ({ onRegister, onForgot }) => {
           whileTap={{ scale: 0.98 }}
           type="submit"
           disabled={isLoading}
-          className="w-full bg-[#A047FF] hover:bg-[#8c3de6] text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
         </motion.button>
@@ -185,11 +185,11 @@ const Login = ({ onRegister, onForgot }) => {
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1, duration: 0.4 }}
-          whileHover={{ scale: 1.02, backgroundColor: "rgba(140, 61, 230, 0.44)" }}
+          whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           type="button"
           onClick={onRegister}
-          className="w-full text-[#8c3de6] hover:text-[#f4f1f8] font-semibold py-2 rounded-lg"
+          className="w-full text-primary hover:bg-primary/50 hover:text-accent-foreground font-semibold py-2 rounded-lg transition-colors ease-in duration-200"
         >
           Crear Cuenta
         </motion.button>
@@ -200,9 +200,9 @@ const Login = ({ onRegister, onForgot }) => {
           transition={{ delay: 0.2 }}
           className="flex items-center my-4"
         >
-          <hr className="grow border-t border-gray-700" />
-          <span className="px-3 text-gray-500 text-sm">o</span>
-          <hr className="grow border-t border-gray-700" />
+          <hr className="grow border-t border-border" />
+          <span className="px-3 text-muted-foreground text-sm">o</span>
+          <hr className="grow border-t border-border" />
         </motion.div>
 
         <motion.div

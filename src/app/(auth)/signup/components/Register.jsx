@@ -68,14 +68,14 @@ const Register = ({ onBack, onLogin }) => {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className="rounded-lg p-8 w-full max-w-md mx-auto bg-[#f4f1f8] shadow-[20px_20px_60px_#cfcdd3,-20px_-20px_60px_#ffffff]"
+      className="rounded-lg p-8 w-full max-w-md mx-auto bg-secondary shadow-[20px_20px_60px_var(--shadow-light),-20px_-20px_60px_var(--shadow-dark)]"
     >
       <div className="text-center mb-8">
         <motion.h1
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-5xl font-bold text-[#A047FF] mb-2"
+          className="text-5xl font-bold text-primary mb-2"
         >
           Crear Cuenta
         </motion.h1>
@@ -83,7 +83,7 @@ const Register = ({ onBack, onLogin }) => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-gray-700"
+          className="text-muted-foreground"
         >
           Unite al Dashboard de Avalon
         </motion.p>
@@ -97,7 +97,7 @@ const Register = ({ onBack, onLogin }) => {
           transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
           className="relative mb-3"
         >
-          <MdPerson className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
+          <MdPerson className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
         <input
           type="text"
           value={name}
@@ -105,7 +105,7 @@ const Register = ({ onBack, onLogin }) => {
           required
           onChange={(e) => setName(e.target.value)}
           placeholder="Nombre completo"
-            className="w-full pl-10 pr-4 py-3 bg-[#f4f1f8] border border-[#D4BBFC] rounded-lg text-black outline-none focus:border-[#A047FF] hover:border-[#A047FF]"
+            className="w-full pl-10 pr-4 py-3 bg-secondary border border-accent rounded-lg text-foreground outline-none focus:border-primary transition-colors ease-in duration-200"
           />
         </motion.div>
 
@@ -117,7 +117,7 @@ const Register = ({ onBack, onLogin }) => {
         >
           <motion.div animate={emailError ? shakeAnimation : {}}>
             <motion.div
-              animate={emailError ? { color: "#ef4444" } : { color: "#6b7280" }}
+              animate={emailError ? { color: "var(--destructive)" } : { color: "var(--muted-foreground)" }}
               transition={{ duration: 0.3 }}
               className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10"
             >
@@ -130,10 +130,10 @@ const Register = ({ onBack, onLogin }) => {
             required
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-              className={`w-full pl-10 pr-4 py-3 bg-[#f4f1f8] rounded-lg text-black outline-none
+              className={`w-full pl-10 pr-4 py-3 bg-secondary rounded-lg text-foreground outline-none transition-colors ease-in duration-200
                 ${emailError
-                  ? "border-2 border-red-500"
-                  : "border border-[#D4BBFC] focus:border-[#A047FF] hover:border-[#A047FF]"
+                  ? "border-2 border-destructive"
+                  : "border border-accent focus:border-primary"
                 }`}
             />
           </motion.div>
@@ -147,7 +147,7 @@ const Register = ({ onBack, onLogin }) => {
         >
           <motion.div animate={passwordError ? shakeAnimation : {}}>
             <motion.div
-              animate={passwordError ? { color: "#ef4444" } : { color: "#6b7280" }}
+              animate={passwordError ? { color: "var(--destructive)" } : { color: "var(--muted-foreground)" }}
               transition={{ duration: 0.3 }}
               className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10"
             >
@@ -160,10 +160,10 @@ const Register = ({ onBack, onLogin }) => {
             required
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Contraseña"
-              className={`w-full pl-10 pr-4 py-3 bg-[#f4f1f8] rounded-lg text-black outline-none
+              className={`w-full pl-10 pr-4 py-3 bg-secondary rounded-lg text-foreground outline-none transition-colors ease-in duration-200
                 ${passwordError
-                  ? "border-2 border-red-500"
-                  : "border border-[#D4BBFC] focus:border-[#A047FF] hover:border-[#A047FF]"
+                  ? "border-2 border-destructive"
+                  : "border border-accent focus:border-primary"
                 }`}
             />
             <motion.button
@@ -171,7 +171,7 @@ const Register = ({ onBack, onLogin }) => {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-[#A047FF]"
+              className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-primary z-10 transition-colors"
               >
               {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
             </motion.button>
@@ -186,9 +186,9 @@ const Register = ({ onBack, onLogin }) => {
           <motion.div
             animate={{
               backgroundColor:
-                password.length >= 8 ? "#10b981" : "transparent",
+                password.length >= 8 ? "var(--success-background)" : "transparent",
               borderColor:
-                password.length >= 8 ? "#10b981" : "#9ca3af",
+                password.length >= 8 ? "var(--success-background)" : "var(--muted-foreground)",
             }}
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="w-4 h-4 rounded-full border flex items-center justify-center ml-1"
@@ -199,13 +199,13 @@ const Register = ({ onBack, onLogin }) => {
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 300, damping: 15 }}
               >
-                <FaCheck className="text-white text-[10px]" />
+                <FaCheck className="text-background text-[10px]" />
               </motion.div>
             )}
           </motion.div>
           <span
             className={`text-sm ${
-              password.length >= 8 ? "text-green-600" : "text-gray-500"
+              password.length >= 8 ? "text-green-700" : "text-muted-foreground"
             }`}
           >
             Usá mínimo 8 caracteres
@@ -219,7 +219,7 @@ const Register = ({ onBack, onLogin }) => {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           type="submit"
-          className="w-full bg-[#A047FF] hover:bg-[#8c3de6] text-white font-semibold py-3 rounded-lg shadow-lg"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 rounded-lg shadow-lg"
         >
           Registrarse
         </motion.button>
@@ -228,11 +228,11 @@ const Register = ({ onBack, onLogin }) => {
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.25, duration: 0.4 }}
-          whileHover={{ scale: 1.02, backgroundColor: "rgba(140, 61, 230, 0.44)" }}
+          whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           type="button"
           onClick={onBack}
-          className="w-full text-[#8c3de6] hover:text-[#f4f1f8] font-semibold py-2 rounded-lg"
+          className="w-full text-primary hover:text-accent-foreground hover:bg-primary/50 font-semibold py-2 rounded-lg transition-colors ease-in duration-200"
         >
           Volver al inicio
         </motion.button>
@@ -243,9 +243,9 @@ const Register = ({ onBack, onLogin }) => {
           transition={{ delay: 0.3 }}
           className="flex items-center my-4"
         >
-          <hr className="grow border-t border-gray-700" />
-          <span className="px-3 text-gray-500 text-sm">o</span>
-          <hr className="grow border-t border-gray-700" />
+          <hr className="grow border-t border-muted-foreground" />
+          <span className="px-3 text-muted-foreground text-sm">o</span>
+          <hr className="grow border-t border-muted-foreground" />
         </motion.div>
 
         <motion.div

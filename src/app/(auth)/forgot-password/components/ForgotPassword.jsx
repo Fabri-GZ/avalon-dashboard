@@ -55,36 +55,36 @@ const ForgotPassword = ({ onBack }) => {
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="rounded-lg p-8 w-full max-w-md mx-auto bg-[#f4f1f8] shadow-[20px_20px_60px_#cfcdd3,-20px_-20px_60px_#ffffff]"
+        className="rounded-lg p-8 w-full max-w-md mx-auto bg-card border border-border shadow-xl"
       >
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6"
+          className="mx-auto w-20 h-20 bg-[#7bf1a8] rounded-full flex items-center justify-center mb-6"
         >
-          <CheckCircle className="w-12 h-12 text-green-600" />
+          <CheckCircle className="w-12 h-12 text-[#0d542b]" />
         </motion.div>
 
-        <h2 className="text-2xl font-bold text-center text-gray-900 mb-3">
+        <h2 className="text-2xl font-bold text-center text-foreground mb-3">
           ¡Revisa tu correo!
         </h2>
 
         <div className="text-center mb-6">
-          <p className="text-gray-600 mb-3">
+          <p className="text-muted-foreground mb-3">
             Te enviamos un email para restablecer tu contraseña a:
           </p>
-          <div className="flex items-center justify-center gap-2 bg-[#A047FF]/10 rounded-lg p-3 mb-3">
-            <Mail className="w-5 h-5 text-[#A047FF]" />
-            <span className="font-semibold text-[#A047FF]">{email}</span>
+          <div className="flex items-center justify-center gap-2 bg-primary/10 rounded-lg p-3 mb-3">
+            <Mail className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-primary">{email}</span>
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Hace click en el enlace del correo para crear una nueva contraseña.
           </p>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
-          <p className="text-xs text-blue-800">
+        <div className="bg-accent/50 border border-accent rounded-lg p-3 mb-6">
+          <p className="text-xs text-foreground">
             💡 <strong>Tip:</strong> Si no ves el correo, revisa tu carpeta de spam o correo no deseado.
           </p>
         </div>
@@ -93,7 +93,7 @@ const ForgotPassword = ({ onBack }) => {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => window.location.href = "/login"}
-          className="w-full bg-[#A047FF] hover:bg-[#8c3de6] text-white font-semibold py-3 rounded-lg shadow-lg"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 rounded-lg shadow-lg transition-colors"
         >
           Volver al inicio de sesión
         </motion.button>
@@ -106,11 +106,11 @@ const ForgotPassword = ({ onBack }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className="rounded-lg p-8 w-full max-w-md mx-auto bg-[#f4f1f8] shadow-[20px_20px_60px_#cfcdd3,-20px_-20px_60px_#ffffff]"
+      className="rounded-lg p-8 w-full max-w-md mx-auto bg-card border border-border shadow-xl"
     >
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-gray-600 hover:text-[#A047FF] mb-6 transition-colors"
+        className="flex items-center gap-2 text-muted-foreground hover:text-primary mb-6 transition-colors"
       >
         <MdArrowBack size={20} />
         <span className="text-sm font-medium">Volver</span>
@@ -121,7 +121,7 @@ const ForgotPassword = ({ onBack }) => {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-4xl font-bold text-[#A047FF] mb-2"
+          className="text-4xl font-bold text-primary mb-2"
         >
           ¿Olvidaste tu contraseña?
         </motion.h1>
@@ -129,7 +129,7 @@ const ForgotPassword = ({ onBack }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-gray-700"
+          className="text-muted-foreground"
         >
           Te enviaremos un email para restablecerla
         </motion.p>
@@ -144,7 +144,7 @@ const ForgotPassword = ({ onBack }) => {
         >
           <motion.div animate={emailError ? shakeAnimation : {}}>
             <motion.div
-              animate={emailError ? { color: "#ef4444" } : { color: "#6b7280" }}
+              animate={emailError ? { color: "var(--destructive)" } : { color: "var(--muted-foreground)" }}
               transition={{ duration: 0.3 }}
               className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10"
             >
@@ -158,10 +158,10 @@ const ForgotPassword = ({ onBack }) => {
               placeholder="Email"
               required
               disabled={isLoading}
-              className={`w-full pl-10 pr-4 py-3 bg-[#f4f1f8] rounded-lg text-black outline-none ${
+              className={`w-full pl-10 pr-4 py-3 bg-input rounded-lg text-foreground outline-none transition-colors ${
                 emailError
-                  ? "border-2 border-red-500"
-                  : "border border-[#D4BBFC] focus:border-[#A047FF] hover:border-[#A047FF]"
+                  ? "border-2 border-destructive"
+                  : "border border-border focus:border-primary hover:border-primary"
               }`}
             />
           </motion.div>
@@ -175,7 +175,7 @@ const ForgotPassword = ({ onBack }) => {
           whileTap={{ scale: 0.98 }}
           onClick={handleSubmit}
           disabled={isLoading}
-          className="w-full bg-[#A047FF] hover:bg-[#8c3de6] text-white font-semibold py-3 rounded-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 rounded-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isLoading ? "Enviando..." : "Enviar email de recuperación"}
         </motion.button>

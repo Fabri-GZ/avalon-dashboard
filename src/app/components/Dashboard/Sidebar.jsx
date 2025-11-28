@@ -89,14 +89,25 @@ const UserMenu = ({ onLogout, theme, setTheme, profile }) => {
 };
 
 const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, navigation, profile }) => {
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      if (document.documentElement.classList.contains('dark')) {
+        return 'dark';
+      }
+      const savedTheme = localStorage.getItem('theme');
+      return savedTheme || 'light';
+    }
+    return 'light';
+  });
 
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === "dark") {
       root.classList.add("dark");
+      localStorage.setItem('theme', 'dark'); 
     } else {
       root.classList.remove("dark");
+      localStorage.setItem('theme', 'light'); 
     }
   }, [theme]);
 

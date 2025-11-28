@@ -20,7 +20,6 @@ const EmailConfirmationModal = ({ isOpen, email, onClose }) => {
             onClick={onClose}
           />
 
-          {/* Modal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -29,7 +28,6 @@ const EmailConfirmationModal = ({ isOpen, email, onClose }) => {
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
             <div className="bg-background rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
-              {/* Icono de éxito con animación */}
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -39,36 +37,33 @@ const EmailConfirmationModal = ({ isOpen, email, onClose }) => {
                 <CheckCircle className="w-12 h-12 text-green-600" />
               </motion.div>
 
-              {/* Título */}
               <motion.h2
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="text-2xl font-bold text-center text-gray-900 mb-3"
+                className="text-2xl font-bold text-center text-foreground mb-3"
               >
                 ¡Revisa tu correo!
               </motion.h2>
 
-              {/* Descripción */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
                 className="text-center mb-6"
               >
-                <p className="text-gray-600 mb-3">
+                <p className="text-muted-foreground mb-3">
                   Te enviamos un email de confirmación a:
                 </p>
                 <div className="flex items-center justify-center gap-2 bg-primary/10 rounded-lg p-3 mb-3">
                   <Mail className="w-5 h-5 text-primary" />
                   <span className="font-semibold text-primary">{email}</span>
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Hace click en el enlace del correo para activar tu cuenta y poder iniciar sesión.
                 </p>
               </motion.div>
 
-              {/* Consejo */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -80,7 +75,6 @@ const EmailConfirmationModal = ({ isOpen, email, onClose }) => {
                 </p>
               </motion.div>
 
-              {/* Botón de acción */}
               <motion.button
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -94,13 +88,12 @@ const EmailConfirmationModal = ({ isOpen, email, onClose }) => {
                 Ir al inicio de sesión
               </motion.button>
 
-              {/* Link secundario */}
               <motion.button
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.7 }}
                 onClick={onClose}
-                className="w-full text-sm text-gray-500 hover:text-gray-700 mt-3 transition-colors"
+                className="w-full text-sm text-muted-foreground mt-3 transition-colors"
               >
                 Cerrar
               </motion.button>
