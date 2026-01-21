@@ -1,13 +1,111 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { FiDollarSign, FiTrendingUp, FiUsers } from "react-icons/fi";
+import { FiDollarSign, FiTrendingUp, FiUsers, FiEye } from "react-icons/fi";
 import StatCard from "../StatCard";
 import Accordion from "../Accordion";
-import { adsData, containerVariants, cardVariants } from "../data/mockData";
+import {
+  groupByPlatform,
+  calculateSocialMetrics,
+  prepareChartData,
+  formatNumber,
+  splitIntoPeriods,
+  calculatePercentageChange,
+  calculateTotal,
+  containerVariants,
+  cardVariants,
+} from "../data/dataProcessors";
 
-const AdsSection = () => {
+const AdsSection = ({ client, socialInsights, socialDemographics, dateRange }) => {
+
+  const metrics = useMemo(() => {
+    const periods = splitIntoPeriods(socialInsights);
+    const current = calculateSocialMetrics(periods.current);
+    const previous = calculateSocialMetrics(periods.previous);
+
+    const totalSpent = 3800; 
+    const costPerEngagement = current.totalEngagement > 0 ? totalSpent / current.totalEngagement : 0;
+
+    return {
+      impressions: {
+        value: current.totalImpressions,
+        change: calculatePercentageChange(current.totalImpressions, previous.totalImpressions)
+      },
+      reach: {
+        value: current.totalReach,
+        change: calculatePercentageChange(current.totalReach, previous.totalReach)
+      },
+      websiteClicks: {
+        value: current.totalWebsiteClicks,
+        change: calculatePercentageChange(current.totalWebsiteClicks, previous.totalWebsiteClicks)
+      },
+      engagement: {
+        value: current.totalEngagement,
+        change: calculatePercentageChange(current.totalEngagement, previous.totalEngagement)
+      },
+      costPerEngagement
+    };
+  }, [socialInsights]);
+
+  const performanceData = useMemo(() => {
+    return prepareChartData(socialInsights, 'date', ['impressions', 'likes', 'comments', 'saves']);
+  }, [socialInsights]);
+
+  const platformMetrics = useMemo(() => {
+    const grouped = groupByPlatform(socialInsights);
+    return Object.keys(grouped).map(platform => {
+      const metrics = calculateSocialMetrics(grouped[platform]);
+      return {
+        platform,
+        impressions: metrics.totalImpressions,
+        engagement: metrics.totalEngagement,
+        reach: metrics.totalReach
+      };
+    });
+  }, [socialInsights]);
+
+  const recommendations = useMemo(() => {
+    const items = [];
+    
+    if (metrics.engagement.change > 10) {
+      items.push({
+        title: "🚀 Engagement en crecimiento",
+        content: `El engagement creció un ${metrics.engagement.change.toFixed(1)}%. Mantener la estrategia actual de contenido y considerar aumentar frecuencia de publicación.`
+      });
+    } else if (metrics.engagement.change < -5) {
+      items.push({
+        title: "⚠️ Engagement descendente",
+        content: `El engagement bajó un ${Math.abs(metrics.engagement.change).toFixed(1)}%. Revisar tipo de contenido y horarios de publicación para mejorar interacción.`
+      });
+    }
+
+    if (metrics.reach.change > 15) {
+      items.push({
+        title: "📈 Alcance excepcional",
+        content: `El alcance aumentó ${metrics.reach.change.toFixed(1)}%. Excelente momento para lanzar campañas de conversión aprovechando la audiencia expandida.`
+      });
+    }
+
+    if (metrics.costPerEngagement < 0.5) {
+      items.push({
+        title: "💰 Costo por engagement optimizado",
+        content: `El costo por engagement está en $${metrics.costPerEngagement.toFixed(2)}, muy por debajo del promedio. Continuar con esta estrategia efectiva.`
+      });
+    }
+
+    if (items.length < 3) {
+      items.push({
+        title: "🎯 Análisis de audiencia",
+        content: "Revisar datos demográficos para identificar segmentos de mayor engagement y optimizar contenido para estos grupos."
+      });
+    }
+
+    return items;
+  }, [metrics]);
+
+
   return (
     <motion.div
       key="ads"
@@ -18,10 +116,34 @@ const AdsSection = () => {
       className="space-y-6"
     >
       <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard title="Inversión Total" value="$3,800" change={8.6} icon={FiDollarSign} />
-        <StatCard title="Impresiones" value="210K" change={13.5} icon={FiTrendingUp} />
-        <StatCard title="Clicks" value="5.8K" change={13.7} icon={FiUsers} />
-        <StatCard title="Conversiones" value="128" change={14.3} icon={FiTrendingUp} />
+        <StatCard 
+          title="Impresiones" 
+          value={formatNumber(metrics.impressions.value)} 
+          change={metrics.impressions.change} 
+          icon={FiEye} 
+          index={0} 
+        />
+        <StatCard 
+          title="Alcance" 
+          value={formatNumber(metrics.reach.value)} 
+          change={metrics.reach.change} 
+          icon={FiUsers} 
+          index={1} 
+        />
+        <StatCard 
+          title="Clicks al Sitio" 
+          value={formatNumber(metrics.websiteClicks.value)} 
+          change={metrics.websiteClicks.change} 
+          icon={FiTrendingUp} 
+          index={2} 
+        />
+        <StatCard 
+          title="Engagement" 
+          value={formatNumber(metrics.engagement.value)} 
+          change={metrics.engagement.change} 
+          icon={FiDollarSign} 
+          index={3} 
+        />
       </motion.div>
 
       <motion.div
@@ -29,39 +151,27 @@ const AdsSection = () => {
         whileHover={{ scale: 1.02 }}
         className="bg-background rounded-xl p-6 border border-secondary"
       >
-        <h3 className="text-xl font-bold text-primary mb-4">Inversión vs Conversiones</h3>
+        <h3 className="text-xl font-bold text-primary mb-4">Rendimiento de Contenido</h3>
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={adsData}>
+          <LineChart data={performanceData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--secondary)" />
-            <XAxis dataKey="month" stroke="var(--muted-foreground)" />
-            <YAxis yAxisId="left" stroke="var(--muted-foreground)" />
+            <XAxis dataKey="dateFormatted" stroke="var(--muted-foreground)" />
+            <YAxis stroke="var(--muted-foreground)" />
             <Tooltip 
               contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--secondary)' }}
               labelStyle={{ color: 'var(--muted-foreground)' }}
             />
             <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="spent" stroke="var(--chart-1)" strokeWidth={2} name="Inversión ($)" />
-            <Line yAxisId="right" type="monotone" dataKey="conversions" stroke="var(--chart-2)" strokeWidth={2} name="Conversiones" />
+            <Line type="monotone" dataKey="impressions" stroke="var(--chart-1)" strokeWidth={2} name="Impresiones" />
+            <Line type="monotone" dataKey="likes" stroke="var(--chart-2)" strokeWidth={2} name="Likes" />
+            <Line type="monotone" dataKey="comments" stroke="var(--chart-3)" strokeWidth={2} name="Comentarios" />
           </LineChart>
         </ResponsiveContainer>
       </motion.div>
 
       <motion.div variants={cardVariants} className="bg-background rounded-xl p-6 border border-secondary">
         <h3 className="text-xl font-bold text-primary mb-4">Recomendaciones IA</h3>
-        <Accordion items={[
-          {
-            title: "💰 Costo por conversión optimizado",
-            content: "El costo por conversión bajó a $29.69. Continuar optimizando las campañas actuales manteniendo esta estrategia efectiva."
-          },
-          {
-            title: "🎯 Remarketing de alto rendimiento",
-            content: "Las campañas de remarketing tienen un ROAS de 4.2x. Aumentar presupuesto en 20% para capitalizar este canal rentable."
-          },
-          {
-            title: "📊 Formatos de anuncio innovadores",
-            content: "Probar anuncios en video. El formato carrusel está teniendo 35% más CTR que otros formatos estáticos."
-          }
-        ]} />
+        <Accordion items={recommendations} />
       </motion.div>
     </motion.div>
   );

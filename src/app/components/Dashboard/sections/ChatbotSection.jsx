@@ -1,13 +1,154 @@
+// src/app/components/Dashboard/sections/ChatbotSection.jsx
 "use client";
 
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { FiMessageSquare, FiUsers } from "react-icons/fi";
 import StatCard from "../StatCard";
 import NumberTicker from "../NumberTicker";
 import Accordion from "../Accordion";
-import { chatbotData, containerVariants, cardVariants } from "../data/mockData";
+import { createClient } from '@/app/utils/supabase/client';
+import { formatNumber, containerVariants, cardVariants } from "../data/dataProcessors";
 
-const ChatbotSection = () => {
+const ChatbotSection = ({ client, dateRange }) => {
+  const [chatbotData, setChatbotData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (client?.id) {
+      fetchChatbotData();
+    }
+  }, [client, dateRange]);
+
+  async function fetchChatbotData() {
+    try {
+      setLoading(true);
+      const dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - dateRange);
+      const dateFromStr = dateFrom.toISOString().split('T')[0];
+
+      const mockData = {
+        conversations: Math.floor(Math.random() * 200) + 100,
+        messages: Math.floor(Math.random() * 1000) + 500,
+        leadsCaptures: Math.floor(Math.random() * 100) + 50,  
+        leadsQualified: Math.floor(Math.random() * 60) + 30,
+        leadsConverted: Math.floor(Math.random() * 30) + 15,
+        avgResponseTime: "2.3 min",
+        satisfactionRate: "92%",
+        topQuestions: [
+          { question: '¿Cuáles son los precios?', count: 87 },
+          { question: '¿Cómo puedo contactarlos?', count: 64 },
+          { question: '¿Tienen garantía?', count: 52 },
+          { question: '¿Tiempo de entrega?', count: 48 },
+          { question: '¿Formas de pago?', count: 41 }
+        ]
+      };
+
+      setChatbotData(mockData);
+    } catch (error) {
+      console.error('Error fetching chatbot data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const metrics = useMemo(() => {
+    if (!chatbotData) return null;
+
+    const qualifiedRate = chatbotData.leadsCaptures > 0 
+      ? (chatbotData.leadsQualified / chatbotData.leadsCaptures * 100).toFixed(1)
+      : 0;
+
+    const convertedRate = chatbotData.leadsCaptures > 0
+      ? (chatbotData.leadsConverted / chatbotData.leadsCaptures * 100).toFixed(1)
+      : 0;
+
+    return {
+      qualifiedRate,
+      convertedRate,
+      qualifiedPercentage: chatbotData.leadsCaptures > 0 
+        ? (chatbotData.leadsQualified / chatbotData.leadsCaptures * 100).toFixed(0)
+        : 0,
+      convertedPercentage: chatbotData.leadsCaptures > 0
+        ? (chatbotData.leadsConverted / chatbotData.leadsCaptures * 100).toFixed(0)
+        : 0
+    };
+  }, [chatbotData]);
+
+  const recommendations = useMemo(() => {
+    if (!chatbotData || !metrics) return [];
+
+    const items = [];
+
+    const responseTime = parseFloat(chatbotData.avgResponseTime);
+    if (responseTime < 3) {
+      items.push({
+        title: "🤖 Tiempo de respuesta excelente",
+        content: `El tiempo de respuesta es excelente (${chatbotData.avgResponseTime}). Mantener este nivel de velocidad para garantizar la satisfacción del cliente.`
+      });
+    } else {
+      items.push({
+        title: "⏱️ Optimizar tiempo de respuesta",
+        content: `El tiempo de respuesta es ${chatbotData.avgResponseTime}. Considerar automatizar más respuestas frecuentes para mejorar la experiencia.`
+      });
+    }
+
+    if (chatbotData.topQuestions && chatbotData.topQuestions.length > 0) {
+      const topQuestion = chatbotData.topQuestions[0];
+      items.push({
+        title: "💬 Automatización de preguntas frecuentes",
+        content: `"${topQuestion.question}" se preguntó ${topQuestion.count} veces. Agregar respuesta destacada o mejorar visibilidad en FAQ.`
+      });
+    }
+
+    if (parseFloat(metrics.convertedRate) > 20) {
+      items.push({
+        title: "📈 Conversión superior al promedio",
+        content: `La tasa de conversión de ${metrics.convertedRate}% está por encima del promedio. Documentar el proceso para replicar el éxito.`
+      });
+    } else if (parseFloat(metrics.convertedRate) < 10) {
+      items.push({
+        title: "🎯 Mejorar cualificación de leads",
+        content: `Tasa de conversión de ${metrics.convertedRate}%. Optimizar preguntas de calificación y mejorar seguimiento de leads capturados.`
+      });
+    }
+
+    return items;
+  }, [chatbotData, metrics]);
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm z-50">
+      <div className="relative">
+        <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+        
+        <div className="relative w-24 h-24 rounded-full border-4 border-primary/20">
+          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin" />
+          <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-primary/60 animate-spin" style={{ animationDirection: "reverse", animationDuration: "1s" }} />
+        </div>
+      </div>
+    </div>
+    );
+  }
+
+  if (!chatbotData) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center"
+      >
+        <p className="text-yellow-800 font-medium text-lg">
+          No hay datos de chatbot disponibles
+        </p>
+        <p className="text-yellow-600 mt-2">
+          Los datos del chatbot aparecerán aquí una vez que se registren conversaciones
+        </p>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       key="chatbot"
@@ -18,9 +159,21 @@ const ChatbotSection = () => {
       className="space-y-6"
     >
       <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard title="Conversaciones" value={chatbotData.conversations} icon={FiMessageSquare} />
-        <StatCard title="Mensajes Enviados" value={chatbotData.messages} icon={FiMessageSquare} />
-        <StatCard title="Leads Capturados" value={chatbotData.leadsCaptures} icon={FiUsers} />
+        <StatCard 
+          title="Conversaciones" 
+          value={chatbotData.conversations} 
+          icon={FiMessageSquare} 
+        />
+        <StatCard 
+          title="Mensajes Enviados" 
+          value={chatbotData.messages} 
+          icon={FiMessageSquare} 
+        />
+        <StatCard 
+          title="Leads Capturados" 
+          value={chatbotData.leadsCaptures} 
+          icon={FiUsers} 
+        />
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -53,7 +206,7 @@ const ChatbotSection = () => {
               <div className="w-full bg-accent-foreground rounded-full h-3">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: '63%' }}
+                  animate={{ width: `${metrics.qualifiedPercentage}%` }}
                   transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
                   className="bg-primary h-3 rounded-full"
                 />
@@ -69,7 +222,7 @@ const ChatbotSection = () => {
               <div className="w-full bg-accent-foreground rounded-full h-3">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: '26%' }}
+                  animate={{ width: `${metrics.convertedPercentage}%` }}
                   transition={{ duration: 1, delay: 0.4, ease: "easeOut" }}
                   className="bg-primary h-3 rounded-full"
                 />
@@ -78,7 +231,7 @@ const ChatbotSection = () => {
           </div>
           <div className="mt-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
             <p className="text-sm text-foreground">
-              Tasa de conversión: <span className="text-primary font-semibold">25.8%</span>
+              Tasa de conversión: <span className="text-primary font-semibold">{metrics.convertedRate}%</span>
             </p>
           </div>
         </motion.div>
@@ -116,13 +269,7 @@ const ChatbotSection = () => {
       <motion.div variants={cardVariants} className="bg-background rounded-xl p-6 border border-primary">
         <h3 className="text-xl font-bold text-foreground mb-4">Preguntas Más Frecuentes</h3>
         <div className="space-y-3">
-          {[
-            { question: '¿Cuáles son los precios?', count: 87 },
-            { question: '¿Cómo puedo contactarlos?', count: 64 },
-            { question: '¿Tienen garantía?', count: 52 },
-            { question: '¿Tiempo de entrega?', count: 48 },
-            { question: '¿Formas de pago?', count: 41 }
-          ].map((item, i) => (
+          {chatbotData.topQuestions.map((item, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, x: -20 }}
@@ -141,20 +288,7 @@ const ChatbotSection = () => {
 
       <motion.div variants={cardVariants} className="bg-background rounded-xl p-6 border border-primary">
         <h3 className="text-xl font-bold text-primary mb-4">Recomendaciones IA</h3>
-        <Accordion items={[
-          {
-            title: "🤖 Tiempo de respuesta excelente",
-            content: "El tiempo de respuesta es excelente (2.3 min). Mantener este nivel de velocidad para garantizar la satisfacción del cliente."
-          },
-          {
-            title: "💬 Automatización de preguntas frecuentes",
-            content: "Agregar respuesta automática sobre precios para reducir consultas repetitivas y optimizar el tiempo del equipo."
-          },
-          {
-            title: "📈 Conversión superior al promedio",
-            content: "La tasa de conversión de 25.8% está por encima del promedio. Documentar el proceso para replicar el éxito."
-          }
-        ]} />
+        <Accordion items={recommendations} />
       </motion.div>
     </motion.div>
   );

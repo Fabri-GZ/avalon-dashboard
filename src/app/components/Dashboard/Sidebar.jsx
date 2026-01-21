@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { RxDashboard } from "react-icons/rx";
-import { FiGlobe, FiDollarSign, FiMessageSquare } from "react-icons/fi";
+import { FiGlobe, FiDollarSign, FiMessageSquare, FiUser } from "react-icons/fi";
 import { Sun, Moon, Settings, LogOut, User } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
@@ -19,6 +19,7 @@ const iconMap = {
   FiGlobe,
   FiDollarSign,
   FiMessageSquare,
+  FiUser,
 };
 
 const UserMenu = ({ onLogout, theme, setTheme, profile }) => {

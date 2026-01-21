@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import NumberTicker from "./NumberTicker";
-import { itemVariants } from "./data/mockData";
+import { itemVariants } from "./data/dataProcessors";
 
 const StatCard = ({ title, value, change, icon: Icon, index }) => {
   return (
