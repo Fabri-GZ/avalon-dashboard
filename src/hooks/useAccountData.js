@@ -74,7 +74,7 @@ export function useAccountData(clientId) {
     fetchAccountData();
   }, [clientId, supabase, trigger]);
 
-  const requestOffboarding = async (webhookUrl) => {
+  const requestOffboarding = async () => {
     if (!clientId || isUpdatingStatus) return { success: false, error: 'Invalid state' };
 
     try {
@@ -87,25 +87,26 @@ export function useAccountData(clientId) {
 
       if (updateError) throw updateError;
 
-      if (webhookUrl) {
-        try {
-          await fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              clientId,
-              action: 'offboarding_request',
-              timestamp: new Date().toISOString()
-            })
-          });
-        } catch (webhookError) {
-          console.warn('Webhook failed:', webhookError);
-        }
+      try {
+        const response = await fetch('/api/offboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId,
+            action: 'offboarding_request'
+          })
+        });
+        
+        const data = await response.json();
+        
+        setClientProfile(prev => prev ? { ...prev, status: 'offboarding' } : null);
+
+        return data; // Returns { success: true, offboardingUrl: ... } from API
+      } catch (webhookError) {
+        console.warn('Offboarding API call failed:', webhookError);
+        // Even if webhook fails, we updated the status locally
+        return { success: true, warning: 'Status updated but webhook failed' };
       }
-
-      setClientProfile(prev => prev ? { ...prev, status: 'offboarding' } : null);
-
-      return { success: true };
     } catch (err) {
       console.error('Error requesting offboarding:', err);
       return { success: false, error: err.message };
