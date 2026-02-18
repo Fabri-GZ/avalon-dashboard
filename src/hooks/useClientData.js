@@ -45,7 +45,10 @@ export function useClientData() {
         
         setClients(clientsData);
         if (clientsData.length > 0) {
-          setSelectedClient(clientsData[0]);
+          const savedClientId = typeof window !== 'undefined' ? localStorage.getItem('avalon_selected_client_id') : null;
+          const foundClient = savedClientId ? clientsData.find(c => c.id === savedClientId) : null;
+          
+          setSelectedClient(foundClient || clientsData[0]);
         }
       } 
       else if (profile.role === 'client_user' && profile.client_id) {
@@ -68,6 +71,14 @@ export function useClientData() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (selectedClient?.id) {
+      localStorage.setItem('avalon_selected_client_id', selectedClient.id);
+    }
+  }, [selectedClient]);
+
+
 
   return {
     clients,

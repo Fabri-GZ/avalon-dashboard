@@ -32,7 +32,7 @@ const StatCard = ({ title, value, change, icon: Icon, index }) => {
               borderColor: change > 0 ? "var(--success-border)" : "var(--danger-border)",
             }}
           >
-            {change > 0 ? '+' : ''}{change}%
+            {change > 0 ? '+' : ''}{change.toFixed(2).replace('.', ',')}%
           </motion.span>
         )}
       </div>

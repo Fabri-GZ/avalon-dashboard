@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { FiAlertCircle } from "react-icons/fi";
 import { useAccountData } from "@/hooks/useAccountData";
 import { containerVariants } from "../data/dataProcessors";
+import Loader from "@/app/components/Loader/loader";
 
 import CompanyProfileCard from "./account/CompanyProfileCard";
 import CredentialsCard from "./account/CredentialsCard";
@@ -28,15 +29,7 @@ const AccountSection = ({ client, userRole }) => {
   const isAdmin = userRole === 'admin_global';
 
   if (loading) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="flex items-center justify-center py-20"
-      >
-        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-      </motion.div>
-    );
+    return <Loader />;
   }
 
   if (error) {

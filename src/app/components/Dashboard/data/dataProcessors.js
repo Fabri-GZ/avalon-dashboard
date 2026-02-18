@@ -75,14 +75,13 @@ export function calculateWebsiteMetrics(websiteAnalytics) {
 }
 
 
-export function prepareChartData(data, dateField = 'date', valueFields = []) {
+import { formatDateByFilter } from './timeFilters';
+
+export function prepareChartData(data, dateField = 'date', valueFields = [], timeFilter = 'daily') {
   return data.map(item => {
     const chartItem = {
       date: item[dateField],
-      dateFormatted: new Date(item[dateField]).toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: 'short'
-      })
+      dateFormatted: formatDateByFilter(item[dateField], timeFilter)
     };
     
     valueFields.forEach(field => {

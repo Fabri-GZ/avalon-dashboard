@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Building2, Globe, Share2, DollarSign, Upload } from "lucide-react";
 import { completeOnboarding } from "@/lib/auth-actions";
 import { ToastContainer, toast } from "react-toastify";
+import Loader from "@/app/components/Loader/loader";
 
 const OnboardingPage = () => {
   const router = useRouter();
@@ -79,12 +80,12 @@ const OnboardingPage = () => {
 
   return (
     <div className="min-h-screen bg-secondary flex items-center justify-center p-4">
+      {isLoading && <Loader />}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-background rounded-2xl shadow-xl max-w-2xl w-full p-8"
       >
-        {/* Indicadores de Paso */}
         <div className="flex justify-center mb-8">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${step >= 1 ? 'bg-violet-500' : 'bg-gray-300'}`}>1</div>
           <div className="w-16 h-1 bg-gray-300 mx-2 self-center"></div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/app/utils/supabase/client';
 
-export function useAnalyticsData(clientId, dateRange = 30) {
+export function useAnalyticsData(clientId) {
   const [socialInsights, setSocialInsights] = useState([]);
   const [websiteAnalytics, setWebsiteAnalytics] = useState([]);
   const [socialDemographics, setSocialDemographics] = useState([]);
@@ -14,16 +14,22 @@ export function useAnalyticsData(clientId, dateRange = 30) {
     if (clientId) {
       fetchAnalyticsData();
     }
-  }, [clientId, dateRange]);
+  }, [clientId]);
 
   async function fetchAnalyticsData() {
     try {
       setLoading(true);
       setError(null);
 
-      const dateFrom = new Date();
-      dateFrom.setDate(dateFrom.getDate() - dateRange);
-      const dateFromStr = dateFrom.toISOString().split('T')[0];
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('onboarding_date')
+        .eq('id', clientId)
+        .single();
+
+      if (clientError) throw clientError;
+
+      const dateFromStr = clientData.onboarding_date;
 
       const { data: socialData, error: socialError } = await supabase
         .from('social_insights')

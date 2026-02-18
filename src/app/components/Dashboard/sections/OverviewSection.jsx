@@ -16,11 +16,16 @@ import {
   cardVariants
 } from "../data/dataProcessors";
 
-const OverviewSection = ({ client, socialInsights, websiteAnalytics, socialDemographics, dateRange }) => {
+import { applyTimeFilter } from "../data/timeFilters";
+
+const OverviewSection = ({ client, socialInsights, websiteAnalytics, socialDemographics, timeFilter }) => {
 
   const metrics = useMemo(() => {
-    const socialPeriods = splitIntoPeriods(socialInsights);
-    const websitePeriods = splitIntoPeriods(websiteAnalytics);
+    const filteredSocial = applyTimeFilter(socialInsights, timeFilter);
+    const filteredWebsite = applyTimeFilter(websiteAnalytics, timeFilter);
+
+    const socialPeriods = splitIntoPeriods(filteredSocial);
+    const websitePeriods = splitIntoPeriods(filteredWebsite);
 
     const currentSocial = calculateSocialMetrics(socialPeriods.current);
     const previousSocial = calculateSocialMetrics(socialPeriods.previous);
@@ -46,15 +51,17 @@ const OverviewSection = ({ client, socialInsights, websiteAnalytics, socialDemog
         change: calculatePercentageChange(currentWebsite.totalUsers, previousWebsite.totalUsers)
       }
     };
-  }, [socialInsights, websiteAnalytics]);
+  }, [socialInsights, websiteAnalytics, timeFilter]);
 
   const socialChartData = useMemo(() => {
-    return prepareChartData(socialInsights, 'date', ['reach', 'impressions']);
-  }, [socialInsights]);
+    const filteredSocial = applyTimeFilter(socialInsights, timeFilter);
+    return prepareChartData(filteredSocial, 'date', ['reach', 'impressions'], timeFilter);
+  }, [socialInsights, timeFilter]);
 
   const websiteChartData = useMemo(() => {
-    return prepareChartData(websiteAnalytics, 'date', ['sessions', 'users']);
-  }, [websiteAnalytics]);
+    const filteredWebsite = applyTimeFilter(websiteAnalytics, timeFilter);
+    return prepareChartData(filteredWebsite, 'date', ['sessions', 'users'], timeFilter);
+  }, [websiteAnalytics, timeFilter]);
 
   return (
     <motion.div
@@ -98,11 +105,11 @@ const OverviewSection = ({ client, socialInsights, websiteAnalytics, socialDemog
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div variants={cardVariants} className="bg-background rounded-xl p-6 border border-secondary">
-          <h3 className="text-xl font-bold text-primary mb-4">Crecimiento de Seguidores</h3>
+          <h3 className="text-xl font-bold text-primary mb-4">Alcance Total</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={socialChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--secondary)" />
-              <XAxis dataKey="month" stroke="var(--muted-foreground)" />
+              <XAxis dataKey="dateFormatted" stroke="var(--muted-foreground)" />
               <YAxis stroke="var(--muted-foreground)" />
               <Tooltip 
                 contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--secondary)' }}

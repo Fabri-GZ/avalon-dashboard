@@ -1,4 +1,3 @@
-// src/app/components/Dashboard/sections/ChatbotSection.jsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";

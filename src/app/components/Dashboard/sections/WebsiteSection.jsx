@@ -17,9 +17,12 @@ import {
   cardVariants
 } from "../data/dataProcessors";
 
-const WebsiteSection = ({ client, websiteAnalytics, dateRange }) => {
+import { applyTimeFilter } from "../data/timeFilters";
+
+const WebsiteSection = ({ client, websiteAnalytics, timeFilter }) => {
   const metrics = useMemo(() => {
-    const periods = splitIntoPeriods(websiteAnalytics);
+    const filteredWebsite = applyTimeFilter(websiteAnalytics, timeFilter);
+    const periods = splitIntoPeriods(filteredWebsite);
     const current = calculateWebsiteMetrics(periods.current);
     const previous = calculateWebsiteMetrics(periods.previous);
 
@@ -45,11 +48,12 @@ const WebsiteSection = ({ client, websiteAnalytics, dateRange }) => {
         change: calculatePercentageChange(current.totalConversions, previous.totalConversions)
       }
     };
-  }, [websiteAnalytics]);
+  }, [websiteAnalytics, timeFilter]);
 
   const trafficData = useMemo(() => {
-    return prepareChartData(websiteAnalytics, 'date', ['sessions', 'users', 'pageviews']);
-  }, [websiteAnalytics]);
+    const filteredWebsite = applyTimeFilter(websiteAnalytics, timeFilter);
+    return prepareChartData(filteredWebsite, 'date', ['sessions', 'users', 'pageviews'], timeFilter);
+  }, [websiteAnalytics, timeFilter]);
 
   const conversionRate = useMemo(() => {
     return metrics.sessions.value > 0 

@@ -17,8 +17,8 @@ import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 const DashboardContent = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [dateRange, setDateRange] = useState(30);
-  const profile = useUserProfile();
+  const [timeFilter, setTimeFilter] = useState('monthly');
+  const { profile } = useUserProfile();
 
    const {
     clients,
@@ -36,7 +36,7 @@ const DashboardContent = ({ onLogout }) => {
     loading: analyticsLoading,
     error: analyticsError,
     refetch
-  } = useAnalyticsData(selectedClient?.id, dateRange);
+  } = useAnalyticsData(selectedClient?.id);
 
   const loading = clientLoading || analyticsLoading;
   const error = clientError || analyticsError;
@@ -91,7 +91,7 @@ const DashboardContent = ({ onLogout }) => {
 
   return (
     <div className="min-h-screen bg-secondary lg:flex flex-row">
-      <Sidebar 
+      <Sidebar
         mobile={false} 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -128,13 +128,13 @@ const DashboardContent = ({ onLogout }) => {
           activeTab={activeTab} 
           setSidebarOpen={setSidebarOpen}
           navigation={navigation}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
           onRefresh={refetch}
           userRole={userRole}
           clients={clients}
           selectedClient={selectedClient}
           onClientChange={handleClientChange}
+          timeFilter={timeFilter}
+          setTimeFilter={setTimeFilter}
         />
 
         <main className="p-4 lg:p-6">
@@ -145,7 +145,7 @@ const DashboardContent = ({ onLogout }) => {
                 socialInsights={socialInsights}
                 websiteAnalytics={websiteAnalytics}
                 socialDemographics={socialDemographics}
-                dateRange={dateRange}
+                timeFilter={timeFilter}
               />
             )}
 
@@ -153,7 +153,7 @@ const DashboardContent = ({ onLogout }) => {
               <WebsiteSection
                 client={selectedClient}
                 websiteAnalytics={websiteAnalytics}
-                dateRange={dateRange}
+                timeFilter={timeFilter}
               />
             )}
 
@@ -162,14 +162,13 @@ const DashboardContent = ({ onLogout }) => {
                 client={selectedClient}
                 socialInsights={socialInsights}
                 socialDemographics={socialDemographics}
-                dateRange={dateRange}
+                timeFilter={timeFilter}
               />
             )}
 
             {activeTab === 'chatbot' && (
               <ChatbotSection
                 client={selectedClient}
-                dateRange={dateRange}
               />
             )}
 

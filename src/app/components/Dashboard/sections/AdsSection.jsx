@@ -18,10 +18,13 @@ import {
   cardVariants,
 } from "../data/dataProcessors";
 
-const AdsSection = ({ client, socialInsights, socialDemographics, dateRange }) => {
+import { applyTimeFilter } from "../data/timeFilters";
+
+const AdsSection = ({ client, socialInsights, socialDemographics, timeFilter }) => {
 
   const metrics = useMemo(() => {
-    const periods = splitIntoPeriods(socialInsights);
+    const filteredSocial = applyTimeFilter(socialInsights, timeFilter);
+    const periods = splitIntoPeriods(filteredSocial);
     const current = calculateSocialMetrics(periods.current);
     const previous = calculateSocialMetrics(periods.previous);
 
@@ -47,14 +50,16 @@ const AdsSection = ({ client, socialInsights, socialDemographics, dateRange }) =
       },
       costPerEngagement
     };
-  }, [socialInsights]);
+  }, [socialInsights, timeFilter]);
 
   const performanceData = useMemo(() => {
-    return prepareChartData(socialInsights, 'date', ['impressions', 'likes', 'comments', 'saves']);
-  }, [socialInsights]);
+    const filteredSocial = applyTimeFilter(socialInsights, timeFilter);
+    return prepareChartData(filteredSocial, 'date', ['impressions', 'likes', 'comments', 'saves'], timeFilter);
+  }, [socialInsights, timeFilter]);
 
   const platformMetrics = useMemo(() => {
-    const grouped = groupByPlatform(socialInsights);
+    const filteredSocial = applyTimeFilter(socialInsights, timeFilter);
+    const grouped = groupByPlatform(filteredSocial);
     return Object.keys(grouped).map(platform => {
       const metrics = calculateSocialMetrics(grouped[platform]);
       return {
@@ -64,7 +69,7 @@ const AdsSection = ({ client, socialInsights, socialDemographics, dateRange }) =
         reach: metrics.totalReach
       };
     });
-  }, [socialInsights]);
+  }, [socialInsights, timeFilter]);
 
   const recommendations = useMemo(() => {
     const items = [];

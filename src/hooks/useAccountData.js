@@ -32,7 +32,6 @@ export function useAccountData(clientId) {
         setLoading(true);
         setError(null);
 
-        // Obtener datos del cliente
         const { data: clientData, error: clientError } = await supabase
           .from('clients')
           .select('id, company_name, logo_url, onboarding_date, services_contracted, status')
@@ -42,7 +41,6 @@ export function useAccountData(clientId) {
         if (clientError) throw clientError;
         setClientProfile(clientData);
 
-        // Obtener recursos del cliente
         const { data: resourcesData, error: resourcesError } = await supabase
           .from('client_resources')
           .select('*')
@@ -51,7 +49,6 @@ export function useAccountData(clientId) {
 
         if (resourcesError) throw resourcesError;
 
-        // Filtrar por tipo
         const creds = resourcesData?.filter(r => r.type === 'credential') || [];
         const reps = resourcesData?.filter(r => r.type === 'report') || [];
         const drive = resourcesData?.find(r => r.type === 'drive') || null;
@@ -101,10 +98,10 @@ export function useAccountData(clientId) {
         
         setClientProfile(prev => prev ? { ...prev, status: 'offboarding' } : null);
 
-        return data; // Returns { success: true, offboardingUrl: ... } from API
+        return data;
       } catch (webhookError) {
         console.warn('Offboarding API call failed:', webhookError);
-        // Even if webhook fails, we updated the status locally
+
         return { success: true, warning: 'Status updated but webhook failed' };
       }
     } catch (err) {
