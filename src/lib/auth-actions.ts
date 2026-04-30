@@ -20,7 +20,7 @@ export async function login(formData: FormData) {
 
   const { error } = await supabase.auth.signInWithPassword(credentials);
 
-  if (error) redirect("/error");
+  if (error) redirect(`/error?message=${encodeURIComponent(error.message)}`);
 
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -31,22 +31,35 @@ export async function login(formData: FormData) {
       .eq("id", user.id)
       .single();
 
-     if (profileError || !profile?.client_id) {
+    if (profileError?.code === "PGRST116") {
+      await supabaseAdmin.from("user_profiles").insert({
+        id: user.id,
+        full_name: user.user_metadata?.full_name ?? user.email,
+        email: user.email,
+        role: "client_user",
+      });
       revalidatePath("/", "layout");
       redirect("/onboarding");
     }
-    const { data: client, error: clientError } = await supabase
-        .from('clients')
-        .select('onboarding_completed')
-        .eq('id', profile.client_id)
-        .single();
-      if (clientError || !client?.onboarding_completed) {
-        revalidatePath("/", "layout");
-        redirect("/onboarding");
-      }
+
+    if (profileError || !profile?.client_id) {
+      revalidatePath("/", "layout");
+      redirect("/onboarding");
     }
-    revalidatePath("/", "layout");
-    redirect("/dashboard");
+
+    const { data: client, error: clientError } = await supabase
+      .from('clients')
+      .select('onboarding_completed')
+      .eq('id', profile.client_id)
+      .single();
+
+    if (clientError || !client?.onboarding_completed) {
+      revalidatePath("/", "layout");
+      redirect("/onboarding");
+    }
+  }
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
 }
 
 export async function completeOnboarding(formData: FormData) {
@@ -104,7 +117,7 @@ export async function completeOnboarding(formData: FormData) {
       industry: industry,
       logo_url: logoUrl,
       services_contracted: services,
-      onboarding_completed: false,
+      onboarding_completed: true,
     })
     .select()
     .single();
@@ -116,13 +129,13 @@ export async function completeOnboarding(formData: FormData) {
 
   const { error: profileError } = await supabaseAdmin
     .from("user_profiles")
-    .update({ 
+    .upsert({
+      id: user.id,
       client_id: client.id,
       phone: phone,
       email: user.email,
       avatar_url: logoUrl,
-    })
-    .eq("id", user.id);
+    });
 
   if (profileError) {
     console.error("Error updating profile:", profileError);
@@ -184,7 +197,7 @@ export async function signout() {
     redirect("/error");
   }
 
-  redirect("/logout");
+  redirect("/login");
 }
 
 export async function signInWithGoogle() {
