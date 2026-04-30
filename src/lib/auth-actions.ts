@@ -135,6 +135,7 @@ export async function completeOnboarding(formData: FormData) {
       phone: phone,
       email: user.email,
       avatar_url: logoUrl,
+      role: "client_user",
     });
 
   if (profileError) {
