@@ -6,7 +6,7 @@ import { createClient } from "../app/utils/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createAdminClient(
-  process.env.SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
