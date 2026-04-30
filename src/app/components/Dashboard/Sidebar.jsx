@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { RxDashboard } from "react-icons/rx";
-import { FiGlobe, FiDollarSign, FiMessageSquare, FiUser } from "react-icons/fi";
+import { FiGlobe, FiDollarSign, FiMessageSquare, FiUser, FiShield, FiArrowLeft } from "react-icons/fi";
 import { Sun, Moon, Settings, LogOut, User, ChevronsUpDown, Check, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
+import UserMenu from "./UserMenu";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const iconMap = {
   RxDashboard,
@@ -23,6 +25,8 @@ const iconMap = {
   FiDollarSign,
   FiMessageSquare,
   FiUser,
+  FiShield,
+  FiArrowLeft,
 };
 
 const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile }) => {
@@ -143,68 +147,21 @@ const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile }) =>
   );
 };
 
-const UserMenu = ({ onLogout, theme, setTheme, profile }) => {
-  const name = profile?.full_name || "Usuario";
-  const email = profile?.email || "";
-  const avatar = profile?.avatar_url;
-  
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="w-full focus:outline-none">
-        <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors duration-200 cursor-pointer">
-          {avatar ? (
-            <img
-              src={avatar}
-              alt="Avatar"
-              className="w-10 h-10 rounded-full object-cover shadow"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-linear-to-br from-primary to-primary/80 flex items-center justify-center shadow-md">
-              <User className="w-5 h-5 text-primary-foreground" />
-            </div>
-          )}
-          <div className="flex-1 text-left overflow-hidden">
-            <p className="text-sm font-semibold text-foreground truncate">{name}</p>
-            <p className="text-xs text-muted-foreground truncate">{email}</p>
-          </div>
-          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
-        </div>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 rounded-xl border border-border/50 shadow-xl backdrop-blur-sm bg-background/95 p-2" align="end" side="top">
-        <DropdownMenuItem className="flex gap-3 cursor-pointer p-3 rounded-lg data-highlighted:bg-muted data-highlighted:text-foreground transition-all ease-in duration-200">
-          <Settings className="w-4 h-4" />
-          <span>Configuración</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-          className="flex gap-3 cursor-pointer p-3 rounded-lg data-highlighted:bg-muted data-highlighted:text-foreground transition-all ease-in duration-200"
-        >
-          {theme === "light" ? (
-            <>
-              <Moon className="w-4 h-4" />
-              <span>Modo oscuro</span>
-            </>
-          ) : (
-            <>
-              <Sun className="w-4 h-4" />
-              <span>Modo claro</span>
-            </>
-          )}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator className="my-2" />
-        <DropdownMenuItem
-          onClick={onLogout}
-          className="flex gap-3 cursor-pointer p-3 rounded-lg data-highlighted:bg-muted data-highlighted:text-destructive transition-all ease-in duration-200"
-        >
-          <LogOut className="w-4 h-4 transition-colors group-hover:text-destructive" />
-          <span className="group-hover:text-destructive">Cerrar sesión</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-};
-
-const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, navigation, profile, userRole, clients, selectedClient, onClientChange }) => {
+const Sidebar = ({ 
+  mobile, 
+  activeTab, 
+  setActiveTab, 
+  setSidebarOpen, 
+  onLogout, 
+  navigation: dashboardNavigation, 
+  profile, 
+  userRole, 
+  clients, 
+  selectedClient, 
+  onClientChange,
+  variant = "dashboard"
+}) => {
+  const router = useRouter();
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
       if (document.documentElement.classList.contains('dark')) {
@@ -253,7 +210,7 @@ const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, na
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className="w-full px-4 py-4 mb-2 border-b border-border min-h-[80px] flex items-center"
+          className="w-full px-4 border-b border-border h-[95px] flex items-center"
         >
           {isAdminGlobal ? (
             <CompanySwitcher 
@@ -278,13 +235,20 @@ const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, na
           )}
         </motion.div>
 
-        <nav className="flex-1 flex flex-col gap-2 p-4 overflow-y-auto">
-          {navigation.map((item, idx) => {
-            const Icon = iconMap[item.icon];
-            const isActive = activeTab === item.id;
-            
-            return (
-              <motion.button
+        <nav className="flex-1 flex flex-col p-4">
+          <div className="flex flex-col gap-2">
+            {(variant === "settings" 
+              ? [
+                { id: "profile", name: "Perfil", icon: "FiUser" },
+                { id: "security", name: "Seguridad", icon: "FiShield" }
+              ]
+              : dashboardNavigation
+            ).map((item, idx) => {
+              const Icon = iconMap[item.icon];
+              const isActive = activeTab === item.id;
+
+              return (
+                <motion.button
                 key={item.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -297,28 +261,32 @@ const Sidebar = ({ mobile, activeTab, setActiveTab, setSidebarOpen, onLogout, na
                 }}
                 className={`relative group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? "bg-primary/10 text-primary font-semibold shadow-sm"
-                    : "text-muted-foreground hover:bg-primary/10 hover:text-primary font-medium"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20"
+                  : "text-muted-foreground hover:bg-primary/10 hover:text-primary font-medium"
                 }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-md">{item.name}</span>
+                </motion.button>
+              );
+            })}
+          </div>
+          <div className="mt-auto">
+          {variant === "settings" && (
+            <motion.button
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3 }}
+              whileHover={{ x: -4 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => router.push("/dashboard")}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-primary font-bold bg-primary/5 hover:bg-primary/10 transition-all duration-200 mb-4 w-full"
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-md">{item.name}</span>
-                
-                <AnimatePresence>
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeIndicator"
-                      initial={{ scaleY: 0, opacity: 0 }}
-                      animate={{ scaleY: 1, opacity: 1 }}
-                      exit={{ scaleY: 0, opacity: 0 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                      className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary rounded-r"
-                    />
-                  )}
-                </AnimatePresence>
-              </motion.button>
-            );
-          })}
+              <FiArrowLeft className="w-5 h-5" />
+              <span>Volver al Dashboard</span>
+            </motion.button>
+          )}
+          </div>
         </nav>
 
         <div className="p-4 border-t border-border">

@@ -2,15 +2,26 @@
 
 import { motion } from "framer-motion";
 
-export const ServiceBadge = ({ service }) => (
-  <motion.span
-    initial={{ opacity: 0, scale: 0.8 }}
-    animate={{ opacity: 1, scale: 1 }}
-    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
-  >
-    {service}
-  </motion.span>
-);
+export const ServiceBadge = ({ service }) => {
+  const serviceMap = {
+    'social_media': 'Redes Sociales',
+    'website': 'Sitio Web',
+    'ads': 'Publicidades'
+  };
+
+  const label = serviceMap[service?.toLowerCase()] || service;
+
+  return (
+    <motion.span
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+    >
+      {label}
+    </motion.span>
+  );
+};
+
 
 export const StatusBadge = ({ status }) => {
   const isActive = status === 'active';

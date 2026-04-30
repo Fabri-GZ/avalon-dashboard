@@ -160,8 +160,22 @@ const AdsSection = ({ client, socialInsights, socialDemographics, timeFilter }) 
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={performanceData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--secondary)" />
-            <XAxis dataKey="dateFormatted" stroke="var(--muted-foreground)" />
-            <YAxis stroke="var(--muted-foreground)" />
+            <XAxis 
+              dataKey="dateFormatted" 
+              stroke="var(--muted-foreground)" 
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              minTickGap={30}
+              tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
+            />
+            <YAxis 
+              stroke="var(--muted-foreground)" 
+              fontSize={11}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value) => formatNumber(value)}
+            />
             <Tooltip 
               contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--secondary)' }}
               labelStyle={{ color: 'var(--muted-foreground)' }}

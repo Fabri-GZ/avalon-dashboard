@@ -1,17 +1,13 @@
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { FiUser } from "react-icons/fi";
+import { formatRelativeTime } from '@/app/utils/relativeTime';
 
 export const formatRelativeDate = (dateString) => {
   if (!dateString) return "Sin sincronizar";
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
-  if (diffDays === 0) return "hoy";
-  if (diffDays === 1) return "hace 1 día";
-  return `hace ${diffDays} días`;
+  return formatRelativeTime(dateString);
 };
+
+
 
 export const formatOnboardingDate = (dateString) => {
   if (!dateString) return "";

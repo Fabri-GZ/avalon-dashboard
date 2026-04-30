@@ -92,24 +92,8 @@ export function applyTimeFilter(data, filterType, dateField = 'date') {
 }
 
 
+import { formatDate } from '@/app/utils/dateFormatter';
+
 export function formatDateByFilter(dateString, filterType) {
-  const date = new Date(dateString);
-  
-  switch (filterType) {
-    case 'daily':
-      return date.toLocaleDateString('es-AR', { 
-        day: '2-digit', 
-        month: 'short',
-        year: 'numeric'
-      });
-    case 'monthly':
-      return date.toLocaleDateString('es-AR', { 
-        month: 'short', 
-        year: 'numeric' 
-      });
-    case 'annual':
-      return date.getFullYear().toString();
-    default:
-      return dateString;
-  }
+  return formatDate(dateString, filterType);
 }

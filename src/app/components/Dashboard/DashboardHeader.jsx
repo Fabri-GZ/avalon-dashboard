@@ -3,15 +3,18 @@
 import { motion } from "framer-motion";
 import { FiMenu, FiCalendar } from "react-icons/fi";
 
-const DashboardHeader = ({ activeTab, setSidebarOpen, navigation, timeFilter, setTimeFilter }) => {
+const DashboardHeader = ({ activeTab, setSidebarOpen, navigation, timeFilter, setTimeFilter, title }) => {
   const filterOptions = [
     { value: 'daily', label: 'Diario' },
     { value: 'monthly', label: 'Mensual' },
     { value: 'annual', label: 'Anual' }
   ]
+  
+  const displayTitle = title || navigation.find(item => item.id === activeTab)?.name;
+
   return (
-    <header className="bg-background p-4 lg:p-6 sticky top-0 z-40 border-b border-border">
-      <div className="flex items-center justify-between">
+    <header className="bg-background h-[95px] px-4 lg:px-8 sticky top-0 z-40 border-b border-border flex items-center">
+      <div className="flex items-center justify-between w-full">
         <div className="flex items-center gap-4">
           <motion.button
             initial={{ opacity: 0, x: -20 }}
@@ -24,13 +27,13 @@ const DashboardHeader = ({ activeTab, setSidebarOpen, navigation, timeFilter, se
           </motion.button>
           
           <motion.h2
-            key={activeTab}
+            key={displayTitle}
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2, ease: "easeIn" }}
-            className="text-2xl font-bold text-foreground"
+            className="text-2xl font-extrabold text-foreground tracking-tight"
           >
-            {navigation.find(item => item.id === activeTab)?.name}
+            {displayTitle}
           </motion.h2>
         </div>
 
