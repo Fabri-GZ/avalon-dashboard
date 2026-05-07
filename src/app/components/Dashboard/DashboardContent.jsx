@@ -14,8 +14,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useClientData } from "@/hooks/useClientData";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 
-const DashboardContent = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState('overview');
+const DashboardContent = ({ onLogout, initialTab = 'overview' }) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [timeFilter, setTimeFilter] = useState('monthly');
   const { profile } = useUserProfile();
@@ -25,6 +25,7 @@ const DashboardContent = ({ onLogout }) => {
     selectedClient,
     setSelectedClient,
     userRole,
+    allowedSections,
     loading: clientLoading,
     error: clientError
   } = useClientData();
@@ -81,7 +82,9 @@ const DashboardContent = ({ onLogout }) => {
     );
   }
 
-  if (!selectedClient) {
+  const isInternalRole = userRole && ['admin_global', 'cm', 'pm', 'comercial'].includes(userRole);
+
+  if (!selectedClient && !isInternalRole) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p className="text-gray-600">No se encontró información del cliente.</p>
@@ -92,9 +95,9 @@ const DashboardContent = ({ onLogout }) => {
   return (
     <div className="min-h-screen bg-secondary lg:flex flex-row">
       <Sidebar
-        mobile={false} 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        mobile={false}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
         setSidebarOpen={setSidebarOpen}
         onLogout={onLogout}
         navigation={navigation}
@@ -103,14 +106,15 @@ const DashboardContent = ({ onLogout }) => {
         clients={clients}
         selectedClient={selectedClient}
         onClientChange={handleClientChange}
+        allowedSections={allowedSections}
       />
       
       <AnimatePresence>
         {sidebarOpen && (
-          <Sidebar 
-            mobile={true} 
-            activeTab={activeTab} 
-            setActiveTab={setActiveTab} 
+          <Sidebar
+            mobile={true}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
             setSidebarOpen={setSidebarOpen}
             onLogout={onLogout}
             navigation={navigation}
@@ -119,6 +123,7 @@ const DashboardContent = ({ onLogout }) => {
             clients={clients}
             selectedClient={selectedClient}
             onClientChange={handleClientChange}
+            allowedSections={allowedSections}
           />
         )}
       </AnimatePresence>
@@ -170,6 +175,33 @@ const DashboardContent = ({ onLogout }) => {
               <ChatbotSection
                 client={selectedClient}
               />
+            )}
+
+            {activeTab === 'social' && (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold text-foreground mb-2">Redes Sociales</h2>
+                  <p className="text-muted-foreground">Próximamente</p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'commercial' && (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold text-foreground mb-2">Comercial</h2>
+                  <p className="text-muted-foreground">Próximamente</p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'pm' && (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold text-foreground mb-2">Gestión de Proyectos</h2>
+                  <p className="text-muted-foreground">Próximamente</p>
+                </div>
+              </div>
             )}
 
             {activeTab === 'account' && (

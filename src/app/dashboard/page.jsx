@@ -1,17 +1,19 @@
-"use client";
+import { redirect } from 'next/navigation';
+import { createClient } from '@/app/utils/supabase/server';
+import { defaultRouteForRole } from '@/lib/permissions';
 
-import { useRouter } from "next/navigation";
-import { createClient } from "@/app/utils/supabase/client";
-import DashboardContent from "../components/Dashboard/DashboardContent";
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-export default function DashboardPage() {
-  const router = useRouter();
-  
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
+  if (!user) redirect('/login');
 
-  return <DashboardContent onLogout={handleLogout} />;
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  const role = profile?.role ?? 'client_user';
+  redirect(defaultRouteForRole(role));
 }

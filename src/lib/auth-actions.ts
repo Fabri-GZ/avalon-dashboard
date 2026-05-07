@@ -27,7 +27,7 @@ export async function login(formData: FormData) {
   if (user) {
     const { data: profile, error: profileError } = await supabase
       .from("user_profiles")
-      .select(`client_id`)
+      .select(`client_id, role`)
       .eq("id", user.id)
       .single();
 
@@ -42,20 +42,29 @@ export async function login(formData: FormData) {
       redirect("/onboarding");
     }
 
-    if (profileError || !profile?.client_id) {
+    if (profileError) {
       revalidatePath("/", "layout");
       redirect("/onboarding");
     }
 
-    const { data: client, error: clientError } = await supabase
-      .from('clients')
-      .select('onboarding_completed')
-      .eq('id', profile.client_id)
-      .single();
+    const isClientUser = profile?.role === "client_user";
 
-    if (clientError || !client?.onboarding_completed) {
+    if (isClientUser && !profile?.client_id) {
       revalidatePath("/", "layout");
       redirect("/onboarding");
+    }
+
+    if (isClientUser && profile?.client_id) {
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('onboarding_completed')
+        .eq('id', profile.client_id)
+        .single();
+
+      if (clientError || !client?.onboarding_completed) {
+        revalidatePath("/", "layout");
+        redirect("/onboarding");
+      }
     }
   }
   revalidatePath("/", "layout");

@@ -182,9 +182,12 @@ export const cardVariants = {
 };
 
 export const navigation = [
-  { id: 'overview', name: 'Resumen', icon: 'RxDashboard' },
-  { id: 'website', name: 'Web', icon: 'FiGlobe' },
-  { id: 'ads', name: 'Ads', icon: 'FiDollarSign' },
-  { id: 'chatbot', name: 'Bot', icon: 'FiMessageSquare' },
-  { id: 'account', name: 'Cuenta', icon: 'FiUser' },
+  { id: 'overview',   name: 'Resumen',   icon: 'RxDashboard',     href: '/dashboard/overview' },
+  { id: 'website',    name: 'Web',       icon: 'FiGlobe',          href: '/dashboard/website' },
+  { id: 'ads',        name: 'Ads',       icon: 'FiDollarSign',     href: '/dashboard/ads' },
+  { id: 'social',     name: 'Redes',     icon: 'FiShare2',         href: '/dashboard/social' },
+  { id: 'chatbot',    name: 'Bot',       icon: 'FiMessageSquare',  href: '/dashboard/chatbot' },
+  { id: 'commercial', name: 'Comercial', icon: 'FiBriefcase',      href: '/dashboard/commercial' },
+  { id: 'pm',         name: 'Proyectos', icon: 'FiClipboard',      href: '/dashboard/pm' },
+  { id: 'account',    name: 'Cuenta',    icon: 'FiUser',           href: '/dashboard/account' },
 ];

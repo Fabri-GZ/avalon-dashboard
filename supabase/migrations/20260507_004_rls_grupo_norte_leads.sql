@@ -1,0 +1,1 @@
+ALTER TABLE grupo_norte_leads ENABLE ROW LEVEL SECURITY;

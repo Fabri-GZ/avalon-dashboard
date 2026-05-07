@@ -7,6 +7,7 @@ export function useClientData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [allowedSections, setAllowedSections] = useState(null);
 
   const supabase = createClient();
 
@@ -35,6 +36,12 @@ export function useClientData() {
 
       setUserRole(profile.role);
 
+      const { data: perms } = await supabase
+        .from('section_permissions')
+        .select('section_key')
+        .eq('role', profile.role);
+      setAllowedSections((perms ?? []).map(p => p.section_key));
+
       if (profile.role === 'admin_global') {
         const { data: clientsData, error: clientsError } = await supabase
           .from('clients')
@@ -54,7 +61,7 @@ export function useClientData() {
       else if (profile.role === 'client_user' && profile.client_id) {
         const { data: clientData, error: clientError } = await supabase
           .from('clients')
-          .select('*')
+          .select('*, services_contracted')
           .eq('id', profile.client_id)
           .single();
 
@@ -62,6 +69,36 @@ export function useClientData() {
 
         setClients([clientData]);
         setSelectedClient(clientData);
+
+        const SERVICE_GATED = ['website', 'ads', 'social', 'chatbot'];
+        const contracted = clientData?.services_contracted || [];
+        const sections = (perms ?? []).map(p => p.section_key);
+        const filtered = sections.filter(s =>
+          !SERVICE_GATED.includes(s) || contracted.includes(s)
+        );
+        setAllowedSections(filtered);
+      } else if (['cm', 'pm'].includes(profile.role)) {
+        // cm and pm can see all clients (same as admin_global)
+        const { data: clientsData, error: clientsError } = await supabase
+          .from('clients')
+          .select('*')
+          .order('company_name');
+
+        if (clientsError) throw clientsError;
+
+        setClients(clientsData ?? []);
+        if (clientsData && clientsData.length > 0) {
+          const savedClientId = typeof window !== 'undefined' ? localStorage.getItem('avalon_selected_client_id') : null;
+          const foundClient = savedClientId ? clientsData.find(c => c.id === savedClientId) : null;
+          setSelectedClient(foundClient || clientsData[0]);
+        } else {
+          // internal roles don't need a client to function
+          setSelectedClient({ id: null, company_name: 'Sin cliente' });
+        }
+      } else {
+        // comercial and other internal roles: no client context needed
+        setSelectedClient({ id: null, company_name: 'Avalon' });
+        setClients([]);
       }
 
     } catch (err) {
@@ -85,6 +122,7 @@ export function useClientData() {
     selectedClient,
     setSelectedClient,
     userRole,
+    allowedSections,
     loading,
     error,
     refetch: fetchClientData

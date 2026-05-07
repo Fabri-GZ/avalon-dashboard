@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { requiredSectionFor, defaultRouteForRole, KNOWN_ROLES } from '@/lib/permissions';
+import type { Role } from '@/lib/permissions';
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -35,9 +37,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   const publicRoutes = ['/login', '/signup', '/forgot-password', '/auth'];
-  const isPublicRoute = publicRoutes.some(route =>
-    pathname.startsWith(route)
-  );
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
   if (!user && !isPublicRoute && pathname !== '/') {
     const redirectUrl = request.nextUrl.clone();
@@ -47,44 +47,56 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && isPublicRoute) {
-    return NextResponse.redirect(
-      new URL('/dashboard', request.url)
-    );
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  if (user && pathname.startsWith('/dashboard')) {
-    const { data: profile, error } = await supabase
+  if (user && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin'))) {
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('client_id, role')
       .eq('id', user.id)
       .single();
 
-    if (error || !profile) {
-      return NextResponse.redirect(new URL('/login', request.url));
+    if (profileError || !profile) {
+      return NextResponse.redirect(new URL('/login?error=no_profile', request.url));
     }
 
-    const { role, client_id } = profile;
+    const role = profile.role as Role;
 
-    if (role === 'admin') {
-      return response;
+    if (!KNOWN_ROLES.includes(role)) {
+      return NextResponse.redirect(new URL('/login?error=unknown_role', request.url));
     }
 
+    // client_user onboarding guard
     if (role === 'client_user') {
-      if (!client_id) {
-        return NextResponse.redirect(
-          new URL('/onboarding', request.url)
-        );
+      if (!profile.client_id) {
+        return NextResponse.redirect(new URL('/onboarding', request.url));
       }
 
       const { data: client } = await supabase
         .from('clients')
         .select('onboarding_completed')
-        .eq('id', client_id)
+        .eq('id', profile.client_id)
         .single();
 
       if (!client?.onboarding_completed) {
+        return NextResponse.redirect(new URL('/onboarding', request.url));
+      }
+    }
+
+    const requiredSection = requiredSectionFor(pathname);
+
+    if (requiredSection) {
+      const { data: perms } = await supabase
+        .from('section_permissions')
+        .select('section_key')
+        .eq('role', role);
+
+      const allowed = (perms ?? []).map((p: { section_key: string }) => p.section_key);
+
+      if (!allowed.includes(requiredSection)) {
         return NextResponse.redirect(
-          new URL('/onboarding', request.url)
+          new URL(defaultRouteForRole(role), request.url)
         );
       }
     }

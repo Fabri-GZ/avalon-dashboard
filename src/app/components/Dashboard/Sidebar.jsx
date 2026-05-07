@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { RxDashboard } from "react-icons/rx";
-import { FiGlobe, FiDollarSign, FiMessageSquare, FiUser, FiShield, FiArrowLeft } from "react-icons/fi";
+import { FiGlobe, FiDollarSign, FiMessageSquare, FiUser, FiShield, FiArrowLeft, FiShare2, FiBriefcase, FiClipboard, FiUsers, FiSettings } from "react-icons/fi";
 import { Sun, Moon, Settings, LogOut, User, ChevronsUpDown, Check, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -27,9 +27,14 @@ const iconMap = {
   FiUser,
   FiShield,
   FiArrowLeft,
+  FiShare2,
+  FiBriefcase,
+  FiClipboard,
+  FiUsers,
+  FiSettings,
 };
 
-const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile }) => {
+const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile, userRole }) => {
   const [open, setOpen] = useState(false);
   
   return (
@@ -132,33 +137,48 @@ const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile }) =>
           })}
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="my-2" />
-        <DropdownMenuItem className="gap-3 p-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-all duration-200 group">
-          <Link href="/admin/create-client">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-dashed border-border/50 group-hover:border-primary/50 transition-colors duration-200">
-            <Building2 className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-200" />
-          </div>
-          <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors duration-200">
-            Agregar Cliente
-          </span>
-          </Link>
-        </DropdownMenuItem>
+        {userRole === 'admin_global' && (
+          <>
+            <DropdownMenuItem className="gap-3 p-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-all duration-200 group">
+              <Link href="/admin/create-client" className="flex items-center gap-3 w-full">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-dashed border-border/50 group-hover:border-primary/50 transition-colors duration-200">
+                  <Building2 className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-200" />
+                </div>
+                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors duration-200">
+                  Agregar Cliente
+                </span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="gap-3 p-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-all duration-200 group">
+              <Link href="/admin/invite-user" className="flex items-center gap-3 w-full">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-dashed border-border/50 group-hover:border-primary/50 transition-colors duration-200">
+                  <User className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-200" />
+                </div>
+                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors duration-200">
+                  Invitar Usuario
+                </span>
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 };
 
-const Sidebar = ({ 
-  mobile, 
-  activeTab, 
-  setActiveTab, 
-  setSidebarOpen, 
-  onLogout, 
-  navigation: dashboardNavigation, 
-  profile, 
-  userRole, 
-  clients, 
-  selectedClient, 
+const Sidebar = ({
+  mobile,
+  activeTab,
+  setActiveTab,
+  setSidebarOpen,
+  onLogout,
+  navigation: dashboardNavigation,
+  profile,
+  userRole,
+  clients,
+  selectedClient,
   onClientChange,
+  allowedSections,
   variant = "dashboard"
 }) => {
   const router = useRouter();
@@ -184,7 +204,7 @@ const Sidebar = ({
     }
   }, [theme]);
 
-  const isAdminGlobal = userRole === 'admin_global';
+  const showSwitcher = ['admin_global', 'cm', 'pm'].includes(userRole);
 
   return (
     <div className={`${mobile ? 'fixed inset-0 z-50 lg:hidden' : 'hidden lg:flex'}`}>
@@ -212,12 +232,13 @@ const Sidebar = ({
           transition={{ duration: 0.4, delay: 0.1 }}
           className="w-full px-4 border-b border-border h-[95px] flex items-center"
         >
-          {isAdminGlobal ? (
-            <CompanySwitcher 
-              clients={clients} 
-              selectedClient={selectedClient} 
+          {showSwitcher ? (
+            <CompanySwitcher
+              clients={clients}
+              selectedClient={selectedClient}
               onClientChange={onClientChange}
               mobile={mobile}
+              userRole={userRole}
             />
           ) : (
             <div className="flex items-center gap-3">
@@ -237,33 +258,36 @@ const Sidebar = ({
 
         <nav className="flex-1 flex flex-col p-4">
           <div className="flex flex-col gap-2">
-            {(variant === "settings" 
+            {(variant === "settings"
               ? [
-                { id: "profile", name: "Perfil", icon: "FiUser" },
-                { id: "security", name: "Seguridad", icon: "FiShield" }
-              ]
-              : dashboardNavigation
+                  { id: "profile", name: "Perfil", icon: "FiUser" },
+                  { id: "security", name: "Seguridad", icon: "FiShield" }
+                ]
+              : (allowedSections
+                  ? dashboardNavigation.filter(item => allowedSections.includes(item.id))
+                  : dashboardNavigation)
             ).map((item, idx) => {
               const Icon = iconMap[item.icon];
               const isActive = activeTab === item.id;
 
               return (
                 <motion.button
-                key={item.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.08, duration: 0.3 }}
-                whileHover={{ x: 4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setSidebarOpen(false);
-                }}
-                className={`relative group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                  isActive
-                  ? "bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20"
-                  : "text-muted-foreground hover:bg-primary/10 hover:text-primary font-medium"
-                }`}
+                  key={item.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.08, duration: 0.3 }}
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setSidebarOpen(false);
+                    if (item.href) router.push(item.href);
+                  }}
+                  className={`relative group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? "bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20"
+                      : "text-muted-foreground hover:bg-primary/10 hover:text-primary font-medium"
+                  }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span className="text-md">{item.name}</span>
