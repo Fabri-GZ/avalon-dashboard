@@ -39,6 +39,12 @@ export async function middleware(request: NextRequest) {
   const publicRoutes = ['/login', '/signup', '/forgot-password', '/auth'];
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
+  // Routes where an authenticated user should be redirected away (login, signup, etc.)
+  // Excludes /auth/* utility routes (reset-password, confirm, callback) which must remain
+  // accessible even with an active recovery session.
+  const guestOnlyRoutes = ['/login', '/signup', '/forgot-password'];
+  const isGuestOnlyRoute = guestOnlyRoutes.some(route => pathname.startsWith(route));
+
   if (!user && !isPublicRoute && pathname !== '/') {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/login';
@@ -46,7 +52,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && isPublicRoute) {
+  if (user && isGuestOnlyRoute) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
