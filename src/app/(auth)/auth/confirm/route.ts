@@ -1,7 +1,6 @@
 import { type EmailOtpType } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
-
-import { createClient } from '@/app/utils/supabase/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -13,17 +12,34 @@ export async function GET(request: NextRequest) {
   redirectTo.pathname = next
   redirectTo.searchParams.delete('token_hash')
   redirectTo.searchParams.delete('type')
+  redirectTo.searchParams.delete('next')
 
   if (token_hash && type) {
-    const supabase = await createClient();
+    // Create the response first so cookies can be written directly onto it.
+    // In a GET Route Handler, cookies() from next/headers is read-only —
+    // using createClient() here would silently drop the session cookies.
+    const response = NextResponse.redirect(redirectTo)
 
-    const { error } = await supabase.auth.verifyOtp({
-      type,
-      token_hash,
-    })
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
+    const { error } = await supabase.auth.verifyOtp({ type, token_hash })
     if (!error) {
-      redirectTo.searchParams.delete('next')
-      return NextResponse.redirect(redirectTo)
+      return response
     }
   }
 
