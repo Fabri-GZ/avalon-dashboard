@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { MdLock } from "react-icons/md";
@@ -8,6 +8,7 @@ import { FaCheck } from "react-icons/fa";
 import { ToastContainer, toast, Flip } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { updatePassword } from "@/lib/auth-actions";
+import { createClient } from "@/app/utils/supabase/client";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -16,6 +17,30 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [sessionError, setSessionError] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token_hash = params.get("token_hash");
+    const type = params.get("type");
+
+    if (token_hash && type === "recovery") {
+      const supabase = createClient();
+      supabase.auth
+        .verifyOtp({ token_hash, type: "recovery" })
+        .then(({ error }) => {
+          if (error) {
+            setSessionError("El link expiró o ya fue usado. Pedí uno nuevo.");
+          } else {
+            window.history.replaceState({}, "", "/auth/reset-password");
+            setSessionReady(true);
+          }
+        });
+    } else {
+      setSessionReady(true);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,6 +80,27 @@ const ResetPassword = () => {
     x: [0, -10, 10, -10, 10, 0],
     transition: { duration: 0.4 }
   };
+
+  if (sessionError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#f4f1f8]">
+        <div className="rounded-lg p-8 w-full max-w-md mx-auto bg-[#f4f1f8] shadow-[20px_20px_60px_#cfcdd3,-20px_-20px_60px_#ffffff] text-center">
+          <p className="text-red-500 font-semibold mb-4">{sessionError}</p>
+          <a href="/forgot-password" className="text-[#A047FF] underline">
+            Pedir nuevo link
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (!sessionReady) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#f4f1f8]">
+        <p className="text-gray-500">Verificando link...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#f4f1f8]">
