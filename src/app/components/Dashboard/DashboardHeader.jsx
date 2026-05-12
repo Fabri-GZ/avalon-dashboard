@@ -2,15 +2,19 @@
 
 import { motion } from "framer-motion";
 import { FiMenu, FiCalendar } from "react-icons/fi";
+import { useDashboardUI } from "@/contexts/DashboardUIContext";
+import { navigation } from "@/app/components/Dashboard/data/dataProcessors";
 
-const DashboardHeader = ({ activeTab, setSidebarOpen, navigation, timeFilter, setTimeFilter, title }) => {
+const DashboardHeader = () => {
+  const { activeSection, setSidebarOpen, timeFilter, setTimeFilter } = useDashboardUI();
+
   const filterOptions = [
     { value: 'daily', label: 'Diario' },
     { value: 'monthly', label: 'Mensual' },
     { value: 'annual', label: 'Anual' }
   ]
-  
-  const displayTitle = title || navigation.find(item => item.id === activeTab)?.name;
+
+  const displayTitle = navigation.find(item => item.id === activeSection)?.name;
 
   return (
     <header className="bg-background h-[95px] px-4 lg:px-8 sticky top-0 z-40 border-b border-border flex items-center">
@@ -37,7 +41,7 @@ const DashboardHeader = ({ activeTab, setSidebarOpen, navigation, timeFilter, se
           </motion.h2>
         </div>
 
-        {['overview', 'website', 'ads'].includes(activeTab) && (
+        {['overview', 'website', 'ads'].includes(activeSection) && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}

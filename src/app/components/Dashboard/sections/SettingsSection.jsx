@@ -10,7 +10,13 @@ import ProfileCard from "./settings/ProfileCard";
 import SecurityCard from "./settings/SecurityCard";
 import { cn } from "@/lib/utils";
 
-const SettingsSection = ({ activeTab }) => {
+const TABS = [
+  { id: "profile", label: "Perfil", icon: FiUser },
+  { id: "security", label: "Seguridad", icon: FiShield },
+];
+
+const SettingsSection = () => {
+  const [activeTab, setActiveTab] = useState("profile");
   const {
     profile,
     loading,
@@ -42,6 +48,23 @@ const SettingsSection = ({ activeTab }) => {
 
   return (
     <div className="w-full">
+      <div className="flex gap-2 mb-6">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+              activeTab === id
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted"
+            )}
+          >
+            <Icon size={16} />
+            {label}
+          </button>
+        ))}
+      </div>
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}

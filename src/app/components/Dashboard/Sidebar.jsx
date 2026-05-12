@@ -18,6 +18,9 @@ import {
 import UserMenu from "./UserMenu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useDashboardData } from "@/contexts/DashboardDataContext";
+import { useDashboardUI } from "@/contexts/DashboardUIContext";
+import { navigation } from "@/app/components/Dashboard/data/dataProcessors";
 
 const iconMap = {
   RxDashboard,
@@ -168,20 +171,19 @@ const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile, user
 
 const Sidebar = ({
   mobile,
-  activeTab,
-  setActiveTab,
-  setSidebarOpen,
   onLogout,
-  navigation: dashboardNavigation,
-  profile,
-  userRole,
-  clients,
-  selectedClient,
-  onClientChange,
-  allowedSections,
-  variant = "dashboard"
+  variant = "dashboard",
 }) => {
   const router = useRouter();
+  const { profile, clients, selectedClient, setSelectedClient, userRole, allowedSections } = useDashboardData();
+  const { sidebarOpen, setSidebarOpen, activeSection } = useDashboardUI();
+
+  const handleClientChange = (id) => {
+    const c = clients.find((cl) => cl.id === id);
+    if (c) setSelectedClient(c);
+  };
+
+  const dashboardNavigation = navigation;
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
       if (document.documentElement.classList.contains('dark')) {
@@ -236,7 +238,7 @@ const Sidebar = ({
             <CompanySwitcher
               clients={clients}
               selectedClient={selectedClient}
-              onClientChange={onClientChange}
+              onClientChange={handleClientChange}
               mobile={mobile}
               userRole={userRole}
             />
@@ -268,7 +270,7 @@ const Sidebar = ({
                   : dashboardNavigation)
             ).map((item, idx) => {
               const Icon = iconMap[item.icon];
-              const isActive = activeTab === item.id;
+              const isActive = activeSection === item.id;
 
               return (
                 <motion.button
@@ -279,7 +281,6 @@ const Sidebar = ({
                   whileHover={{ x: 4 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
-                    setActiveTab(item.id);
                     setSidebarOpen(false);
                     if (item.href) router.push(item.href);
                   }}

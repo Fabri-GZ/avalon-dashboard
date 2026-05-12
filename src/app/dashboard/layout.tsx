@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/app/utils/supabase/server';
 import { Role, DashboardContext, defaultRouteForRole, KNOWN_ROLES } from '@/lib/permissions';
 import { SectionKey } from '@/lib/sections';
+import DashboardShell from './DashboardShell';
 
 export default async function DashboardLayout({
   children,
@@ -42,5 +43,13 @@ export default async function DashboardLayout({
     redirect('/dashboard/settings');
   }
 
-  return <>{children}</>;
+  return (
+    <DashboardShell
+      initialRole={role}
+      initialAllowedSections={allowedSections}
+      initialUserId={user.id}
+    >
+      {children}
+    </DashboardShell>
+  );
 }

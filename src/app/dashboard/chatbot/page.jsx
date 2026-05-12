@@ -1,17 +1,20 @@
 "use client";
-
-import { useRouter } from "next/navigation";
-import { createClient } from "@/app/utils/supabase/client";
-import DashboardContent from "@/app/components/Dashboard/DashboardContent";
+import { motion } from "framer-motion";
+import ChatbotSection from "@/app/components/Dashboard/sections/ChatbotSection";
+import { useDashboardData } from "@/contexts/DashboardDataContext";
 
 export default function ChatbotPage() {
-  const router = useRouter();
+  const { selectedClient: client } = useDashboardData();
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
-  return <DashboardContent onLogout={handleLogout} initialTab="chatbot" />;
+  return (
+    <motion.div
+      key="chatbot"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.2 }}
+    >
+      <ChatbotSection client={client} />
+    </motion.div>
+  );
 }

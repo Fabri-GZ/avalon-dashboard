@@ -9,6 +9,7 @@ import { ToastContainer, toast, Flip } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { updatePassword } from "@/lib/auth-actions";
 import { createClient } from "@/app/utils/supabase/client";
+import Loader from "@/app/components/Loader/loader";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -95,11 +96,7 @@ const ResetPassword = () => {
   }
 
   if (!sessionReady) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#f4f1f8]">
-        <p className="text-gray-500">Verificando link...</p>
-      </div>
-    );
+    return <Loader />;
   }
 
   return (

@@ -8,6 +8,7 @@ export function useClientData() {
   const [error, setError] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [allowedSections, setAllowedSections] = useState(null);
+  const [profile, setProfile] = useState(null);
 
   const supabase = createClient();
 
@@ -28,12 +29,13 @@ export function useClientData() {
 
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('role, client_id')
+        .select('*')
         .eq('id', user.id)
         .single();
 
       if (profileError) throw profileError;
 
+      setProfile(profile);
       setUserRole(profile.role);
 
       const { data: perms } = await supabase
@@ -123,6 +125,7 @@ export function useClientData() {
     setSelectedClient,
     userRole,
     allowedSections,
+    profile,
     loading,
     error,
     refetch: fetchClientData
