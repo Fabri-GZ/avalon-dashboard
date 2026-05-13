@@ -1,17 +1,17 @@
 import { supabaseAdmin } from '@/app/utils/supabase/admin'
-import { fetchAsana } from './client'
-import { ASANA_PROJECT_ALLOWLIST } from './config'
+import { fetchAsana, fetchAsanaProjectName } from './client'
 import type { AsanaSection, AsanaTask } from './types'
 
 const SYNC_TTL = 15 * 60 * 1000
-let lastSync = 0
+const lastSyncByUser = new Map<string, number>()
 
 function customField(task: AsanaTask, name: string): string | null {
   return task.custom_fields?.find(f => f.name === name)?.display_value ?? null
 }
 
-export async function syncProject(projectName: string, projectGid: string): Promise<void> {
-  console.log(`[asana-sync] Iniciando sync: ${projectName} (${projectGid})`)
+export async function syncProject(userId: string, token: string, projectGid: string): Promise<void> {
+  const projectName = await fetchAsanaProjectName(token, projectGid)
+  console.log(`[asana-sync] ${userId}: sync ${projectName} (${projectGid})`)
 
   const { data: clientData, error: clientError } = await supabaseAdmin
     .from('pm_clients')
@@ -24,11 +24,9 @@ export async function syncProject(projectName: string, projectGid: string): Prom
   }
   const clientId = clientData.id
 
-  const sections = await fetchAsana<AsanaSection>(`/projects/${projectGid}/sections`, {
+  const sections = await fetchAsana<AsanaSection>(token, `/projects/${projectGid}/sections`, {
     opt_fields: 'gid,name,created_at',
   })
-
-  console.log(`[asana-sync] ${projectName}: ${sections.length} secciones encontradas`)
 
   if (sections.length > 0) {
     await supabaseAdmin.from('pm_sections').upsert(
@@ -50,7 +48,7 @@ export async function syncProject(projectName: string, projectGid: string): Prom
   const allTaskGids: string[] = []
 
   for (const section of sections) {
-    const tasks = await fetchAsana<AsanaTask>('/tasks', {
+    const tasks = await fetchAsana<AsanaTask>(token, '/tasks', {
       section: section.gid,
       opt_fields: 'gid,name,completed,completed_at,due_on,start_on,assignee.name,notes,custom_fields',
     })
@@ -77,32 +75,32 @@ export async function syncProject(projectName: string, projectGid: string): Prom
     }
   }
 
-  console.log(`[asana-sync] ${projectName}: ${taskRows.length} tareas encontradas`)
-
   if (taskRows.length > 0) {
     await supabaseAdmin.from('pm_tasks').upsert(taskRows, { onConflict: 'asana_task_id' })
   }
 
-  console.log(`[asana-sync] ${projectName}: sync completado ✓`)
-
   const deleteQuery = supabaseAdmin.from('pm_tasks').delete().eq('client_id', clientId)
-
   if (allTaskGids.length > 0) {
     await deleteQuery.not('asana_task_id', 'in', `(${allTaskGids.join(',')})`)
   } else {
     await deleteQuery
   }
+
+  console.log(`[asana-sync] ${userId}: ${projectName} ✓`)
 }
 
-export async function syncAllProjects(): Promise<void> {
-  const entries = Object.entries(ASANA_PROJECT_ALLOWLIST)
-  for (const [name, gid] of entries) {
-    await syncProject(name, gid)
+export async function syncAllProjects(userId: string, token: string, gids: string[]): Promise<void> {
+  for (const gid of gids) {
+    await syncProject(userId, token, gid)
   }
 }
 
-export function triggerSync(): void {
-  if (Date.now() - lastSync < SYNC_TTL) return
-  lastSync = Date.now()
-  syncAllProjects().catch(err => console.error('[asana-sync]', err))
+export function triggerSync(userId: string, token: string, gids: string[]): void {
+  if (!gids.length) return
+  const last = lastSyncByUser.get(userId) ?? 0
+  if (Date.now() - last < SYNC_TTL) return
+  lastSyncByUser.set(userId, Date.now())
+  syncAllProjects(userId, token, gids).catch(err =>
+    console.error(`[asana-sync] ${userId}:`, err)
+  )
 }

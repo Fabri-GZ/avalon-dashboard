@@ -1,21 +1,28 @@
+import { createClient } from '@/app/utils/supabase/server'
+import { getPmUserConfig } from '@/lib/pm/user-config'
 import { syncProject, syncAllProjects } from '@/lib/asana/sync'
-import { ASANA_PROJECT_ALLOWLIST } from '@/lib/asana/config'
 
 export async function GET(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return Response.json({ error: 'No autorizado' }, { status: 401 })
+
+  const cfg = await getPmUserConfig(user.id)
+  if (!cfg) return Response.json({ error: 'Sin configuración de Asana para este usuario' }, { status: 403 })
+
   const { searchParams } = new URL(request.url)
   const gid = searchParams.get('gid')
 
   try {
     if (gid) {
-      const entry = Object.entries(ASANA_PROJECT_ALLOWLIST).find(([, g]) => g === gid)
-      if (!entry) {
-        return Response.json({ ok: false, error: 'GID no está en la allowlist' }, { status: 400 })
+      if (!cfg.projectGids.includes(gid)) {
+        return Response.json({ error: 'GID no pertenece a tu cuenta' }, { status: 403 })
       }
-      await syncProject(entry[0], gid)
-      return Response.json({ ok: true, synced: entry[0] })
+      await syncProject(user.id, cfg.token, gid)
+      return Response.json({ ok: true, synced: gid })
     }
 
-    await syncAllProjects()
+    await syncAllProjects(user.id, cfg.token, cfg.projectGids)
     return Response.json({ ok: true, synced: 'all' })
   } catch (err) {
     console.error('[pm/sync-asana]', err)

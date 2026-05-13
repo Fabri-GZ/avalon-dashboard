@@ -3,12 +3,10 @@ import type { AsanaPaginatedResponse, AsanaTask } from './types'
 const BASE_URL = 'https://app.asana.com/api/1.0'
 
 export async function fetchAsana<T>(
+  token: string,
   path: string,
   params: Record<string, string> = {}
 ): Promise<T[]> {
-  const token = process.env.ASANA_TOKEN
-  if (!token) throw new Error('ASANA_TOKEN is not set')
-
   const results: T[] = []
   let offset: string | null = null
 
@@ -35,13 +33,11 @@ export async function fetchAsana<T>(
 }
 
 export async function updateAsanaTask(
+  token: string,
   gid: string,
   data: { completed: boolean }
 ): Promise<AsanaTask> {
-  const token = process.env.ASANA_TOKEN
-  if (!token) throw new Error('ASANA_TOKEN is not set')
-
-  const res = await fetch(`https://app.asana.com/api/1.0/tasks/${gid}`, {
+  const res = await fetch(`${BASE_URL}/tasks/${gid}`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -57,4 +53,14 @@ export async function updateAsanaTask(
 
   const json: { data: AsanaTask } = await res.json()
   return json.data
+}
+
+export async function fetchAsanaProjectName(token: string, gid: string): Promise<string> {
+  const res = await fetch(`${BASE_URL}/projects/${gid}?opt_fields=name`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error(`Asana API ${res.status} on GET /projects/${gid}`)
+  const json: { data: { name: string } } = await res.json()
+  return json.data.name
 }

@@ -34,9 +34,9 @@ function SettingsIcon() {
   )
 }
 
-export async function ClientSidebar() {
+export async function ClientSidebar({ gids }: { gids: string[] }) {
   const supabase = await createClient()
-  const clients = await getClientsWithStatus(supabase)
+  const clients = await getClientsWithStatus(supabase, gids)
 
   return (
     <aside className="w-[260px] h-full bg-sidebar border-r border-border flex flex-col flex-shrink-0">
