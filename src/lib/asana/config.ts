@@ -1,0 +1,16 @@
+export const ASANA_PROJECT_ALLOWLIST: Record<string, string> = {
+  Viviera:          '1208103748859865',
+  Amsterdamn:       '1214267906411177',
+  BIOBEN:           '1210718832603538',
+  'D BENEDETTO':    '1212242836234958',
+  'Garden FREE':    '1214137928981460',
+  'GRUPO NORTE':    '1213694411564083',
+  'Hotel Acapulco': '1210702265905684',
+  'INSUMA SRL':     '1214267849403800',
+  'Las Mercedes':   '1208272457375417',
+  'Mansilla Cards': '1210252076517129',
+  'MPF IMPRESOS':   '1214267906411130',
+  SISTER:           '1211760778143308',
+  TALLON:           '1214317439814153',
+  TIF:              '1214064913221960',
+}

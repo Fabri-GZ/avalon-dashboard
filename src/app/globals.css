@@ -3,6 +3,41 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── PM Module Animations ────────────────────────── */
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes sheetSlideDown {
+  from { transform: translateY(0); }
+  to   { transform: translateY(110%); }
+}
+@keyframes sheetFadeIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes sheetFadeOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+@keyframes backdropFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@layer utilities {
+  .tab-content-enter        { animation: tabFadeIn 0.18s ease-out both; }
+  .animate-sheet-up         { animation: sheetSlideUp 0.52s cubic-bezier(0.32, 0.72, 0, 1) both; }
+  .animate-sheet-down       { animation: sheetSlideDown 0.22s cubic-bezier(0.4, 0, 1, 0.6) both; }
+  .animate-sheet-fade       { animation: sheetFadeIn 0.5s ease-out both; }
+  .animate-sheet-fade-out   { animation: sheetFadeOut 0.18s ease-in both; }
+  .animate-backdrop-out     { animation: backdropFadeOut 0.22s ease-in both; }
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -38,6 +73,22 @@ body {
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
+  /* ── PM Module Design Tokens ─────────────────────── */
+  --color-sidebar: #FFFFFF;
+  --color-bg: #F4F3F8;
+  --color-surface: #F9FAFB;
+  --color-text: #1A1A2E;
+  --color-text-muted: #9CA3AF;
+  --color-text-secondary: #6B7280;
+  --color-brand: #7C3AED;
+  --color-brand-hover: #6D28D9;
+  --radius-item: 0.625rem;
+  --radius-avatar: 0.5rem;
+  --radius-card: 0.75rem;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.05);
+  --font-poppins: Poppins, sans-serif;
+  --font-unbounded: Poppins, sans-serif;
 }
 
 :root {
