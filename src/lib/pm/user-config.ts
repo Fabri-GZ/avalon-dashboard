@@ -14,17 +14,13 @@ export async function getPmUserConfig(userId: string): Promise<PmUserConfig | nu
 
   if (error || !cfg) return null
 
-  const { data: secret, error: vErr } = await (supabaseAdmin as any)
-    .schema('vault')
-    .from('decrypted_secrets')
-    .select('decrypted_secret')
-    .eq('id', cfg.asana_token_secret_id)
-    .single()
+  const { data: token, error: vErr } = await supabaseAdmin
+    .rpc('get_pm_user_token', { p_user_id: userId })
 
-  if (vErr || !secret?.decrypted_secret) return null
+  if (vErr || !token) return null
 
   return {
-    token: secret.decrypted_secret as string,
+    token: token as string,
     projectGids: cfg.asana_project_gids ?? [],
   }
 }
