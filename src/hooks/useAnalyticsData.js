@@ -13,6 +13,8 @@ export function useAnalyticsData(clientId) {
   useEffect(() => {
     if (clientId) {
       fetchAnalyticsData();
+    } else {
+      setLoading(false);
     }
   }, [clientId]);
 
