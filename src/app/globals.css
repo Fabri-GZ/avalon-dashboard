@@ -38,6 +38,25 @@
   .animate-backdrop-out     { animation: backdropFadeOut 0.22s ease-in both; }
 }
 
+/* Themed thin scrollbar — matches design tokens, light + dark. */
+@utility scrollbar-themed {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+
+  &::-webkit-scrollbar       { width: 6px; height: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+    transition: background-color .15s;
+  }
+  &:hover::-webkit-scrollbar-thumb { background-color: var(--muted-foreground); }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   padding: 0;

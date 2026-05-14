@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-toastify'
+import { FiMenu } from 'react-icons/fi'
 import { StatusBadge } from '@/components/pm/ui/StatusBadge'
+import { useDashboardUI } from '@/contexts/DashboardUIContext'
 import type { Client, Brief } from '@/lib/pm/types'
 
 function SyncIcon({ spinning }: { spinning: boolean }) {
@@ -18,12 +20,11 @@ function SyncIcon({ spinning }: { spinning: boolean }) {
   )
 }
 
-function ReportIcon({ spinning }: { spinning: boolean }) {
+function ReportIcon() {
   return (
     <svg
       width="14" height="14" viewBox="0 0 24 24" fill="none"
       stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-      className={spinning ? 'animate-spin' : ''}
     >
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
       <polyline points="14 2 14 8 20 8"/>
@@ -44,6 +45,7 @@ export function ClientHeader({
   const [loadingReport, setLoadingReport] = useState(false)
   const [loadingSync, setLoadingSync] = useState(false)
   const router = useRouter()
+  const { setSidebarOpen } = useDashboardUI()
 
   async function handleSync() {
     setLoadingSync(true)
@@ -98,7 +100,7 @@ export function ClientHeader({
         onClick={handleSync}
         disabled={loadingSync}
         title={loadingSync ? 'Sincronizando...' : 'Sincronizar'}
-        className="flex items-center gap-1.5 border border-border hover:border-primary text-muted-foreground hover:text-primary text-xs font-semibold p-2 sm:px-4 sm:py-2 rounded-lg transition-colors duration-200 ease-in disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
+        className="flex items-center gap-1.5 border border-border hover:border-primary text-muted-foreground hover:text-primary text-xs font-bold p-2 sm:px-4 sm:py-2 rounded-lg transition-colors duration-200 ease-in disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
       >
         <SyncIcon spinning={loadingSync} />
         <span className="hidden sm:inline">{loadingSync ? 'Sincronizando...' : 'Sincronizar'}</span>
@@ -110,11 +112,19 @@ export function ClientHeader({
         title={loadingReport ? 'Generando...' : 'Generar Reporte'}
         className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold p-2 sm:px-4 sm:py-2 rounded-lg transition-colors duration-200 ease-in disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
       >
-        <ReportIcon spinning={loadingReport} />
+        <ReportIcon />
         {loadingReport
           ? 'Generando...'
           : <><span className="sm:hidden">Generar</span><span className="hidden sm:inline">Generar Reporte</span></>
         }
+      </button>
+
+      <button
+        onClick={() => setSidebarOpen(true)}
+        aria-label="Abrir menú"
+        className="lg:hidden text-muted-foreground hover:text-foreground flex-shrink-0 ml-1"
+      >
+        <FiMenu className="w-6 h-6" />
       </button>
     </div>
   )

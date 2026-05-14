@@ -21,9 +21,9 @@ export function ClientTabs({ clientId }: { clientId: string }) {
         <Link
           key={key}
           href={`/dashboard/pm/${clientId}?tab=${key}`}
-          className={`px-5 py-3.5 text-sm font-medium border-b-2 transition-colors duration-200 ease-in -mb-px ${
+          className={`px-5 py-3.5 text-sm font-semibold border-b-2 transition-colors duration-200 ease-in -mb-px ${
             activeTab === key
-              ? 'text-primary border-primary font-semibold'
+              ? 'text-primary border-primary font-bold'
               : 'text-muted-foreground border-transparent hover:text-foreground'
           }`}
         >

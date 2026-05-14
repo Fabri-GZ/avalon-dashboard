@@ -95,7 +95,7 @@ const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile, user
             )}
           </div>
         )}
-        <DropdownMenuGroup className="max-h-[320px] overflow-y-auto space-y-1">
+        <DropdownMenuGroup className="max-h-[320px] overflow-y-auto space-y-1 scrollbar-themed pr-1">
           {clients.map((client) => {
             const isSelected = selectedClient?.id === client.id;
             return (
