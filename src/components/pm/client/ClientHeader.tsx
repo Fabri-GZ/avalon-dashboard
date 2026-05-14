@@ -85,9 +85,9 @@ export function ClientHeader({
   }
 
   return (
-    <div className="bg-sidebar border-b border-border px-4 sm:px-7 flex items-center gap-2 sm:gap-3 min-h-[60px]">
+    <div className="bg-card border-b border-border px-4 sm:px-7 flex items-center gap-2 sm:gap-3 min-h-[60px]">
       <div className="mr-auto flex-shrink-0">
-        <h1 className="font-unbounded font-bold text-sm text-text leading-tight">
+        <h1 className="font-bold text-sm text-foreground leading-tight">
           {client.name}
         </h1>
       </div>
@@ -98,7 +98,7 @@ export function ClientHeader({
         onClick={handleSync}
         disabled={loadingSync}
         title={loadingSync ? 'Sincronizando...' : 'Sincronizar'}
-        className="flex items-center gap-1.5 border border-border hover:border-brand text-text-secondary hover:text-brand text-xs font-semibold font-poppins p-2 sm:px-4 sm:py-2 rounded-lg transition-colors duration-200 ease-in disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
+        className="flex items-center gap-1.5 border border-border hover:border-primary text-muted-foreground hover:text-primary text-xs font-semibold p-2 sm:px-4 sm:py-2 rounded-lg transition-colors duration-200 ease-in disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
       >
         <SyncIcon spinning={loadingSync} />
         <span className="hidden sm:inline">{loadingSync ? 'Sincronizando...' : 'Sincronizar'}</span>
@@ -108,7 +108,7 @@ export function ClientHeader({
         onClick={handleGenerateReport}
         disabled={loadingReport}
         title={loadingReport ? 'Generando...' : 'Generar Reporte'}
-        className="flex items-center gap-1.5 bg-brand hover:bg-brand-hover text-white text-xs font-semibold font-poppins p-2 sm:px-4 sm:py-2 rounded-lg transition-colors duration-200 ease-in disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
+        className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold p-2 sm:px-4 sm:py-2 rounded-lg transition-colors duration-200 ease-in disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
       >
         <ReportIcon spinning={loadingReport} />
         {loadingReport

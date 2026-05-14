@@ -1,18 +1,49 @@
-export default function PMPage() {
+import { createClient } from '@/app/utils/supabase/server'
+import { getPmUserConfig } from '@/lib/pm/user-config'
+import { PendingFeed } from '@/components/pm/feed/PendingFeed'
+import { SetupEmpty } from '@/components/pm/feed/SetupEmpty'
+
+export default async function PMPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const cfg = user ? await getPmUserConfig(user.id) : null
+  const gids = cfg?.projectGids ?? []
+
+  // Determine role to decide scoping. We rely on user_profiles for the source of truth.
+  let role: string | null = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    role = profile?.role ?? null
+  }
+
+  const isAdmin = role === 'admin_global'
+  const isPm = role === 'pm'
+
+  if (isPm && gids.length === 0) {
+    return (
+      <div className="px-2 py-4">
+        <h1 className="mb-6 text-2xl font-bold tracking-tight text-foreground">
+          Proyectos
+        </h1>
+        <SetupEmpty />
+      </div>
+    )
+  }
+
+  // For admin_global pass null = no scoping; for pm pass their gids.
+  const scopeGids = isAdmin ? null : gids
+
   return (
-    <div className="flex flex-col items-center justify-center h-full py-20 gap-3">
-      <div className="w-14 h-14 rounded-2xl bg-white border border-gray-100 flex items-center justify-center shadow-card">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 11l3 3L22 4"/>
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-        </svg>
-      </div>
-      <div className="text-center">
-        <p className="font-unbounded font-bold text-sm text-text mb-1">Gestión de Proyectos</p>
-        <p className="text-xs text-text-muted font-poppins max-w-[240px] leading-relaxed">
-          Seleccioná un cliente desde el panel izquierdo para ver sus tareas.
-        </p>
-      </div>
+    <div className="px-2 py-4">
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-foreground">
+        Proyectos
+      </h1>
+      <PendingFeed gids={scopeGids} />
     </div>
   )
 }

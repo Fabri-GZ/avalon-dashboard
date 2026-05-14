@@ -32,22 +32,22 @@ export function BriefTab({ clientId, brief }: { clientId: string; brief: Brief |
   return (
     <div className="w-full">
       {editing ? (
-        <div className="bg-white rounded-card shadow-card p-6 space-y-4">
-          <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider font-poppins">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6 space-y-4">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
             Brief del proyecto
           </p>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Describí el alcance prometido al cliente: entregables, cantidades, plataformas, fechas clave..."
-            className="w-full h-48 text-sm font-poppins text-text bg-bg border border-border rounded-item p-4 resize-none focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand placeholder:text-text-muted"
+            className="w-full h-48 text-sm text-foreground bg-background border border-border rounded-md p-4 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder:text-muted-foreground"
           />
-          {error && <p className="text-xs text-red-500 font-poppins">{error}</p>}
+          {error && <p className="text-xs text-destructive">{error}</p>}
           <div className="flex gap-2 justify-end">
             {brief && (
               <button
                 onClick={() => { setEditing(false); setContent(brief.content) }}
-                className="px-4 py-2 text-xs font-poppins font-medium text-text-secondary hover:text-text transition-colors"
+                className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 Cancelar
               </button>
@@ -55,29 +55,29 @@ export function BriefTab({ clientId, brief }: { clientId: string; brief: Brief |
             <button
               onClick={handleSave}
               disabled={!content.trim() || isPending}
-              className="px-4 py-2 rounded-lg bg-brand text-white text-xs font-poppins font-semibold hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isPending ? 'Guardando...' : 'Guardar Brief'}
             </button>
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-card shadow-card p-6">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider font-poppins">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               Brief del proyecto
             </p>
             <button
               onClick={() => setEditing(true)}
-              className="text-xs text-brand font-poppins font-medium hover:underline"
+              className="text-xs text-primary font-medium hover:underline"
             >
               Editar
             </button>
           </div>
-          <p className="text-sm font-poppins text-text leading-relaxed whitespace-pre-wrap">
+          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
             {brief?.content}
           </p>
-          <p className="text-[10px] text-text-muted font-poppins mt-5">
+          <p className="text-[10px] text-muted-foreground mt-5">
             Cargado el {formatDate(brief?.created_at ?? null)} · Texto manual
           </p>
         </div>

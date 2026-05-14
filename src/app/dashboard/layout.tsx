@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/app/utils/supabase/server';
 import { Role, DashboardContext, defaultRouteForRole, KNOWN_ROLES } from '@/lib/permissions';
 import { SectionKey } from '@/lib/sections';
+import { getPmUserConfig } from '@/lib/pm/user-config';
 import DashboardShell from './DashboardShell';
 
 export default async function DashboardLayout({
@@ -43,11 +44,16 @@ export default async function DashboardLayout({
     redirect('/dashboard/settings');
   }
 
+  const initialPmGids = role === 'pm'
+    ? (await getPmUserConfig(user.id))?.projectGids ?? []
+    : null;
+
   return (
     <DashboardShell
       initialRole={role}
       initialAllowedSections={allowedSections}
       initialUserId={user.id}
+      initialPmGids={initialPmGids}
     >
       {children}
     </DashboardShell>

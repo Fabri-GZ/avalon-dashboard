@@ -12,6 +12,7 @@ import { ClientTabs } from '@/components/pm/client/ClientTabs'
 import { TasksTab } from '@/components/pm/client/tabs/TasksTab'
 import { BriefTab } from '@/components/pm/client/tabs/BriefTab'
 import { ReportTab } from '@/components/pm/client/tabs/ReportTab'
+import { ClientSync } from '@/components/pm/ClientSync'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -45,6 +46,7 @@ export default async function PMClientPage({ params, searchParams }: Props) {
 
   return (
     <div className="flex flex-col h-full">
+      <ClientSync clientId={id} />
       <ClientHeader client={client} latestBrief={latestBrief} />
       <Suspense>
         <ClientTabs clientId={id} />

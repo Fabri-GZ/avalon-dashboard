@@ -20,8 +20,8 @@ export function SemaphoreCard({
 
   return (
     <div
-      className={`flex flex-col items-center text-center rounded-card p-4 shadow-card transition-all border-2 ${
-        isActive ? '' : 'border-transparent bg-white'
+      className={`flex flex-col items-center text-center rounded-xl p-4 shadow-sm transition-all border-2 ${
+        isActive ? 'bg-card' : 'border-transparent bg-card'
       }`}
       style={
         isActive
@@ -30,8 +30,8 @@ export function SemaphoreCard({
       }
     >
       <span className={`inline-block w-3 h-3 rounded-full mb-2 ${colors.dot}`} />
-      <span className="font-unbounded text-sm font-bold text-text">{label}</span>
-      <span className="text-xs text-text-muted font-poppins mt-0.5">{desc}</span>
+      <span className="text-sm font-bold text-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground mt-0.5">{desc}</span>
     </div>
   )
 }

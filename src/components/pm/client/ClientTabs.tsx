@@ -16,15 +16,15 @@ export function ClientTabs({ clientId }: { clientId: string }) {
   const activeTab = (searchParams.get('tab') as TabKey) ?? 'tareas'
 
   return (
-    <div className="flex bg-sidebar border-b border-border px-7">
+    <div className="flex bg-card border-b border-border px-7">
       {TABS.map(({ key, label }) => (
         <Link
           key={key}
           href={`/dashboard/pm/${clientId}?tab=${key}`}
-          className={`px-5 py-3.5 text-sm font-poppins border-b-2 transition-colors duration-200 ease-in -mb-px ${
+          className={`px-5 py-3.5 text-sm border-b-2 transition-colors duration-200 ease-in -mb-px ${
             activeTab === key
-              ? 'text-brand border-brand font-semibold'
-              : 'text-text-muted border-transparent hover:text-text'
+              ? 'text-primary border-primary font-semibold'
+              : 'text-muted-foreground border-transparent hover:text-foreground'
           }`}
         >
           {label}

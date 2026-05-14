@@ -9,6 +9,7 @@ interface DashboardDataProviderProps {
   initialRole: Role;
   initialAllowedSections: string[];
   initialUserId: string;
+  initialPmGids?: string[] | null;
 }
 
 const DashboardDataContext = createContext<any | null>(null);
@@ -18,6 +19,7 @@ export function DashboardDataProvider({
   initialRole,
   initialAllowedSections,
   initialUserId,
+  initialPmGids,
 }: DashboardDataProviderProps) {
   const {
     clients,
@@ -29,7 +31,7 @@ export function DashboardDataProvider({
     loading: clientLoading,
     error: clientError,
     refetch,
-  } = useClientData();
+  } = useClientData({ initialPmGids });
 
   const {
     socialInsights,

@@ -40,7 +40,7 @@ export function TaskDetailSheet({ task, sectionName, onClose }: Props) {
       onClick={handleClose}
     >
       <div
-        className={`fixed bottom-0 inset-x-0 bg-white rounded-t-2xl max-h-[92vh] overflow-y-auto
+        className={`fixed bottom-0 inset-x-0 bg-card text-card-foreground rounded-t-2xl max-h-[92vh] overflow-y-auto
           sm:relative sm:bottom-auto sm:inset-x-auto sm:rounded-xl sm:w-full sm:max-w-[480px] sm:max-h-[85vh]
           ${isClosing
             ? 'animate-sheet-down sm:animate-sheet-fade-out'
@@ -50,23 +50,23 @@ export function TaskDetailSheet({ task, sectionName, onClose }: Props) {
         onAnimationEnd={isClosing ? onClose : undefined}
       >
         {/* Drag handle (mobile only) */}
-        <div className="sm:hidden flex justify-center pt-3 pb-1 sticky top-0 bg-white">
-          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        <div className="sm:hidden flex justify-center pt-3 pb-1 sticky top-0 bg-card">
+          <div className="w-10 h-1 bg-muted rounded-full" />
         </div>
 
         {/* Header */}
-        <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-gray-100">
+        <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-border">
           <div className="flex-1 min-w-0 pr-3">
-            <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider font-poppins mb-1">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
               {sectionName}
             </p>
-            <h2 className="font-poppins font-semibold text-base text-text leading-snug">
+            <h2 className="font-semibold text-base text-foreground leading-snug">
               {task.name}
             </h2>
           </div>
           <button
             onClick={handleClose}
-            className="flex-shrink-0 w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-text-muted hover:bg-gray-200 transition-colors duration-200 ease-in mt-0.5"
+            className="flex-shrink-0 w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted/80 transition-colors duration-200 ease-in mt-0.5"
             aria-label="Cerrar"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -86,7 +86,7 @@ export function TaskDetailSheet({ task, sectionName, onClose }: Props) {
               <Pill color="gray">Pendiente</Pill>
             )}
             {task.field_prioridad && (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold font-poppins bg-brand/10 text-brand">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">
                 {task.field_prioridad}
               </span>
             )}
@@ -95,27 +95,27 @@ export function TaskDetailSheet({ task, sectionName, onClose }: Props) {
           {task.assignee && (
             <Row label="Responsable">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-purple-100 text-brand text-[10px] font-unbounded font-bold flex items-center justify-center flex-shrink-0">
+                <span className="w-6 h-6 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                   {getInitials(task.assignee)}
                 </span>
-                <span className="text-sm font-poppins text-text">{task.assignee}</span>
+                <span className="text-sm text-foreground">{task.assignee}</span>
               </div>
             </Row>
           )}
 
           {(task.start_date || task.due_date) && (
             <Row label="Fechas">
-              <span className="text-sm font-poppins text-text">
+              <span className="text-sm text-foreground">
                 {task.start_date && task.due_date ? (
                   <>
                     {formatDate(task.start_date)}
                     {' → '}
-                    <span className={overdue ? 'text-red-600 font-semibold' : ''}>
+                    <span className={overdue ? 'text-destructive font-semibold' : ''}>
                       {formatDate(task.due_date)}
                     </span>
                   </>
                 ) : task.due_date ? (
-                  <span className={overdue ? 'text-red-600 font-semibold' : ''}>
+                  <span className={overdue ? 'text-destructive font-semibold' : ''}>
                     {formatDate(task.due_date)}
                   </span>
                 ) : (
@@ -132,10 +132,10 @@ export function TaskDetailSheet({ task, sectionName, onClose }: Props) {
 
           {task.notes && (
             <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider font-poppins">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Notas
               </p>
-              <p className="text-sm font-poppins text-text leading-relaxed whitespace-pre-wrap">
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                 {task.notes}
               </p>
             </div>
@@ -154,10 +154,18 @@ function Pill({
   color: 'green' | 'red' | 'gray'
   children: React.ReactNode
 }) {
-  const badge = { green: 'bg-green-50 text-green-700', red: 'bg-red-50 text-red-600', gray: 'bg-gray-100 text-gray-600' }
-  const dot   = { green: 'bg-green-400', red: 'bg-red-400', gray: 'bg-gray-400' }
+  const badge = {
+    green: 'bg-green-500/15 text-green-700 dark:text-green-400',
+    red:   'bg-destructive/15 text-destructive',
+    gray:  'bg-muted text-muted-foreground',
+  }
+  const dot = {
+    green: 'bg-green-500',
+    red:   'bg-destructive',
+    gray:  'bg-muted-foreground',
+  }
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold font-poppins ${badge[color]}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${badge[color]}`}>
       <span className={`w-1.5 h-1.5 rounded-full inline-block ${dot[color]}`} />
       {children}
     </span>
@@ -167,10 +175,10 @@ function Pill({
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-4">
-      <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider font-poppins w-[72px] flex-shrink-0 pt-[3px] leading-tight">
+      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[72px] flex-shrink-0 pt-[3px] leading-tight">
         {label}
       </span>
-      <div className="flex-1 text-sm font-poppins text-text">
+      <div className="flex-1 text-sm text-foreground">
         {children}
       </div>
     </div>

@@ -79,8 +79,22 @@ const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile, user
         sideOffset={8}
       >
         <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Teams
+          {userRole === 'pm' ? 'Mis clientes' : 'Teams'}
         </DropdownMenuLabel>
+        {clients.length === 0 && (
+          <div className="px-3 py-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              {userRole === 'pm'
+                ? 'Sin clientes asignados'
+                : 'No hay clientes disponibles'}
+            </p>
+            {userRole === 'pm' && (
+              <p className="text-xs text-muted-foreground/70 mt-1">
+                Contactá a un admin para que te asigne proyectos.
+              </p>
+            )}
+          </div>
+        )}
         <DropdownMenuGroup className="max-h-[320px] overflow-y-auto space-y-1">
           {clients.map((client) => {
             const isSelected = selectedClient?.id === client.id;

@@ -3,7 +3,7 @@ import type { SectionWithTasks } from '@/lib/pm/types'
 
 function EmptyIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12h6M12 9v6"/>
     </svg>
   )
@@ -15,12 +15,12 @@ export function TasksTab({ sections }: { sections: SectionWithTasks[] }) {
   if (visibleSections.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+        <div className="w-14 h-14 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground">
           <EmptyIcon />
         </div>
         <div className="text-center">
-          <p className="font-unbounded font-bold text-sm text-text mb-1">Sin tareas</p>
-          <p className="text-xs text-text-muted font-poppins max-w-[220px] leading-relaxed">
+          <p className="font-bold text-sm text-foreground mb-1">Sin tareas</p>
+          <p className="text-xs text-muted-foreground max-w-[220px] leading-relaxed">
             Usá el botón Sincronizar para traer las tareas desde Asana.
           </p>
         </div>
@@ -51,7 +51,7 @@ export function TasksTab({ sections }: { sections: SectionWithTasks[] }) {
       {completedSections.length > 0 && (
         <div>
           <div className="flex items-center gap-3 mb-4">
-            <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest font-poppins">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest font-poppins">
               Completadas
             </span>
             <div className="flex-1 h-px bg-border" />
@@ -71,11 +71,11 @@ function SectionBlock({ section }: { section: SectionWithTasks }) {
   return (
     <div>
       <div className="flex items-center gap-3 mb-2">
-        <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider font-poppins whitespace-nowrap">
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider font-poppins whitespace-nowrap">
           {section.name}
         </span>
         <div className="flex-1 h-px bg-border" />
-        <span className="text-[10px] text-text-muted font-poppins flex-shrink-0">
+        <span className="text-[10px] text-muted-foreground font-poppins flex-shrink-0">
           {section.tasks.length}
         </span>
       </div>

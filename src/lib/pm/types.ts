@@ -59,3 +59,34 @@ export interface Report {
   raw_response: unknown
   generated_at: string
 }
+
+export type FeedBadge = 'overdue' | 'due' | 'brief' | 'report'
+
+export interface FeedItem {
+  id: string
+  clientId: string
+  clientName: string
+  title: string
+  badge: FeedBadge
+  sectionName?: string
+  dueDate?: string | null
+  daysOverdue?: number
+  daysUntilDue?: number
+  priority?: string | null
+}
+
+export interface FeedStats {
+  overdue: number
+  thisWeek: number
+  withoutBrief: number
+  activeClients: number
+}
+
+export interface FeedData {
+  stats: FeedStats
+  groups: {
+    immediate: FeedItem[]
+    thisWeek: FeedItem[]
+    setup: FeedItem[]
+  }
+}
