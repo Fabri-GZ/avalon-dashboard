@@ -108,7 +108,7 @@ export function ClientHeader({
         onClick={handleGenerateReport}
         disabled={loadingReport}
         title={loadingReport ? 'Generando...' : 'Generar Reporte'}
-        className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold p-2 sm:px-4 sm:py-2 rounded-lg transition-colors duration-200 ease-in disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
+        className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold p-2 sm:px-4 sm:py-2 rounded-lg transition-colors duration-200 ease-in disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
       >
         <ReportIcon spinning={loadingReport} />
         {loadingReport

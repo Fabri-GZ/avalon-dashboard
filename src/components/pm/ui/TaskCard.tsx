@@ -82,7 +82,7 @@ export function TaskCard({ task, sectionName }: { task: Task; sectionName: strin
         } ${
           optimisticCompleted
             ? 'bg-primary border-primary text-primary-foreground hover:bg-primary/80 hover:border-primary/80'
-            : 'border-input hover:border-primary hover:bg-primary/10'
+            : 'border-muted-foreground/40 hover:border-primary hover:bg-primary/10'
         }`}
       >
         {optimisticCompleted && <CheckIcon />}

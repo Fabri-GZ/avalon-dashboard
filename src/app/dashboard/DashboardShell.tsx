@@ -26,6 +26,10 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 
   const sidebarVariant = pathname.startsWith("/dashboard/settings") ? "settings" : "dashboard";
 
+  // PM client detail pages render their own header (ClientHeader) — hide the
+  // global one to avoid the "doble header" feel and reclaim vertical space.
+  const isPmClientRoute = /^\/dashboard\/pm\/[^/]+$/.test(pathname);
+
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -51,9 +55,9 @@ function ShellInner({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
 
       <div className="w-full">
-        <DashboardHeader />
+        {!isPmClientRoute && <DashboardHeader />}
 
-        <main className="p-4 lg:p-6">
+        <main className={isPmClientRoute ? "" : "p-4 lg:p-6"}>
           {dataLoading ? (
             <Loader />
           ) : (

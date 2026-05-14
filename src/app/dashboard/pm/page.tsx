@@ -26,10 +26,7 @@ export default async function PMPage() {
 
   if (isPm && gids.length === 0) {
     return (
-      <div className="px-2 py-4">
-        <h1 className="mb-6 text-2xl font-bold tracking-tight text-foreground">
-          Proyectos
-        </h1>
+      <div className="py-2">
         <SetupEmpty />
       </div>
     )
@@ -39,10 +36,7 @@ export default async function PMPage() {
   const scopeGids = isAdmin ? null : gids
 
   return (
-    <div className="px-2 py-4">
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-foreground">
-        Proyectos
-      </h1>
+    <div className="py-2">
       <PendingFeed gids={scopeGids} />
     </div>
   )

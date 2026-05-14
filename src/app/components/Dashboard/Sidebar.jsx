@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import UserMenu from "./UserMenu";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useDashboardData } from "@/contexts/DashboardDataContext";
 import { useDashboardUI } from "@/contexts/DashboardUIContext";
 import { navigation } from "@/app/components/Dashboard/data/dataProcessors";
@@ -189,12 +189,28 @@ const Sidebar = ({
   variant = "dashboard",
 }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const { profile, clients, selectedClient, setSelectedClient, userRole, allowedSections } = useDashboardData();
   const { sidebarOpen, setSidebarOpen, activeSection } = useDashboardUI();
 
   const handleClientChange = (id) => {
     const c = clients.find((cl) => cl.id === id);
-    if (c) setSelectedClient(c);
+    if (!c) return;
+    setSelectedClient(c);
+
+    // For PMs the dropdown IS the "open this client's tracker" gesture —
+    // always route them to /dashboard/pm/[id]. For admin_global, just
+    // change context and keep them on their current section.
+    if (userRole === 'pm') {
+      router.push(`/dashboard/pm/${id}`);
+      return;
+    }
+
+    // For other roles, only navigate when already inside the PM tracker
+    // (so changing client from a client tracker switches to the new one).
+    if (pathname?.startsWith('/dashboard/pm/')) {
+      router.push(`/dashboard/pm/${id}`);
+    }
   };
 
   const dashboardNavigation = navigation;
