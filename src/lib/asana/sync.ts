@@ -2,11 +2,26 @@ import { supabaseAdmin } from '@/app/utils/supabase/admin'
 import { fetchAsana, fetchAsanaProjectName } from './client'
 import type { AsanaSection, AsanaTask } from './types'
 
-const SYNC_TTL = 15 * 60 * 1000
-const lastSyncByUser = new Map<string, number>()
+const SYNC_TTL_MS = 15 * 60 * 1000
+const SYNC_CONCURRENCY = 3
 
 function customField(task: AsanaTask, name: string): string | null {
   return task.custom_fields?.find(f => f.name === name)?.display_value ?? null
+}
+
+async function runWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<void>
+): Promise<void> {
+  const queue = [...items]
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (queue.length) {
+      const item = queue.shift()!
+      await fn(item)
+    }
+  })
+  await Promise.allSettled(workers)
 }
 
 export async function syncProject(userId: string, token: string, projectGid: string): Promise<void> {
@@ -90,16 +105,33 @@ export async function syncProject(userId: string, token: string, projectGid: str
 }
 
 export async function syncAllProjects(userId: string, token: string, gids: string[]): Promise<void> {
-  for (const gid of gids) {
-    await syncProject(userId, token, gid)
-  }
+  await runWithConcurrency(gids, SYNC_CONCURRENCY, (gid) =>
+    syncProject(userId, token, gid)
+  )
+  await supabaseAdmin
+    .from('pm_user_configs')
+    .update({ last_sync_at: new Date().toISOString() })
+    .eq('user_id', userId)
 }
 
-export function triggerSync(userId: string, token: string, gids: string[]): void {
+export async function triggerSync(userId: string, token: string, gids: string[]): Promise<void> {
   if (!gids.length) return
-  const last = lastSyncByUser.get(userId) ?? 0
-  if (Date.now() - last < SYNC_TTL) return
-  lastSyncByUser.set(userId, Date.now())
+
+  const { data } = await supabaseAdmin
+    .from('pm_user_configs')
+    .select('last_sync_at')
+    .eq('user_id', userId)
+    .single()
+
+  const lastSync = data?.last_sync_at ? new Date(data.last_sync_at).getTime() : 0
+  if (Date.now() - lastSync < SYNC_TTL_MS) return
+
+  // Mark as syncing immediately to prevent concurrent triggers
+  await supabaseAdmin
+    .from('pm_user_configs')
+    .update({ last_sync_at: new Date().toISOString() })
+    .eq('user_id', userId)
+
   syncAllProjects(userId, token, gids).catch(err =>
     console.error(`[asana-sync] ${userId}:`, err)
   )
