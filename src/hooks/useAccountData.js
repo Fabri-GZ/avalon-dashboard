@@ -36,9 +36,19 @@ export function useAccountData(clientId) {
           .from('clients')
           .select('id, company_name, logo_url, onboarding_date, services_contracted, status')
           .eq('id', clientId)
-          .single();
+          .maybeSingle();
 
         if (clientError) throw clientError;
+        if (!clientData) {
+          // PM viewing an unlinked pm_clients project — no clients mirror exists.
+          setClientProfile(null);
+          setCredentials([]);
+          setReports([]);
+          setDriveResource(null);
+          setWebsiteResource(null);
+          setLoading(false);
+          return;
+        }
         setClientProfile(clientData);
 
         const { data: resourcesData, error: resourcesError } = await supabase

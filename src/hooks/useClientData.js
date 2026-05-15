@@ -60,12 +60,13 @@ export function useClientData(options = {}) {
 
         if (clientsError) throw clientsError;
 
-        setClients(clientsData);
-        if (clientsData.length > 0) {
-          const savedClientId = typeof window !== 'undefined' ? localStorage.getItem('avalon_selected_client_id') : null;
-          const foundClient = savedClientId ? clientsData.find(c => c.id === savedClientId) : null;
+        const adminClients = clientsData.map(c => ({ ...c, clientId: c.id }));
+        setClients(adminClients);
+        if (adminClients.length > 0) {
+          const savedClientId = typeof window !== 'undefined' ? localStorage.getItem(`avalon_selected_client_id_${profile.role}`) : null;
+          const foundClient = savedClientId ? adminClients.find(c => c.id === savedClientId) : null;
 
-          setSelectedClient(foundClient || clientsData[0]);
+          setSelectedClient(foundClient || adminClients[0]);
         }
       }
       else if (profile.role === 'client_user' && profile.client_id) {
@@ -77,8 +78,9 @@ export function useClientData(options = {}) {
 
         if (clientError) throw clientError;
 
-        setClients([clientData]);
-        setSelectedClient(clientData);
+        const enrichedClientData = { ...clientData, clientId: clientData.id };
+        setClients([enrichedClientData]);
+        setSelectedClient(enrichedClientData);
 
         const SERVICE_GATED = ['website', 'ads', 'social', 'chatbot'];
         const contracted = clientData?.services_contracted || [];
@@ -98,7 +100,7 @@ export function useClientData(options = {}) {
         } else {
           const { data: pmClients, error: pmErr } = await supabase
             .from('pm_clients')
-            .select('id, name, asana_project_id, status')
+            .select('id, name, asana_project_id, status, client_id')
             .in('asana_project_id', gids)
             .order('name');
 
@@ -106,6 +108,7 @@ export function useClientData(options = {}) {
 
           const adapted = (pmClients ?? []).map(c => ({
             id: c.id,
+            clientId: c.client_id ?? null,
             company_name: c.name,
             logo_url: null,
             status: c.status,
@@ -113,7 +116,7 @@ export function useClientData(options = {}) {
           }));
           setClients(adapted);
           if (adapted.length > 0) {
-            const savedClientId = typeof window !== 'undefined' ? localStorage.getItem('avalon_selected_client_id') : null;
+            const savedClientId = typeof window !== 'undefined' ? localStorage.getItem(`avalon_selected_client_id_${profile.role}`) : null;
             const foundClient = savedClientId ? adapted.find(c => c.id === savedClientId) : null;
             setSelectedClient(foundClient || null);
           } else {
@@ -128,13 +131,14 @@ export function useClientData(options = {}) {
 
         if (clientsError) throw clientsError;
 
-        setClients(clientsData ?? []);
-        if (clientsData && clientsData.length > 0) {
-          const savedClientId = typeof window !== 'undefined' ? localStorage.getItem('avalon_selected_client_id') : null;
-          const foundClient = savedClientId ? clientsData.find(c => c.id === savedClientId) : null;
-          setSelectedClient(foundClient || clientsData[0]);
+        const cmClients = (clientsData ?? []).map(c => ({ ...c, clientId: c.id }));
+        setClients(cmClients);
+        if (cmClients.length > 0) {
+          const savedClientId = typeof window !== 'undefined' ? localStorage.getItem(`avalon_selected_client_id_${profile.role}`) : null;
+          const foundClient = savedClientId ? cmClients.find(c => c.id === savedClientId) : null;
+          setSelectedClient(foundClient || cmClients[0]);
         } else {
-          setSelectedClient({ id: null, company_name: 'Sin cliente' });
+          setSelectedClient({ id: null, clientId: null, company_name: 'Sin cliente' });
         }
       } else {
         // comercial and other internal roles: no client context needed
@@ -151,10 +155,10 @@ export function useClientData(options = {}) {
   }
 
   useEffect(() => {
-    if (selectedClient?.id) {
-      localStorage.setItem('avalon_selected_client_id', selectedClient.id);
+    if (selectedClient?.id && profile?.role) {
+      localStorage.setItem(`avalon_selected_client_id_${profile.role}`, selectedClient.id);
     }
-  }, [selectedClient]);
+  }, [selectedClient, profile]);
 
 
 

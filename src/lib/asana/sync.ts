@@ -24,20 +24,28 @@ async function runWithConcurrency<T>(
   await Promise.allSettled(workers)
 }
 
-export async function syncProject(userId: string, token: string, projectGid: string): Promise<void> {
+export async function syncProject(userId: string, token: string, projectGid: string, clientId?: string): Promise<void> {
   const projectName = await fetchAsanaProjectName(token, projectGid)
   console.log(`[asana-sync] ${userId}: sync ${projectName} (${projectGid})`)
 
+  const upsertPayload: { name: string; asana_project_id: string; client_id?: string } = {
+    name: projectName,
+    asana_project_id: projectGid,
+  }
+  if (clientId !== undefined) {
+    upsertPayload.client_id = clientId
+  }
+
   const { data: clientData, error: clientError } = await supabaseAdmin
     .from('pm_clients')
-    .upsert({ name: projectName, asana_project_id: projectGid }, { onConflict: 'asana_project_id' })
+    .upsert(upsertPayload, { onConflict: 'asana_project_id' })
     .select('id')
     .single()
 
   if (clientError || !clientData) {
     throw new Error(`Failed to upsert client ${projectName}: ${clientError?.message}`)
   }
-  const clientId = clientData.id
+  const pmClientId = clientData.id
 
   const sections = await fetchAsana<AsanaSection>(token, `/projects/${projectGid}/sections`, {
     opt_fields: 'gid,name,created_at',
@@ -45,7 +53,7 @@ export async function syncProject(userId: string, token: string, projectGid: str
 
   if (sections.length > 0) {
     await supabaseAdmin.from('pm_sections').upsert(
-      sections.map(s => ({ asana_section_id: s.gid, name: s.name, client_id: clientId })),
+      sections.map(s => ({ asana_section_id: s.gid, name: s.name, client_id: pmClientId })),
       { onConflict: 'asana_section_id' }
     )
   }
@@ -53,7 +61,7 @@ export async function syncProject(userId: string, token: string, projectGid: str
   const { data: dbSections } = await supabaseAdmin
     .from('pm_sections')
     .select('id, asana_section_id')
-    .eq('client_id', clientId)
+    .eq('client_id', pmClientId)
 
   const sectionIdMap = Object.fromEntries(
     (dbSections ?? []).map((s: { id: string; asana_section_id: string }) => [s.asana_section_id, s.id])
@@ -80,7 +88,7 @@ export async function syncProject(userId: string, token: string, projectGid: str
         completed_at: task.completed_at,
         notes: task.notes,
         section_id: sectionIdMap[section.gid] ?? null,
-        client_id: clientId,
+        client_id: pmClientId,
         field_aprobado:   customField(task, 'Aprobado'),
         field_areas:      customField(task, 'Áreas'),
         field_proceso:    customField(task, 'Proceso'),
@@ -94,7 +102,7 @@ export async function syncProject(userId: string, token: string, projectGid: str
     await supabaseAdmin.from('pm_tasks').upsert(taskRows, { onConflict: 'asana_task_id' })
   }
 
-  const deleteQuery = supabaseAdmin.from('pm_tasks').delete().eq('client_id', clientId)
+  const deleteQuery = supabaseAdmin.from('pm_tasks').delete().eq('client_id', pmClientId)
   if (allTaskGids.length > 0) {
     await deleteQuery.not('asana_task_id', 'in', `(${allTaskGids.join(',')})`)
   } else {

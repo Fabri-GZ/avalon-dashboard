@@ -27,9 +27,16 @@ export function useAnalyticsData(clientId) {
         .from('clients')
         .select('onboarding_date')
         .eq('id', clientId)
-        .single();
+        .maybeSingle();
 
       if (clientError) throw clientError;
+
+      if (!clientData?.onboarding_date) {
+        setSocialInsights([]);
+        setWebsiteAnalytics([]);
+        setSocialDemographics([]);
+        return;
+      }
 
       const dateFromStr = clientData.onboarding_date;
 

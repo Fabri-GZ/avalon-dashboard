@@ -39,7 +39,7 @@ export function DashboardDataProvider({
     socialDemographics,
     loading: analyticsLoading,
     error: analyticsError,
-  } = useAnalyticsData(selectedClient?.id);
+  } = useAnalyticsData(selectedClient?.clientId ?? null);
 
   const value = useMemo(
     () => ({

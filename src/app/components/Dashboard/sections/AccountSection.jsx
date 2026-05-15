@@ -24,7 +24,7 @@ const AccountSection = ({ client, userRole }) => {
     error,
     isUpdatingStatus,
     requestOffboarding
-  } = useAccountData(client?.id);
+  } = useAccountData(client?.clientId ?? null);
 
   const isAdmin = userRole === 'admin_global';
 

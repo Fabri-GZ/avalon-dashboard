@@ -2,6 +2,7 @@ export type ReportStatus = 'green' | 'yellow' | 'red'
 
 export interface Client {
   id: string
+  clientId: string | null   // mirrors pm_clients.client_id; null when unlinked
   name: string
   asana_project_id: string
   status: ReportStatus | null
