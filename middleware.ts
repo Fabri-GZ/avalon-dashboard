@@ -70,6 +70,14 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=unknown_role', request.url));
     }
 
+    // /dashboard root → role-default route, at the edge BEFORE any React render.
+    // Doing this here (instead of /dashboard/page.jsx's server redirect) avoids
+    // a hydration race in app-router.tsx that throws React #310 on first load
+    // when SSR streaming bridges the redirect.
+    if (pathname === '/dashboard' || pathname === '/dashboard/') {
+      return NextResponse.redirect(new URL(defaultRouteForRole(role), request.url));
+    }
+
     // client_user onboarding guard
     if (role === 'client_user') {
       if (!profile.client_id) {
