@@ -14,13 +14,23 @@ export class DashboardErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
   static getDerivedStateFromError(error: Error): State {
+    // Next.js redirect() and notFound() throw special errors that the framework
+    // needs to handle. Never swallow them.
+    const digest = (error as { digest?: string }).digest;
+    if (typeof digest === 'string' && (digest.startsWith('NEXT_REDIRECT') || digest === 'NEXT_NOT_FOUND')) {
+      throw error;
+    }
     return { hasError: true, message: error.message, stack: error.stack };
   }
 
   componentDidCatch(error: Error, info: { componentStack?: string }) {
+    const digest = (error as { digest?: string }).digest;
+    if (typeof digest === 'string' && (digest.startsWith('NEXT_REDIRECT') || digest === 'NEXT_NOT_FOUND')) {
+      throw error;
+    }
     console.error("[DashboardErrorBoundary] crash caught", {
       message: error.message,
-      digest: (error as { digest?: string }).digest,
+      digest,
       stack: error.stack,
       componentStack: info.componentStack,
     });
