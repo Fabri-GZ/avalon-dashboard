@@ -7,6 +7,7 @@ import Sidebar from "@/app/components/Dashboard/Sidebar";
 import DashboardHeader from "@/app/components/Dashboard/DashboardHeader";
 import Loader from "@/app/components/Loader/loader";
 import { ClientToast } from "./ClientToast";
+import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
 import { createClient } from "@/app/utils/supabase/client";
 import type { Role } from "@/lib/permissions";
 
@@ -81,15 +82,17 @@ export default function DashboardShell({
   initialPmGids,
 }: DashboardShellProps) {
   return (
-    <DashboardDataProvider
-      initialRole={initialRole}
-      initialAllowedSections={initialAllowedSections}
-      initialUserId={initialUserId}
-      initialPmGids={initialPmGids}
-    >
-      <DashboardUIProvider>
-        <ShellInner>{children}</ShellInner>
-      </DashboardUIProvider>
-    </DashboardDataProvider>
+    <DashboardErrorBoundary>
+      <DashboardDataProvider
+        initialRole={initialRole}
+        initialAllowedSections={initialAllowedSections}
+        initialUserId={initialUserId}
+        initialPmGids={initialPmGids}
+      >
+        <DashboardUIProvider>
+          <ShellInner>{children}</ShellInner>
+        </DashboardUIProvider>
+      </DashboardDataProvider>
+    </DashboardErrorBoundary>
   );
 }
