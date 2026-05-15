@@ -214,27 +214,33 @@ const Sidebar = ({
   };
 
   const dashboardNavigation = navigation;
-  const [theme, setTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
-      if (document.documentElement.classList.contains('dark')) {
-        return 'dark';
-      }
-      const savedTheme = localStorage.getItem('theme');
-      return savedTheme || 'light';
-    }
-    return 'light';
-  });
+  // SSR-safe theme: stable initial value, then sync from DOM/localStorage after mount.
+  // Reading client-only state during render causes useId hydration drift in Radix,
+  // which cascades to React #310 in React 19.
+  const [theme, setTheme] = useState('light');
+  const [themeReady, setThemeReady] = useState(false);
 
   useEffect(() => {
+    if (document.documentElement.classList.contains('dark')) {
+      setTheme('dark');
+    } else {
+      const saved = localStorage.getItem('theme');
+      if (saved) setTheme(saved);
+    }
+    setThemeReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!themeReady) return;
     const root = window.document.documentElement;
     if (theme === "dark") {
       root.classList.add("dark");
-      localStorage.setItem('theme', 'dark'); 
+      localStorage.setItem('theme', 'dark');
     } else {
       root.classList.remove("dark");
-      localStorage.setItem('theme', 'light'); 
+      localStorage.setItem('theme', 'light');
     }
-  }, [theme]);
+  }, [theme, themeReady]);
 
   const showSwitcher = ['admin_global', 'cm', 'pm'].includes(userRole);
 
