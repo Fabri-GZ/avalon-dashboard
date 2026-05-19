@@ -1,6 +1,26 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+:root {
+  --toastify-color-success: #059669;
+  --toastify-color-error: #DC2626;
+  --toastify-toast-bd-radius: 10px;
+  --toastify-font-family: Poppins, sans-serif;
+  --toastify-toast-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --toastify-toast-min-height: 56px;
+  --toastify-toast-padding: 12px 14px;
+}
+
+.Toastify__toast {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.Toastify__progress-bar-theme--colored.Toastify__progress-bar--success,
+.Toastify__progress-bar-theme--colored.Toastify__progress-bar--error {
+  background: rgba(255, 255, 255, 0.35);
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /* ── PM Module Animations ────────────────────────── */

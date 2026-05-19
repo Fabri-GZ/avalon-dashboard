@@ -63,6 +63,10 @@ export function ClientHeader({
   }
 
   async function handleGenerateReport() {
+    if (!latestBrief) {
+      toast.error('No se puede generar un reporte sin brief')
+      return
+    }
     setLoadingReport(true)
     try {
       const res = await fetch('/api/pm/generate-report', {

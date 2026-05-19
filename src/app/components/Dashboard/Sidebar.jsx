@@ -132,13 +132,16 @@ const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile, user
                     )} />
                   )}
                 </div>
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden flex items-center gap-2">
                   <p className={cn(
-                    "text-sm font-medium truncate transition-colors duration-200",
+                    "text-sm font-medium truncate transition-colors duration-200 flex-1",
                     isSelected ? "text-foreground" : "text-foreground/90 group-hover:text-foreground"
                   )}>
                     {client.company_name}
                   </p>
+                  {client.status === 'green'  && <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />}
+                  {client.status === 'yellow' && <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />}
+                  {client.status === 'red'    && <span className="w-2 h-2 rounded-full bg-red-500   flex-shrink-0" />}
                 </div>
                 {isSelected && (
                   <motion.div
