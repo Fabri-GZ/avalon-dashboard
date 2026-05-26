@@ -3,7 +3,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { RxDashboard } from "react-icons/rx";
 import { FiGlobe, FiDollarSign, FiMessageSquare, FiUser, FiShield, FiArrowLeft, FiShare2, FiBriefcase, FiClipboard, FiUsers, FiSettings } from "react-icons/fi";
-import { Sun, Moon, Settings, LogOut, User, ChevronsUpDown, Check, Building2 } from "lucide-react";
+import { Sun, Moon, Settings, LogOut, User, ChevronsUpDown, Check, Building2, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -186,6 +186,67 @@ const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile, user
   );
 };
 
+const NavGroup = ({ item, idx, pathname, onNavigate }) => {
+  const Icon = iconMap[item.icon];
+  const groupActive = pathname?.startsWith("/dashboard/chatbot");
+  const [manualOpen, setManualOpen] = useState(false);
+  const open = manualOpen || groupActive;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: idx * 0.08, duration: 0.3 }}
+    >
+      <button
+        onClick={() => setManualOpen((o) => !o)}
+        className={`relative group flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+          groupActive
+            ? "bg-primary/10 text-primary font-semibold"
+            : "text-muted-foreground hover:bg-primary/10 hover:text-primary font-medium"
+        }`}
+      >
+        <Icon className="w-5 h-5" />
+        <span className="text-md">{item.name}</span>
+        <ChevronDown
+          className={`ml-auto w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-1 ml-4 flex flex-col gap-1 border-l border-border pl-3">
+              {item.children.map((child) => {
+                const childActive = pathname?.startsWith(child.href);
+                return (
+                  <button
+                    key={child.id}
+                    onClick={() => onNavigate(child.href)}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                      childActive
+                        ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                        : "text-muted-foreground hover:bg-primary/10 hover:text-primary font-medium"
+                    }`}
+                  >
+                    {child.name}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
 const Sidebar = ({
   mobile,
   onLogout,
@@ -308,6 +369,21 @@ const Sidebar = ({
                   ? dashboardNavigation.filter(item => allowedSections.includes(item.id))
                   : dashboardNavigation)
             ).map((item, idx) => {
+              if (item.children) {
+                return (
+                  <NavGroup
+                    key={item.id}
+                    item={item}
+                    idx={idx}
+                    pathname={pathname}
+                    onNavigate={(href) => {
+                      setSidebarOpen(false);
+                      router.push(href);
+                    }}
+                  />
+                );
+              }
+
               const Icon = iconMap[item.icon];
               const isActive = activeSection === item.id;
 

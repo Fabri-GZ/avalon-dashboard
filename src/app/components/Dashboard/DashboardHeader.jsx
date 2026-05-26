@@ -2,11 +2,25 @@
 
 import { motion } from "framer-motion";
 import { FiMenu, FiCalendar } from "react-icons/fi";
+import { usePathname } from "next/navigation";
 import { useDashboardUI } from "@/contexts/DashboardUIContext";
 import { navigation } from "@/app/components/Dashboard/data/dataProcessors";
 
+function resolveTitle(pathname, activeSection) {
+  for (const item of navigation) {
+    if (item.children) {
+      const child = item.children.find((c) => pathname?.startsWith(c.href));
+      if (child) return child.name;
+    } else if (item.href && pathname?.startsWith(item.href)) {
+      return item.name;
+    }
+  }
+  return navigation.find((item) => item.id === activeSection)?.name ?? "";
+}
+
 const DashboardHeader = () => {
   const { activeSection, setSidebarOpen, timeFilter, setTimeFilter } = useDashboardUI();
+  const pathname = usePathname();
 
   const filterOptions = [
     { value: 'daily', label: 'Diario' },
@@ -14,7 +28,7 @@ const DashboardHeader = () => {
     { value: 'annual', label: 'Anual' }
   ]
 
-  const displayTitle = navigation.find(item => item.id === activeSection)?.name;
+  const displayTitle = resolveTitle(pathname, activeSection);
 
   return (
     <header className="bg-background h-[95px] px-4 lg:px-8 sticky top-0 z-40 border-b border-border flex items-center">
@@ -30,6 +44,8 @@ const DashboardHeader = () => {
         </motion.h2>
 
         <div className="flex items-center gap-3">
+          <div id="dashboard-header-slot" className="flex items-center gap-3" />
+
           {['overview', 'website', 'ads'].includes(activeSection) && (
             <motion.div
               initial={{ opacity: 0, x: 20 }}

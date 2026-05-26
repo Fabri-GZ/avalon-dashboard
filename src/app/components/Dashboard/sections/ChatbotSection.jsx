@@ -9,7 +9,7 @@ import Accordion from "../Accordion";
 import { createClient } from '@/app/utils/supabase/client';
 import { formatNumber, containerVariants, cardVariants } from "../data/dataProcessors";
 
-const ChatbotSection = ({ client, dateRange }) => {
+const ChatbotSection = ({ client, dateRange = 30 }) => {
   const [chatbotData, setChatbotData] = useState(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();

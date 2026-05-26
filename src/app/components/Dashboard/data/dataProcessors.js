@@ -186,7 +186,15 @@ export const navigation = [
   { id: 'website',    name: 'Web',       icon: 'FiGlobe',          href: '/dashboard/website' },
   { id: 'ads',        name: 'Ads',       icon: 'FiDollarSign',     href: '/dashboard/ads' },
   { id: 'social',     name: 'Redes',     icon: 'FiShare2',         href: '/dashboard/social' },
-  { id: 'chatbot',    name: 'Bot',       icon: 'FiMessageSquare',  href: '/dashboard/chatbot' },
+  {
+    id: 'chatbot',
+    name: 'Bot',
+    icon: 'FiMessageSquare',
+    children: [
+      { id: 'chatbot-insights', name: 'Insights', href: '/dashboard/chatbot/insights' },
+      { id: 'chatbot-crm',      name: 'CRM',      href: '/dashboard/chatbot/crm' },
+    ],
+  },
   { id: 'commercial', name: 'Comercial', icon: 'FiBriefcase',      href: '/dashboard/commercial' },
   { id: 'pm',         name: 'Proyectos', icon: 'FiClipboard',      href: '/dashboard/pm' },
   { id: 'account',    name: 'Cuenta',    icon: 'FiUser',           href: '/dashboard/account' },
