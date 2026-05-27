@@ -1,8 +1,8 @@
 'use client'
 
-import { User, MapPin, Package, Layers, GitBranch } from 'lucide-react'
+import { User, MapPin, Package, Layers, GitBranch, UserCheck } from 'lucide-react'
 import { initials, prettify, prettifyLocation, capitalize } from '@/lib/crm/format'
-import type { Lead } from '@/lib/crm/types'
+import type { Lead, Stage } from '@/lib/crm/types'
 
 const INTENCION_STYLE: Record<string, { label: string; className: string }> = {
   presupuesto: {
@@ -16,6 +16,34 @@ const INTENCION_STYLE: Record<string, { label: string; className: string }> = {
   otro: {
     label: 'Otro',
     className: 'bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300',
+  },
+}
+
+const STAGE_STYLE: Record<Stage, { label: string; dot: string; badge: string }> = {
+  nuevo: {
+    label: 'Nuevo',
+    dot: 'bg-sky-500',
+    badge: 'bg-sky-500/10 text-sky-700 ring-sky-500/20 dark:text-sky-300',
+  },
+  conversando: {
+    label: 'Conversando',
+    dot: 'bg-amber-500',
+    badge: 'bg-amber-500/10 text-amber-700 ring-amber-500/20 dark:text-amber-300',
+  },
+  derivado: {
+    label: 'Derivado',
+    dot: 'bg-violet-500',
+    badge: 'bg-violet-500/10 text-violet-700 ring-violet-500/20 dark:text-violet-300',
+  },
+  cerrado: {
+    label: 'Cerrado',
+    dot: 'bg-emerald-500',
+    badge: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20 dark:text-emerald-300',
+  },
+  sin_respuesta: {
+    label: 'Sin respuesta',
+    dot: 'bg-zinc-400',
+    badge: 'bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:text-zinc-400',
   },
 }
 
@@ -45,6 +73,7 @@ function Field({
 export function LeadInfoPanel({ lead }: { lead: Lead }) {
   const avatar = initials(lead.nombre)
   const intencion = lead.intencion ? INTENCION_STYLE[lead.intencion] : null
+  const stageMeta = STAGE_STYLE[lead.stage]
 
   return (
     <div className="flex flex-col gap-5 rounded-xl border border-border bg-card p-5">
@@ -62,13 +91,22 @@ export function LeadInfoPanel({ lead }: { lead: Lead }) {
         </div>
       </div>
 
-      {intencion && (
+      <div className="flex flex-wrap items-center gap-2">
         <span
-          className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${intencion.className}`}
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${stageMeta.badge}`}
         >
-          {intencion.label}
+          <span className={`h-1.5 w-1.5 rounded-full ${stageMeta.dot}`} />
+          {stageMeta.label}
         </span>
-      )}
+
+        {intencion && (
+          <span
+            className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${intencion.className}`}
+          >
+            {intencion.label}
+          </span>
+        )}
+      </div>
 
       <div className="flex flex-col gap-4 border-t border-border pt-4">
         <Field icon={MapPin} label="Ubicación" value={prettifyLocation(lead.ubicacion)} />
@@ -81,6 +119,9 @@ export function LeadInfoPanel({ lead }: { lead: Lead }) {
             label="Derivación"
             value={capitalize(lead.tipo_derivacion) || 'Derivado'}
           />
+        )}
+        {lead.comercial_asignado && (
+          <Field icon={UserCheck} label="Comercial" value={lead.comercial_asignado} />
         )}
       </div>
     </div>

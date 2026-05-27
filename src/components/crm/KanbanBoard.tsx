@@ -60,10 +60,12 @@ export function KanbanBoard({ leads }: { leads: Lead[] }) {
     <div className="flex flex-col gap-4">
       <CrmTopbar value={filters} onChange={setFilters} total={filtered.length} />
 
-      <div className="flex gap-4 overflow-x-auto pb-2">
-        {STAGES.map((stage) => (
-          <KanbanColumn key={stage} stage={stage} leads={columns[stage]} />
-        ))}
+      <div className="min-w-0 overflow-hidden">
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {STAGES.map((stage) => (
+            <KanbanColumn key={stage} stage={stage} leads={columns[stage]} />
+          ))}
+        </div>
       </div>
     </div>
   )

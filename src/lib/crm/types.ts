@@ -15,6 +15,7 @@ export interface Lead {
   detalle_aberturas: string | null
   derivado: boolean | null
   tipo_derivacion: string | null
+  comercial_asignado: string | null
   last_snippet: string | null
   first_contact_at: string | null
   last_message_at: string | null

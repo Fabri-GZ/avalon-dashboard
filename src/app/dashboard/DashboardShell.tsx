@@ -10,6 +10,8 @@ import { ClientToast } from "./ClientToast";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
 import { createClient } from "@/app/utils/supabase/client";
 import type { Role } from "@/lib/permissions";
+import { requiredSectionFor, defaultRouteForRole } from "@/lib/permissions";
+import { useEffect } from "react";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -22,8 +24,16 @@ interface DashboardShellProps {
 function ShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { dataLoading } = useDashboardData();
+  const { dataLoading, allowedSections, userRole } = useDashboardData();
   const { sidebarOpen, setSidebarOpen } = useDashboardUI();
+
+  useEffect(() => {
+    if (!userRole || !allowedSections) return;
+    const required = requiredSectionFor(pathname);
+    if (required && !allowedSections.includes(required)) {
+      router.replace(defaultRouteForRole(userRole));
+    }
+  }, [pathname, allowedSections, userRole, router]);
 
   const sidebarVariant = pathname.startsWith("/dashboard/settings") ? "settings" : "dashboard";
 

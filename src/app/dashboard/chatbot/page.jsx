@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function ChatbotPage() {
-  redirect("/dashboard/chatbot/insights");
+  redirect("/dashboard/chatbot/crm");
 }
