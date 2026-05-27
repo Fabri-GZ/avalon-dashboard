@@ -84,10 +84,7 @@ export function HorizontalBarCard({ title, data, colored = false }: HorizontalBa
               />
               <Tooltip
                 {...tooltipStyle}
-                formatter={(value: number, name: string, props: { payload?: { label: string } }) => [
-                  value,
-                  props.payload?.label ?? name,
-                ]}
+                formatter={(value: number) => [value, 'Leads']}
               />
               <Bar dataKey="value" barSize={isMobile ? 16 : 20} radius={[0, 6, 6, 0]}>
                 {colored

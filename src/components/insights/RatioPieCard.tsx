@@ -1,9 +1,9 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { PieChart, Pie, Cell, Sector, ResponsiveContainer, Label } from 'recharts'
+import { PieChart, Pie, Cell, Sector, ResponsiveContainer, Label, Tooltip } from 'recharts'
 import type { RatioMetric } from '@/lib/insights/types'
-import { cardVariants } from './chartTheme'
+import { cardVariants, tooltipStyle } from './chartTheme'
 
 interface RatioPieCardProps {
   label: string
@@ -18,12 +18,10 @@ interface ActiveShapeProps {
   startAngle: number
   endAngle: number
   fill: string
-  positive: number
-  total: number
 }
 
 function ActiveShape({
-  cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, positive, total,
+  cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill,
 }: ActiveShapeProps) {
   if (!cx || !cy || !innerRadius) return null
   return (
@@ -37,15 +35,6 @@ function ActiveShape({
         endAngle={endAngle}
         fill={fill}
       />
-      <text
-        x={cx}
-        y={cy + innerRadius + 16}
-        textAnchor="middle"
-        fill="var(--muted-foreground)"
-        fontSize={10}
-      >
-        {positive} de {total}
-      </text>
     </g>
   )
 }
@@ -75,6 +64,7 @@ export function RatioPieCard({ label, ratio }: RatioPieCardProps) {
           <div className="relative">
             <ResponsiveContainer width="100%" height={120}>
               <PieChart>
+                <Tooltip {...tooltipStyle} formatter={(value: number, name: string) => [value, name]} />
                 <Pie
                   data={data}
                   dataKey="value"
@@ -93,8 +83,6 @@ export function RatioPieCard({ label, ratio }: RatioPieCardProps) {
                       startAngle={props.startAngle as number}
                       endAngle={props.endAngle as number}
                       fill={props.fill as string}
-                      positive={ratio.positive}
-                      total={ratio.total}
                     />
                   )}
                   stroke="var(--card)"
