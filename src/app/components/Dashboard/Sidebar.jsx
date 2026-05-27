@@ -186,7 +186,7 @@ const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile, user
   );
 };
 
-const NavGroup = ({ item, idx, pathname, onNavigate, userRole }) => {
+const NavGroup = ({ item, idx, pathname, onNavigate }) => {
   const Icon = iconMap[item.icon];
   const groupActive = pathname?.startsWith("/dashboard/chatbot");
   const [manualOpen, setManualOpen] = useState(false);
@@ -223,9 +223,7 @@ const NavGroup = ({ item, idx, pathname, onNavigate, userRole }) => {
             className="overflow-hidden"
           >
             <div className="mt-1 ml-4 flex flex-col gap-1 border-l border-border pl-3">
-              {item.children.filter(child =>
-                !(child.id === 'chatbot-insights' && userRole === 'client_user')
-              ).map((child) => {
+              {item.children.map((child) => {
                 const childActive = pathname?.startsWith(child.href);
                 return (
                   <button
@@ -378,7 +376,6 @@ const Sidebar = ({
                     item={item}
                     idx={idx}
                     pathname={pathname}
-                    userRole={userRole}
                     onNavigate={(href) => {
                       setSidebarOpen(false);
                       router.push(href);
