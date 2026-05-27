@@ -19,6 +19,7 @@ export interface Lead {
   last_snippet: string | null
   first_contact_at: string | null
   last_message_at: string | null
+  calificado: boolean | null
 }
 
 export interface Message {

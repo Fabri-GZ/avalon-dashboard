@@ -4,7 +4,7 @@ import { createClient as createServerClient } from '@/app/utils/supabase/server'
 type ServerClient = Awaited<ReturnType<typeof createServerClient>>
 
 const LEAD_FIELDS =
-  'channel, session_id, nombre, contacto, stage, intencion, material, ubicacion, cantidad_aberturas, detalle_aberturas, derivado, tipo_derivacion, comercial_asignado, last_snippet, first_contact_at, last_message_at'
+  'channel, session_id, nombre, contacto, stage, intencion, material, ubicacion, cantidad_aberturas, detalle_aberturas, derivado, tipo_derivacion, comercial_asignado, last_snippet, first_contact_at, last_message_at, calificado'
 
 export async function getLeads(
   supabase: ServerClient,
