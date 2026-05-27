@@ -48,7 +48,9 @@ export function DistributionPieCard({ title, data }: DistributionPieCardProps) {
                 ))}
                 <Label
                   content={({ viewBox }) => {
-                    const { cx, cy } = viewBox as { cx: number; cy: number }
+                    const vb = viewBox as { cx?: number; cy?: number } | undefined
+                    if (!vb?.cx || !vb?.cy) return null
+                    const { cx, cy } = vb
                     return (
                       <g>
                         <text x={cx} y={cy - 6} textAnchor="middle" fill="var(--foreground)" fontSize={18} fontWeight={700}>

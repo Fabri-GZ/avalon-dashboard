@@ -9,13 +9,12 @@ import { tooltipStyle, axisTickStyle } from './chartTheme'
 
 interface LeadsTrendChartProps {
   data: TimeSeriesPoint[]
-  timeFilter: 'daily' | 'monthly' | 'annual'
 }
 
 const isEmpty = (data: TimeSeriesPoint[]) =>
   data.length === 0 || data.every((p) => p.value === 0)
 
-export function LeadsTrendChart({ data, timeFilter }: LeadsTrendChartProps) {
+export function LeadsTrendChart({ data }: LeadsTrendChartProps) {
   const empty = isEmpty(data)
 
   return (

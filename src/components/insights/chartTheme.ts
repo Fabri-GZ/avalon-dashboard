@@ -1,4 +1,11 @@
-export { cardVariants, containerVariants } from '@/app/components/Dashboard/data/dataProcessors'
+import type { Variants } from 'framer-motion'
+import {
+  cardVariants as _cardVariants,
+  containerVariants as _containerVariants,
+} from '@/app/components/Dashboard/data/dataProcessors'
+
+export const cardVariants = _cardVariants as Variants
+export const containerVariants = _containerVariants as Variants
 
 export const tooltipStyle = {
   contentStyle: {

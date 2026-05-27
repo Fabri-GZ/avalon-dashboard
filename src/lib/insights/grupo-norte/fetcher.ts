@@ -3,9 +3,9 @@ import { generateEmptyTrend } from '../period'
 import {
   getLeadsCount,
   getLeadsForPeriod,
-  getAvgMessagesPerConversation,
+  getTotalMessages,
   getDerivationRate,
-  getQualifiedRate,
+  getClosedRate,
   getLeadsTrend,
   getByMaterial,
   getByIntencion,
@@ -23,25 +23,23 @@ export const grupoNorteFetcher: InsightsFetcher = async ({
   supabase,
   clientId,
   period,
-  timeFilter,
 }) => {
-  const { from, to, prevFrom, prevTo } = period
+  const { from, to, prevFrom, prevTo, hasComparison, bucket } = period
 
-  const [currentCount, previousCount, leads] = await Promise.all([
+  const [currentCount, previousCount, leads, totalMessages] = await Promise.all([
     getLeadsCount(supabase, clientId, from, to),
-    getLeadsCount(supabase, clientId, prevFrom, prevTo),
+    hasComparison ? getLeadsCount(supabase, clientId, prevFrom, prevTo) : Promise.resolve(0),
     getLeadsForPeriod(supabase, clientId, from, to),
+    getTotalMessages(supabase, clientId, from, to),
   ])
-
-  const avgMessages = await getAvgMessagesPerConversation(supabase, clientId, from, to, currentCount)
 
   if (leads.length === 0 && currentCount === 0) {
     const result: InsightsData = {
       totalLeads: { value: 0, previous: previousCount, deltaPct: 0 },
       derivationRate: { rate: 0, positive: 0, negative: 0, total: 0, positiveLabel: 'Derivados', negativeLabel: 'No derivados' },
-      qualifiedRate: { rate: 0, positive: 0, negative: 0, total: 0, positiveLabel: 'Calificados', negativeLabel: 'No calificados' },
-      avgMessagesPerConversation: 0,
-      leadsTrend: generateEmptyTrend(timeFilter),
+      closedRate: { rate: 0, positive: 0, negative: 0, total: 0, positiveLabel: 'Cerrados', negativeLabel: 'No cerrados' },
+      totalMessages,
+      leadsTrend: generateEmptyTrend(bucket),
       byMaterial: [],
       byStage: getByStage([]),
       byIntencion: [],
@@ -55,12 +53,12 @@ export const grupoNorteFetcher: InsightsFetcher = async ({
     totalLeads: {
       value: currentCount,
       previous: previousCount,
-      deltaPct: calcDelta(currentCount, previousCount),
+      deltaPct: hasComparison ? calcDelta(currentCount, previousCount) : 0,
     },
     derivationRate: getDerivationRate(leads),
-    qualifiedRate: getQualifiedRate(leads),
-    avgMessagesPerConversation: avgMessages,
-    leadsTrend: getLeadsTrend(leads, timeFilter, period),
+    closedRate: getClosedRate(leads),
+    totalMessages,
+    leadsTrend: getLeadsTrend(leads, period),
     byMaterial: getByMaterial(leads),
     byStage: getByStage(leads),
     byIntencion: getByIntencion(leads),

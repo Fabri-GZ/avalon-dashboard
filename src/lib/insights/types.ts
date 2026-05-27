@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+export type InsightsRange = 'hoy' | '7d' | '30d' | 'todo'
+
 export interface Period {
   from: Date
   to: Date
@@ -10,7 +12,8 @@ export interface InsightsPeriod {
   to: string
   prevFrom: string
   prevTo: string
-  bucket: 'day' | 'week' | 'month'
+  hasComparison: boolean
+  bucket: 'hour' | 'day' | 'week' | 'month'
 }
 
 export interface MetricDelta {
@@ -37,6 +40,7 @@ export interface DistributionSlice {
   label: string
   value: number
   color?: string
+  [key: string]: unknown
 }
 
 export interface FunnelStage {
@@ -44,6 +48,7 @@ export interface FunnelStage {
   label: string
   value: number
   color: string
+  [key: string]: unknown
 }
 
 export const STAGE_COLORS: Record<FunnelStage['stage'], string> = {
@@ -65,8 +70,8 @@ export const STAGE_LABELS: Record<FunnelStage['stage'], string> = {
 export interface InsightsData {
   totalLeads: MetricDelta
   derivationRate: RatioMetric
-  qualifiedRate: RatioMetric
-  avgMessagesPerConversation: number
+  closedRate: RatioMetric
+  totalMessages: number
   leadsTrend: TimeSeriesPoint[]
   byMaterial: DistributionSlice[]
   byStage: FunnelStage[]
@@ -82,7 +87,6 @@ export interface RawLead {
   intencion: string | null
   ubicacion: string | null
   derivado: boolean | null
-  calificado: boolean | null
   comercial_asignado: string | null
 }
 
@@ -90,5 +94,5 @@ export type InsightsFetcher = (args: {
   supabase: SupabaseClient
   clientId: string
   period: InsightsPeriod
-  timeFilter: 'daily' | 'monthly' | 'annual'
+  range: InsightsRange
 }) => Promise<InsightsData>

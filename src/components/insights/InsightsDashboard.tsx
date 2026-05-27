@@ -1,29 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { BarChart3, AlertTriangle, MessageSquare } from 'lucide-react'
+import { motion, AnimatePresence, useReducedMotion, type Variants } from 'framer-motion'
+import { BarChart3, AlertTriangle, Users, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useDashboardData } from '@/contexts/DashboardDataContext'
-import { useDashboardUI } from '@/contexts/DashboardUIContext'
 import { createClient } from '@/app/utils/supabase/client'
 import { getInsightsFetcher } from '@/lib/insights/registry'
 import { buildInsightsPeriod } from '@/lib/insights/period'
-import type { InsightsData } from '@/lib/insights/types'
+import type { InsightsData, InsightsRange } from '@/lib/insights/types'
 import { containerVariants, cardVariants } from './chartTheme'
-import { StatCardDelta } from './StatCardDelta'
+import StatCard from '@/app/components/Dashboard/StatCard'
 import { RatioPieCard } from './RatioPieCard'
 import { LeadsTrendChart } from './LeadsTrendChart'
 import { DistributionPieCard } from './DistributionPieCard'
 import { HorizontalBarCard } from './HorizontalBarCard'
+import { InsightsTopbar } from './InsightsTopbar'
 
 const supabase = createClient()
-
-const PERIOD_LABELS: Record<string, string> = {
-  daily: 'Últimos 7 días',
-  monthly: 'Últimas 4 semanas',
-  annual: 'Últimos 12 meses',
-}
 
 function SkeletonCard({ height = 118 }: { height?: number }) {
   return (
@@ -35,10 +29,10 @@ function SkeletonCard({ height = 118 }: { height?: number }) {
 }
 
 export function InsightsDashboard() {
-  const { selectedClient } = useDashboardData()
-  const { timeFilter } = useDashboardUI()
+  const { selectedClient, dataLoading } = useDashboardData()
   const reducedMotion = useReducedMotion()
 
+  const [range, setRange] = useState<InsightsRange>('30d')
   const [data, setData] = useState<InsightsData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +44,7 @@ export function InsightsDashboard() {
     if (!clientId) return
 
     const fetcher = getInsightsFetcher(clientId)
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (!fetcher) {
       setData(null)
       setError(null)
@@ -63,9 +58,10 @@ export function InsightsDashboard() {
     setLoading(true)
     setError(null)
     setData(null)
+    /* eslint-enable react-hooks/set-state-in-effect */
 
-    const period = buildInsightsPeriod(timeFilter)
-    fetcher({ supabase, clientId, period, timeFilter })
+    const period = buildInsightsPeriod(range)
+    fetcher({ supabase, clientId, period, range })
       .then((result) => {
         if (!cancelled) {
           setData(result)
@@ -82,19 +78,18 @@ export function InsightsDashboard() {
     return () => {
       cancelled = true
     }
-  }, [selectedClient?.clientId, timeFilter, retryKey])
+  }, [selectedClient?.clientId, range, retryKey])
 
-  const clientName = selectedClient?.clientId === 'b7859a5a-d306-488a-ba3d-6733ae8430ad'
-    ? 'Grupo Norte'
-    : (selectedClient as { name?: string } | null)?.name ?? 'Cliente'
-
-  const containerVars = reducedMotion
+  const containerVars = (reducedMotion
     ? { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0 } } }
-    : containerVariants
+    : containerVariants) as Variants
 
-  const cardVars = reducedMotion
+  const cardVars = (reducedMotion
     ? { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.15 } } }
-    : cardVariants
+    : cardVariants) as Variants
+
+  const totalLeadsChange =
+    data && data.totalLeads.previous > 0 ? data.totalLeads.deltaPct : undefined
 
   return (
     <motion.div
@@ -104,19 +99,7 @@ export function InsightsDashboard() {
       variants={containerVars}
       className="space-y-6"
     >
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground tracking-tight">Insights del chatbot</h2>
-          <p className="text-sm text-muted-foreground">Resumen de leads de WhatsApp</p>
-        </div>
-        <div className="flex items-center gap-2 text-sm flex-wrap">
-          <span className="font-medium text-foreground">{clientName}</span>
-          <span className="text-muted-foreground">·</span>
-          <span className="text-muted-foreground">WhatsApp</span>
-          <span className="text-muted-foreground">·</span>
-          <span className="text-muted-foreground">{PERIOD_LABELS[timeFilter]}</span>
-        </div>
-      </div>
+      <InsightsTopbar value={range} onChange={setRange} />
 
       {noFetcher && (
         <div className="bg-card border border-secondary rounded-xl p-8 text-center max-w-md mx-auto flex flex-col items-center gap-3">
@@ -144,7 +127,7 @@ export function InsightsDashboard() {
         </div>
       )}
 
-      {loading && !error && !noFetcher && (
+      {(loading || (dataLoading && !data)) && !error && !noFetcher && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <SkeletonCard />
@@ -169,7 +152,7 @@ export function InsightsDashboard() {
       {data && !loading && !error && !noFetcher && (
         <AnimatePresence mode="wait">
           <motion.div
-            key={timeFilter}
+            key={range}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -178,35 +161,42 @@ export function InsightsDashboard() {
           >
             <motion.div
               variants={containerVars}
+              initial="hidden"
+              animate="visible"
               className="grid grid-cols-2 md:grid-cols-4 gap-4"
             >
-              <StatCardDelta
-                label="Total leads"
+              <StatCard
+                title="Total leads"
                 value={data.totalLeads.value}
-                delta={data.totalLeads}
+                change={totalLeadsChange}
+                icon={Users}
+                index={0}
               />
               <RatioPieCard
                 label="Tasa de derivación"
                 ratio={data.derivationRate}
               />
               <RatioPieCard
-                label="Leads calificados"
-                ratio={data.qualifiedRate}
+                label="Leads cerrados"
+                ratio={data.closedRate}
               />
-              <StatCardDelta
-                label="Mensajes por conv."
-                value={data.avgMessagesPerConversation}
-                delta={{ value: data.avgMessagesPerConversation, previous: 0, deltaPct: 0 }}
-                icon={<MessageSquare size={14} />}
+              <StatCard
+                title="Mensajes totales"
+                value={data.totalMessages}
+                change={undefined}
+                icon={MessageSquare}
+                index={3}
               />
             </motion.div>
 
             <motion.div
               variants={containerVars}
+              initial="hidden"
+              animate="visible"
               className="grid grid-cols-1 lg:grid-cols-3 gap-6"
             >
               <motion.div variants={cardVars} className="lg:col-span-2">
-                <LeadsTrendChart data={data.leadsTrend} timeFilter={timeFilter} />
+                <LeadsTrendChart data={data.leadsTrend} />
               </motion.div>
               <motion.div variants={cardVars} className="lg:col-span-1">
                 <DistributionPieCard title="Por material" data={data.byMaterial} />
@@ -215,6 +205,8 @@ export function InsightsDashboard() {
 
             <motion.div
               variants={containerVars}
+              initial="hidden"
+              animate="visible"
               className="grid grid-cols-1 lg:grid-cols-3 gap-6"
             >
               <motion.div variants={cardVars}>
@@ -235,7 +227,7 @@ export function InsightsDashboard() {
               </motion.div>
             </motion.div>
 
-            <motion.div variants={cardVars}>
+            <motion.div variants={cardVars} initial="hidden" animate="visible">
               <HorizontalBarCard
                 title="Top ubicaciones"
                 data={data.topUbicaciones}

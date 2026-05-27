@@ -25,6 +25,7 @@ interface ActiveShapeProps {
 function ActiveShape({
   cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, positive, total,
 }: ActiveShapeProps) {
+  if (!cx || !cy || !innerRadius) return null
   return (
     <g>
       <Sector

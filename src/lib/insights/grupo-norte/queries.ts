@@ -29,7 +29,7 @@ export async function getLeadsForPeriod(
 ): Promise<RawLead[]> {
   const { data, error } = await supabase
     .from('gn_leads')
-    .select('first_contact_at, stage, material, intencion, ubicacion, derivado, calificado, comercial_asignado')
+    .select('first_contact_at, stage, material, intencion, ubicacion, derivado, comercial_asignado')
     .eq('client_id', clientId)
     .eq('channel', 'whatsapp')
     .gte('first_contact_at', from)
@@ -39,12 +39,11 @@ export async function getLeadsForPeriod(
   return (data ?? []) as RawLead[]
 }
 
-export async function getAvgMessagesPerConversation(
+export async function getTotalMessages(
   supabase: SupabaseClient,
   clientId: string,
   from: string,
-  to: string,
-  leadsCount: number
+  to: string
 ): Promise<number> {
   const { count, error } = await supabase
     .from('gn_messages')
@@ -54,8 +53,7 @@ export async function getAvgMessagesPerConversation(
     .lte('created_at', to)
 
   if (error) throw new Error(error.message)
-  const msgCount = count ?? 0
-  return leadsCount > 0 ? Math.round(msgCount / leadsCount) : 0
+  return count ?? 0
 }
 
 export function getDerivationRate(leads: RawLead[]): RatioMetric {
@@ -72,8 +70,8 @@ export function getDerivationRate(leads: RawLead[]): RatioMetric {
   }
 }
 
-export function getQualifiedRate(leads: RawLead[]): RatioMetric {
-  const positive = leads.filter((l) => l.calificado === true).length
+export function getClosedRate(leads: RawLead[]): RatioMetric {
+  const positive = leads.filter((l) => l.stage === 'cerrado').length
   const total = leads.length
   const negative = total - positive
   return {
@@ -81,21 +79,20 @@ export function getQualifiedRate(leads: RawLead[]): RatioMetric {
     positive,
     negative,
     total,
-    positiveLabel: 'Calificados',
-    negativeLabel: 'No calificados',
+    positiveLabel: 'Cerrados',
+    negativeLabel: 'No cerrados',
   }
 }
 
 export function getLeadsTrend(
   leads: RawLead[],
-  timeFilter: 'daily' | 'monthly' | 'annual',
   period: InsightsPeriod
 ): TimeSeriesPoint[] {
-  const trend = generateEmptyTrend(timeFilter)
+  const trend = generateEmptyTrend(period.bucket)
 
   for (const lead of leads) {
     if (!lead.first_contact_at) continue
-    const label = bucketLabel(lead.first_contact_at, timeFilter, period.from)
+    const label = bucketLabel(lead.first_contact_at, period.bucket, period.from)
     const point = trend.find((p) => p.label === label)
     if (point) point.value += 1
   }
@@ -115,8 +112,20 @@ function groupAndSort(items: (string | null)[], labelMap?: Record<string, string
     .sort((a, b) => b.value - a.value)
 }
 
+function normalizeMaterial(raw: string | null): string | null {
+  if (!raw) return null
+  const v = raw.toLowerCase()
+  if (v.includes('aluminio')) return 'Aluminio'
+  if (v.includes('pvc')) return 'PVC'
+  return 'Otro'
+}
+
+function titleCase(raw: string): string {
+  return raw.replace(/_/g, ' ').replace(/\S+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+}
+
 export function getByMaterial(leads: RawLead[]): DistributionSlice[] {
-  return groupAndSort(leads.map((l) => l.material))
+  return groupAndSort(leads.map((l) => normalizeMaterial(l.material)))
 }
 
 const INTENCION_LABELS: Record<string, string> = {
@@ -135,7 +144,9 @@ export function getByComercial(leads: RawLead[]): DistributionSlice[] {
 }
 
 export function getTopUbicaciones(leads: RawLead[]): DistributionSlice[] {
-  return groupAndSort(leads.map((l) => l.ubicacion)).slice(0, 6)
+  return groupAndSort(
+    leads.map((l) => (l.ubicacion && l.ubicacion.trim() !== '' ? titleCase(l.ubicacion) : null))
+  ).slice(0, 6)
 }
 
 const KNOWN_STAGES: FunnelStage['stage'][] = [

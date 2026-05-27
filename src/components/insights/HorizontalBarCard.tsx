@@ -35,7 +35,7 @@ export function HorizontalBarCard({ title, data, colored = false }: HorizontalBa
   const displayData = showTopN ? data.slice(0, 4) : data
   const hiddenCount = data.length - 4
 
-  const chartHeight = Math.max(displayData.length * 44, 160)
+  const chartHeight = Math.max(displayData.length * (isMobile ? 56 : 52), 160)
   const yAxisWidth = isMobile ? 72 : 92
 
   const normalized = displayData.map((item) => ({
@@ -60,6 +60,7 @@ export function HorizontalBarCard({ title, data, colored = false }: HorizontalBa
             <BarChart
               layout="vertical"
               data={normalized}
+              barCategoryGap="35%"
               margin={{ top: 0, right: 40, left: 0, bottom: 0 }}
             >
               <XAxis
