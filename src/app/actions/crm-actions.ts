@@ -1,6 +1,32 @@
 'use server'
 
 import { createClient } from '@/app/utils/supabase/server'
+import type { Stage } from '@/lib/crm/types'
+
+type UpdateStageError = 'protected_stage' | 'lead_not_found' | 'unauthorized' | 'db_error'
+
+export async function updateStageAction(
+  sessionId: string,
+  newStage: Stage,
+): Promise<{ success: boolean; error?: UpdateStageError }> {
+  if (newStage === 'derivado') return { success: false, error: 'protected_stage' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('gn_leads')
+    .update({ stage: newStage })
+    .eq('session_id', sessionId)
+    .eq('channel', 'whatsapp')
+    .select('session_id')
+    .maybeSingle()
+
+  if (error) {
+    if (error.code === '42501') return { success: false, error: 'unauthorized' }
+    return { success: false, error: 'db_error' }
+  }
+  if (!data) return { success: false, error: 'lead_not_found' }
+  return { success: true }
+}
 
 export async function deriveLeadAction(
   sessionId: string

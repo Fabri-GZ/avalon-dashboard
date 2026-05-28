@@ -28,3 +28,12 @@ export interface Message {
   content: string
   created_at: string | null
 }
+
+export const SELECTABLE_STAGES: Stage[] = ['nuevo', 'conversando', 'cerrado', 'sin_respuesta']
+
+export const STAGE_UPDATE_ERROR_MESSAGES: Record<string, string> = {
+  protected_stage: 'Para derivar un lead, usá el botón "Derivar Automáticamente".',
+  lead_not_found: 'No encontramos este lead. Actualizá la página e intentá de nuevo.',
+  unauthorized: 'No tenés permiso para cambiar el estado de este lead.',
+  db_error: 'Algo salió mal al guardar el cambio. Intentá de nuevo.',
+}
