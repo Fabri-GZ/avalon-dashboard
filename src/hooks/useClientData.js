@@ -106,11 +106,21 @@ export function useClientData(options = {}) {
 
           if (pmErr) throw pmErr;
 
+          const linkedClientIds = (pmClients ?? []).map(c => c.client_id).filter(Boolean);
+          let logoMap = {};
+          if (linkedClientIds.length > 0) {
+            const { data: logoData } = await supabase
+              .from('clients')
+              .select('id, logo_url')
+              .in('id', linkedClientIds);
+            logoMap = Object.fromEntries((logoData ?? []).map(c => [c.id, c.logo_url]));
+          }
+
           const adapted = (pmClients ?? []).map(c => ({
             id: c.id,
             clientId: c.client_id ?? null,
             company_name: c.name,
-            logo_url: null,
+            logo_url: logoMap[c.client_id] ?? null,
             status: c.status,
             asana_project_id: c.asana_project_id,
           }));
