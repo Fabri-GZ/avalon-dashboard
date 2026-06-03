@@ -11,6 +11,20 @@ const TABS = [
 
 export type TabKey = typeof TABS[number]['key']
 
+export function ClientTabsSkeleton() {
+  return (
+    <div className="flex bg-card border-b border-border px-7 h-[52px] items-center gap-1">
+      {TABS.map(({ key }) => (
+        <div
+          key={key}
+          className="px-5 py-2 rounded-md bg-muted/50 animate-pulse"
+          style={{ width: key === 'tareas' ? 68 : key === 'brief' ? 52 : 76, height: 28 }}
+        />
+      ))}
+    </div>
+  )
+}
+
 export function ClientTabs({ clientId }: { clientId: string }) {
   const searchParams = useSearchParams()
   const activeTab = (searchParams.get('tab') as TabKey) ?? 'tareas'

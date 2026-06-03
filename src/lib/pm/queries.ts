@@ -1,9 +1,12 @@
 import type { Client, Brief, SectionWithTasks, Report } from './types'
 import { createClient as createServerClient } from '@/app/utils/supabase/server'
 import { createClient as createBrowserClient } from '@/app/utils/supabase/client'
+import { supabaseAdmin } from '@/app/utils/supabase/admin'
 
 type ServerClient = Awaited<ReturnType<typeof createServerClient>>
 type BrowserClient = ReturnType<typeof createBrowserClient>
+type AdminClient = typeof supabaseAdmin
+type PmQueryClient = ServerClient | BrowserClient | AdminClient
 
 export async function getClientsWithStatus(
   supabase: ServerClient,
@@ -22,7 +25,7 @@ export async function getClientsWithStatus(
 }
 
 export async function getClientById(
-  supabase: ServerClient,
+  supabase: PmQueryClient,
   id: string
 ): Promise<Client | null> {
   const { data, error } = await supabase
@@ -36,7 +39,7 @@ export async function getClientById(
 }
 
 export async function getSectionsWithTasks(
-  supabase: ServerClient,
+  supabase: PmQueryClient,
   clientId: string
 ): Promise<SectionWithTasks[]> {
   const { data: sections, error: secErr } = await supabase
@@ -62,7 +65,7 @@ export async function getSectionsWithTasks(
 }
 
 export async function getLatestBrief(
-  supabase: ServerClient,
+  supabase: PmQueryClient,
   clientId: string
 ): Promise<Brief | null> {
   const { data, error } = await supabase
@@ -78,7 +81,7 @@ export async function getLatestBrief(
 }
 
 export async function getLatestReport(
-  supabase: ServerClient,
+  supabase: PmQueryClient,
   clientId: string
 ): Promise<Report | null> {
   const { data, error } = await supabase
