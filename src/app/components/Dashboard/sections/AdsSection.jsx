@@ -41,7 +41,7 @@ const AdsSection = ({ client, socialInsights, socialDemographics, timeFilter }) 
         change: calculatePercentageChange(current.totalReach, previous.totalReach)
       },
       websiteClicks: {
-        value: current.totalWebsiteClicks,
+        value: current.totalWebsiteClicks, 
         change: calculatePercentageChange(current.totalWebsiteClicks, previous.totalWebsiteClicks)
       },
       engagement: {

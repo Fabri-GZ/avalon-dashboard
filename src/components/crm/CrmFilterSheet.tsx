@@ -3,24 +3,24 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
-import type { DateRange } from './CrmTopbar'
+import type { CrmDateRange } from '@/lib/crm/types'
 
-const RANGES: { value: DateRange; label: string; desc: string }[] = [
-  { value: 'hoy', label: 'Hoy', desc: 'Solo leads de hoy' },
-  { value: '7d', label: '7 Días', desc: 'Últimos 7 días' },
-  { value: '30d', label: '30 Días', desc: 'Últimos 30 días' },
-  { value: 'todo', label: 'Todo', desc: 'Sin filtro de fecha' },
+const RANGES: { value: CrmDateRange; label: string; desc: string }[] = [
+  { value: '7d',   label: '7 Días',  desc: 'Últimos 7 días' },
+  { value: '30d',  label: '30 Días', desc: 'Últimos 30 días' },
+  { value: '90d',  label: '90 Días', desc: 'Últimos 90 días' },
+  { value: 'todo', label: 'Todo',    desc: 'Sin filtro de fecha' },
 ]
 
 interface Props {
-  value: DateRange
+  value: CrmDateRange
   total: number
-  onApply: (next: DateRange) => void
+  onApply: (next: CrmDateRange) => void
   onClose: () => void
 }
 
 function SheetContent({ value, total, onApply, onClose }: Props) {
-  const [selected, setSelected] = useState<DateRange>(value)
+  const [selected, setSelected] = useState<CrmDateRange>(value)
   const [closing, setClosing] = useState(false)
 
   useEffect(() => {
@@ -126,5 +126,8 @@ function SheetContent({ value, total, onApply, onClose }: Props) {
 }
 
 export function CrmFilterSheet(props: Props) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  if (!mounted) return null
   return createPortal(<SheetContent {...props} />, document.body)
 }

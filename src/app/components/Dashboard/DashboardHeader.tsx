@@ -5,28 +5,33 @@ import { FiMenu, FiCalendar } from "react-icons/fi";
 import { usePathname } from "next/navigation";
 import { useDashboardUI } from "@/contexts/DashboardUIContext";
 import { navigation } from "@/app/components/Dashboard/data/dataProcessors";
+import { useDateRangeParam } from "@/hooks/useDateRangeParam";
+import type { SectionDateRange } from "@/lib/types/dateRange";
 
-function resolveTitle(pathname, activeSection) {
+const SECTION_RANGES = ['7d', '30d', '3m', 'todo'] as const
+
+const filterOptions: { value: SectionDateRange; label: string }[] = [
+  { value: '7d',  label: 'Diario' },
+  { value: '30d', label: 'Mensual' },
+  { value: '3m',  label: 'Anual' },
+]
+
+function resolveTitle(pathname: string | null, activeSection: string): string {
   for (const item of navigation) {
     if (item.children) {
-      const child = item.children.find((c) => pathname?.startsWith(c.href));
+      const child = item.children.find((c: { href: string }) => pathname?.startsWith(c.href));
       if (child) return child.name;
     } else if (item.href && pathname?.startsWith(item.href)) {
       return item.name;
     }
   }
-  return navigation.find((item) => item.id === activeSection)?.name ?? "";
+  return navigation.find((item: { id: string; name: string }) => item.id === activeSection)?.name ?? "";
 }
 
 const DashboardHeader = () => {
-  const { activeSection, setSidebarOpen, timeFilter, setTimeFilter } = useDashboardUI();
+  const { activeSection, setSidebarOpen } = useDashboardUI();
   const pathname = usePathname();
-
-  const filterOptions = [
-    { value: 'daily', label: 'Diario' },
-    { value: 'monthly', label: 'Mensual' },
-    { value: 'annual', label: 'Anual' }
-  ]
+  const [dateRange, setDateRange] = useDateRangeParam<SectionDateRange>(SECTION_RANGES, '30d');
 
   const displayTitle = resolveTitle(pathname, activeSection);
 
@@ -58,16 +63,16 @@ const DashboardHeader = () => {
                 {filterOptions.map((option) => (
                   <button
                     key={option.value}
-                    onClick={() => setTimeFilter(option.value)}
+                    onClick={() => setDateRange(option.value)}
                     className={`
                       relative px-4 py-1.5 rounded-md text-sm font-[550] transition-all duration-300 ease-in-out
-                      ${timeFilter === option.value
+                      ${dateRange === option.value
                         ? 'text-primary-foreground'
                         : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                       }
                     `}
                   >
-                    {timeFilter === option.value && (
+                    {dateRange === option.value && (
                       <motion.div
                         layoutId="activeFilter"
                         className="absolute inset-0 bg-primary rounded-md shadow-md"

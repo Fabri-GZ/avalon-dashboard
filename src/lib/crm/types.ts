@@ -1,6 +1,7 @@
 export type Stage = 'nuevo' | 'conversando' | 'derivado' | 'cerrado' | 'sin_respuesta'
 export type Channel = 'whatsapp'
 export type Intencion = 'presupuesto' | 'postventa' | 'otro'
+export type CrmDateRange = '7d' | '30d' | '90d' | 'todo'
 
 export interface Lead {
   channel: Channel

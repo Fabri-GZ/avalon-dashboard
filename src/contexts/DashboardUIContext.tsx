@@ -5,7 +5,9 @@ import { usePathname } from "next/navigation";
 type TimeFilter = "daily" | "monthly" | "annual";
 
 interface DashboardUIContextValue {
+  /** @deprecated Use URL param ?range= via useDateRangeParam instead. Remove in Phase B. */
   timeFilter: TimeFilter;
+  /** @deprecated Use URL param ?range= via useDateRangeParam instead. Remove in Phase B. */
   setTimeFilter: (f: TimeFilter) => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;

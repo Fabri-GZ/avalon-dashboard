@@ -5,54 +5,50 @@ import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { CrmFilterSheet } from './CrmFilterSheet'
-import type { Channel } from '@/lib/crm/types'
-
-export type DateRange = 'hoy' | '7d' | '30d' | 'todo'
-
-export interface CrmFilters {
-  search: string
-  channel: Channel
-  dateRange: DateRange
-}
+import { useDateRangeParam } from '@/hooks/useDateRangeParam'
+import type { CrmDateRange } from '@/lib/crm/types'
 
 const HEADER_SLOT_ID = 'dashboard-header-slot'
 
-const RANGES: { value: DateRange; label: string }[] = [
-  { value: 'hoy', label: 'Hoy' },
-  { value: '7d', label: '7 Días' },
-  { value: '30d', label: '30 Días' },
-  { value: 'todo', label: 'Todo' },
-]
+const CRM_RANGES = ['7d', '30d', '90d', 'todo'] as const
 
-function Controls({
-  value,
-  onChange,
-  total,
-}: {
-  value: CrmFilters
-  onChange: (next: CrmFilters) => void
+const RANGE_LABELS: Record<CrmDateRange, string> = {
+  '7d': '7 Días',
+  '30d': '30 Días',
+  '90d': '90 Días',
+  'todo': 'Todo',
+}
+
+interface CrmTopbarProps {
+  search: string
+  onSearchChange: (search: string) => void
+  initialDateRange: CrmDateRange
   total: number
-}) {
-  const [search, setSearch] = useState(value.search)
+}
+
+function Controls({ search, onSearchChange, initialDateRange, total }: CrmTopbarProps) {
+  const [localSearch, setLocalSearch] = useState(search)
   const [sheetOpen, setSheetOpen] = useState(false)
-  const hasFilter = value.dateRange !== 'todo'
+  const [dateRange, setDateRange] = useDateRangeParam<CrmDateRange>(CRM_RANGES, initialDateRange)
+
+  const hasFilter = dateRange !== 'todo'
 
   useEffect(() => {
     const id = setTimeout(() => {
-      if (search !== value.search) onChange({ ...value, search })
+      if (localSearch !== search) onSearchChange(localSearch)
     }, 250)
     return () => clearTimeout(id)
-  }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [localSearch]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Search — crece en mobile para llenar el espacio */}
+        {/* Search */}
         <div className="relative w-40 sm:w-44 lg:w-64">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             placeholder="Buscar…"
             className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
           />
@@ -79,13 +75,13 @@ function Controls({
 
         {/* Date range pills — solo desktop */}
         <div className="hidden items-center gap-0.5 rounded-lg bg-secondary p-1 sm:flex">
-          {RANGES.map((r) => {
-            const active = value.dateRange === r.value
+          {CRM_RANGES.map((r) => {
+            const active = dateRange === r
             return (
               <button
-                key={r.value}
+                key={r}
                 type="button"
-                onClick={() => onChange({ ...value, dateRange: r.value })}
+                onClick={() => setDateRange(r)}
                 className={`relative rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
                   active ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -97,7 +93,7 @@ function Controls({
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}
-                <span className="relative z-10">{r.label}</span>
+                <span className="relative z-10">{RANGE_LABELS[r]}</span>
               </button>
             )
           })}
@@ -113,9 +109,9 @@ function Controls({
       {/* Bottom sheet — solo se monta cuando está abierto */}
       {sheetOpen && (
         <CrmFilterSheet
-          value={value.dateRange}
+          value={dateRange}
           total={total}
-          onApply={(next) => onChange({ ...value, dateRange: next })}
+          onApply={(next) => setDateRange(next)}
           onClose={() => setSheetOpen(false)}
         />
       )}
@@ -123,11 +119,7 @@ function Controls({
   )
 }
 
-export function CrmTopbar(props: {
-  value: CrmFilters
-  onChange: (next: CrmFilters) => void
-  total: number
-}) {
+export function CrmTopbar(props: CrmTopbarProps) {
   const [host, setHost] = useState<HTMLElement | null>(null)
 
   useEffect(() => {

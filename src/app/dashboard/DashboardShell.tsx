@@ -1,4 +1,5 @@
 "use client";
+import { Suspense } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { DashboardDataProvider, useDashboardData } from "@/contexts/DashboardDataContext";
@@ -66,7 +67,11 @@ function ShellInner({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
 
       <div className="w-full">
-        {!isPmClientRoute && <DashboardHeader />}
+        {!isPmClientRoute && (
+          <Suspense>
+            <DashboardHeader />
+          </Suspense>
+        )}
 
         <main className={isPmClientRoute ? "" : "p-4 lg:p-6"}>
           {dataLoading ? (

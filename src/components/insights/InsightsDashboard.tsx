@@ -57,7 +57,6 @@ export function InsightsDashboard() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    setData(null)
     /* eslint-enable react-hooks/set-state-in-effect */
 
     const period = buildInsightsPeriod(range)
@@ -127,7 +126,7 @@ export function InsightsDashboard() {
         </div>
       )}
 
-      {(loading || (dataLoading && !data)) && !error && !noFetcher && (
+      {(loading && !data) && !error && !noFetcher && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <SkeletonCard />
@@ -149,7 +148,7 @@ export function InsightsDashboard() {
         </div>
       )}
 
-      {data && !loading && !error && !noFetcher && (
+      {data && !error && !noFetcher && (
         <AnimatePresence mode="wait">
           <motion.div
             key={range}
@@ -157,7 +156,7 @@ export function InsightsDashboard() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: reducedMotion ? 0 : 0.2 }}
-            className="space-y-6"
+            className={`space-y-6 transition-opacity duration-200 ${loading ? 'opacity-50 pointer-events-none' : ''}`}
           >
             <motion.div
               variants={containerVars}
