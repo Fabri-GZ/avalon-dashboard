@@ -1,6 +1,6 @@
 'use client'
 
-import { Lock, ChevronDown, Check } from 'lucide-react'
+import { LuLock as Lock, LuChevronDown as ChevronDown, LuCheck as Check } from 'react-icons/lu'
 import {
   DropdownMenu,
   DropdownMenuContent,

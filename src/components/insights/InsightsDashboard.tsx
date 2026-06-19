@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useReducedMotion, type Variants } from 'framer-motion'
-import { BarChart3, AlertTriangle, Users, MessageSquare } from 'lucide-react'
+import { LuChartColumn as BarChart3, LuTriangleAlert as AlertTriangle, LuUsers as Users, LuMessageSquare as MessageSquare } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { useDashboardData } from '@/contexts/DashboardDataContext'
 import { createClient } from '@/app/utils/supabase/client'

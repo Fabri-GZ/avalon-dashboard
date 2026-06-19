@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Building2, Upload } from "lucide-react";
+import { LuBuilding2 as Building2, LuUpload as Upload } from "react-icons/lu";
 import { completeOnboarding } from "@/lib/auth-actions";
 import { ToastContainer, toast } from "react-toastify";
 import Loader from "@/app/components/Loader/loader";

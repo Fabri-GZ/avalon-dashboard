@@ -15,6 +15,7 @@ export const ROUTE_SECTION_MAP: Array<{ prefix: string; section: SectionKey }> =
   { prefix: '/dashboard/chatbot',    section: SECTIONS.CHATBOT },
   { prefix: '/dashboard/overview',   section: SECTIONS.OVERVIEW },
   { prefix: '/admin',                section: SECTIONS.ADMIN_CLIENTS },
+  { prefix: '/dashboard/agente-ia',  section: SECTIONS.AGENT_IA },
 ];
 
 export function requiredSectionFor(pathname: string): SectionKey | null {
@@ -26,7 +27,7 @@ export function defaultRouteForRole(role: Role): string {
   const map: Record<Role, string> = {
     admin_global: '/dashboard/overview',
     client_user:  '/dashboard/chatbot/crm',
-    cm:           '/dashboard/overview',
+    cm:           '/dashboard/agente-ia',
     pm:           '/dashboard/pm',
     comercial:    '/dashboard/commercial',
   };

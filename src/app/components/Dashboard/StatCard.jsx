@@ -12,7 +12,7 @@ const StatCard = ({ title, value, change, icon: Icon, index }) => {
       animate="visible"
       whileHover={{ scale: 1.05, borderColor: "var(--primary)" }}
       transition={{ duration: 0.2 }}
-      className="bg-background rounded-xl p-6 border border-secondary cursor-pointer"
+      className="bg-card rounded-xl p-6 border border-secondary cursor-pointer"
     >
       <div className="flex items-center justify-between mb-4">
         <div

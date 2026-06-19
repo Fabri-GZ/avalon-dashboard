@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Building2, Globe, Share2, DollarSign, Upload, Calendar, Lock, User, Mail, Phone, Briefcase } from "lucide-react";
+import { LuBuilding2 as Building2, LuGlobe as Globe, LuShare2 as Share2, LuDollarSign as DollarSign, LuUpload as Upload, LuCalendar as Calendar, LuLock as Lock, LuUser as User, LuMail as Mail, LuPhone as Phone, LuBriefcase as Briefcase } from "react-icons/lu";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useUserProfile } from "@/hooks/useUserProfile";

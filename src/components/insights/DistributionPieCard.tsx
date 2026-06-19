@@ -1,7 +1,7 @@
 'use client'
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Label } from 'recharts'
-import { PieChart as PieIcon } from 'lucide-react'
+import { LuChartPie as PieIcon } from 'react-icons/lu'
 import type { DistributionSlice } from '@/lib/insights/types'
 import { chartColors } from './chartTheme'
 

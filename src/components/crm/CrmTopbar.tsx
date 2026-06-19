@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
-import { Search, SlidersHorizontal } from 'lucide-react'
+import { LuSearch as Search, LuSlidersHorizontal as SlidersHorizontal } from 'react-icons/lu'
 import { CrmFilterSheet } from './CrmFilterSheet'
 import { useDateRangeParam } from '@/hooks/useDateRangeParam'
 import type { CrmDateRange } from '@/lib/crm/types'

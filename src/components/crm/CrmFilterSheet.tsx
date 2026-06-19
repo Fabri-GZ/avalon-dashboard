@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { LuX as X } from 'react-icons/lu'
 import type { CrmDateRange } from '@/lib/crm/types'
 
 const RANGES: { value: CrmDateRange; label: string; desc: string }[] = [

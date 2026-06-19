@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { GitBranch, MessageCircle, Loader2 } from 'lucide-react'
+import { LuGitBranch as GitBranch, LuMessageCircle as MessageCircle, LuLoaderCircle as Loader2 } from 'react-icons/lu'
 import { toast } from 'react-toastify'
 import { deriveLeadAction } from '@/app/actions/crm-actions'
 import type { Stage } from '@/lib/crm/types'

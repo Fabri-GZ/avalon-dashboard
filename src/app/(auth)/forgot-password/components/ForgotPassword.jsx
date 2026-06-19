@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { MdMail, MdArrowBack } from "react-icons/md";
-import { Mail, CheckCircle } from "lucide-react";
+import { LuMail as Mail, LuCircleCheck as CheckCircle } from "react-icons/lu";
 import { ToastContainer, toast, Flip } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { resetPassword } from "@/lib/auth-actions";

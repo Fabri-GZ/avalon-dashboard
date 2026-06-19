@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sun, Moon, Settings, LogOut, User, ChevronsUpDown } from "lucide-react";
+import { LuSun as Sun, LuMoon as Moon, LuSettings as Settings, LuLogOut as LogOut, LuUser as User, LuChevronsUpDown as ChevronsUpDown } from "react-icons/lu";
 import {
   DropdownMenu,
   DropdownMenuTrigger,

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { User, GripVertical } from 'lucide-react'
+import { LuUser as User, LuGripVertical as GripVertical } from 'react-icons/lu'
 import { useDraggable } from '@dnd-kit/react'
 import { Feedback } from '@dnd-kit/dom'
 import { relativeTime, initials } from '@/lib/crm/format'

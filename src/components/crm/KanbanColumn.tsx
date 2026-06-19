@@ -2,7 +2,7 @@
 
 import { useDroppable } from '@dnd-kit/react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Lock } from 'lucide-react'
+import { LuLock as Lock } from 'react-icons/lu'
 import { LeadCard } from './LeadCard'
 import type { Lead, Stage } from '@/lib/crm/types'
 

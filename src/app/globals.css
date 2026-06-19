@@ -74,6 +74,21 @@
   &:hover::-webkit-scrollbar-thumb { background-color: var(--muted-foreground); }
 }
 
+/* Global default — normaliza la scrollbar en todo el dashboard (insights, crm,
+   redes, etc.) sin tener que poner la clase en cada contenedor. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar       { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 9999px;
+  transition: background-color .15s;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: var(--muted-foreground); }
+
 html {
   scroll-behavior: smooth;
 }

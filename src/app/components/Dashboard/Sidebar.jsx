@@ -3,7 +3,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { RxDashboard } from "react-icons/rx";
 import { FiGlobe, FiDollarSign, FiMessageSquare, FiUser, FiShield, FiArrowLeft, FiShare2, FiBriefcase, FiClipboard, FiUsers, FiSettings } from "react-icons/fi";
-import { Sun, Moon, Settings, LogOut, User, ChevronsUpDown, Check, Building2, ChevronDown } from "lucide-react";
+import { LuSparkles, LuSun as Sun, LuMoon as Moon, LuSettings as Settings, LuLogOut as LogOut, LuUser as User, LuChevronsUpDown as ChevronsUpDown, LuCheck as Check, LuBuilding2 as Building2, LuChevronDown as ChevronDown } from "react-icons/lu";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -35,6 +35,7 @@ const iconMap = {
   FiClipboard,
   FiUsers,
   FiSettings,
+  LuSparkles,
 };
 
 const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile, userRole }) => {

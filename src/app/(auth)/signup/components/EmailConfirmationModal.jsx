@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, CheckCircle, RefreshCw } from "lucide-react";
+import { LuMail as Mail, LuCircleCheck as CheckCircle, LuRefreshCw as RefreshCw } from "react-icons/lu";
 
 const EmailConfirmationModal = ({ isOpen, email, onClose }) => {
   const handleRefresh = () => {

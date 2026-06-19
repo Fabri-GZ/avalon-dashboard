@@ -142,7 +142,7 @@ const AdsSection = ({ client, socialInsights, socialDemographics, timeFilter }) 
           icon={FiTrendingUp} 
           index={2} 
         />
-        <StatCard 
+        <StatCard
           title="Engagement" 
           value={formatNumber(metrics.engagement.value)} 
           change={metrics.engagement.change} 

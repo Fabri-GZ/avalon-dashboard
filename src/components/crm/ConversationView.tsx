@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowLeft } from 'lucide-react'
+import { LuArrowLeft as ArrowLeft } from 'react-icons/lu'
 import { LeadInfoPanel } from './LeadInfoPanel'
 import { MessageBubble } from './MessageBubble'
 import { ActionButtons } from './ActionButtons'

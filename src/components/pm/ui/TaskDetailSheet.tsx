@@ -66,7 +66,7 @@ export function TaskDetailSheet({ task, sectionName, onClose }: Props) {
           </div>
           <button
             onClick={handleClose}
-            className="flex-shrink-0 w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted/80 transition-colors duration-200 ease-in mt-0.5"
+            className="shrink-0 w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted/80 transition-colors duration-200 ease-in mt-0.5"
             aria-label="Cerrar"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -95,7 +95,7 @@ export function TaskDetailSheet({ task, sectionName, onClose }: Props) {
           {task.assignee && (
             <Row label="Responsable">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                <span className="w-6 h-6 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
                   {getInitials(task.assignee)}
                 </span>
                 <span className="text-sm text-foreground">{task.assignee}</span>

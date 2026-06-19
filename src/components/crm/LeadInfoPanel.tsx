@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, MapPin, Package, Layers, GitBranch, UserCheck } from 'lucide-react'
+import { LuUser as User, LuMapPin as MapPin, LuPackage as Package, LuLayers as Layers, LuGitBranch as GitBranch, LuUserCheck as UserCheck } from 'react-icons/lu'
 import { toast } from 'react-toastify'
 import { initials, prettify, prettifyLocation, capitalize } from '@/lib/crm/format'
 import type { Lead, Stage } from '@/lib/crm/types'
