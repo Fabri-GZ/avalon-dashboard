@@ -36,3 +36,24 @@ export interface TrendResponse {
     requested: string
   }
 }
+
+// Ciclo de vida async del job CM sobre Supabase (fuente de verdad).
+export type JobStatus = 'pending' | 'done' | 'error'
+
+export interface AgentJob {
+  id: string // jobId (PK)
+  session_id: string
+  department: Department
+  user_id: string
+  status: JobStatus
+  request: { message: string }
+  result: TrendResponse | null
+  error: string | null
+  created_at: string
+}
+
+// Respuesta del enqueue: el route devuelve el jobId al toque, sin esperar
+// el resultado. El front pollea agent_jobs hasta done/error.
+export interface EnqueueResponse {
+  jobId: string
+}

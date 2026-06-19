@@ -7,7 +7,8 @@ import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
 import { ResultsGrid } from './ResultsGrid'
 import { ConfirmResetSheet } from './ConfirmResetSheet'
-import type { Department, TrendResponse } from '@/lib/agente-ia/types'
+import { useJobPolling } from '@/hooks/useJobPolling'
+import type { Department, EnqueueResponse, TrendResponse } from '@/lib/agente-ia/types'
 import type { Message } from './ChatMessage'
 
 interface AgenteIAPageProps {
@@ -43,11 +44,33 @@ export function AgenteIAPage({ initialDepartment = 'cm' }: AgenteIAPageProps) {
   const [pendingDept, setPendingDept] = useState<Department | null>(null)
   const [entries, setEntries] = useState<ChatEntry[]>([])
   const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [activeJobId, setActiveJobId] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState(newSessionId)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const hasConversation = entries.length > 0
+  // En vuelo = la última entry todavía no tiene respuesta del agente. Cubre tanto
+  // el despacho del POST como el polling, sin un estado extra que sincronizar.
+  const loading = hasConversation && !entries[entries.length - 1].agentMessage
+
+  // El polling vive en el hook: cuando el job resuelve, volcamos el resultado
+  // (o el error) en la última entry vía estos handlers. Sin effect en la página.
+  useJobPolling(activeJobId, {
+    onDone: (result) => {
+      patchLastEntry({
+        agentMessage: { id: crypto.randomUUID(), role: 'agent', content: result.reply },
+        results: result,
+      })
+      setActiveJobId(null)
+      scrollToBottom(100)
+    },
+    onError: (message) => {
+      patchLastEntry({
+        agentMessage: { id: crypto.randomUUID(), role: 'agent', content: message },
+      })
+      setActiveJobId(null)
+    },
+  })
 
   function handleDepartmentChange(dept: Department) {
     if (dept === department) return
@@ -61,6 +84,7 @@ export function AgenteIAPage({ initialDepartment = 'cm' }: AgenteIAPageProps) {
     setPendingDept(null)
     setEntries([])
     setInput('')
+    setActiveJobId(null)
     setSessionId(newSessionId())
   }
 
@@ -87,7 +111,6 @@ export function AgenteIAPage({ initialDepartment = 'cm' }: AgenteIAPageProps) {
     const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: trimmed }
     setEntries((prev) => [...prev, { userMessage: userMsg }])
     setInput('')
-    setLoading(true)
     scrollToBottom()
 
     try {
@@ -106,14 +129,14 @@ export function AgenteIAPage({ initialDepartment = 'cm' }: AgenteIAPageProps) {
             content: err.error ?? 'Ocurrió un error. Intentá de nuevo.',
           },
         })
+        scrollToBottom(100)
         return
       }
 
-      const data: TrendResponse = await res.json()
-      patchLastEntry({
-        agentMessage: { id: crypto.randomUUID(), role: 'agent', content: data.reply },
-        results: data,
-      })
+      // El route encola el job y devuelve el jobId: el resultado llega por polling.
+      const { jobId }: EnqueueResponse = await res.json()
+      setActiveJobId(jobId)
+      scrollToBottom(100)
     } catch {
       patchLastEntry({
         agentMessage: {
@@ -122,8 +145,6 @@ export function AgenteIAPage({ initialDepartment = 'cm' }: AgenteIAPageProps) {
           content: 'Error de conexión. Verificá tu red e intentá de nuevo.',
         },
       })
-    } finally {
-      setLoading(false)
       scrollToBottom(100)
     }
   }

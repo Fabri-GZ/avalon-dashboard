@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/app/utils/supabase/server'
+import { supabaseAdmin } from '@/app/utils/supabase/admin'
 import { KNOWN_DEPARTMENTS, type Department, type TrendResponse } from '@/lib/agente-ia/types'
 
 // MOCK de v1 (departamento CM). Cuando se prendan otros departamentos, n8n
@@ -50,37 +52,90 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Un único webhook genérico: n8n cambia personalidad / tools / system prompt
-  // según el `department` que viaja en el payload.
-  const webhookUrl = process.env.N8N_AGENT_WEBHOOK_URL
+  // Sección interna: requiere sesión. El user_id ancla el RLS con el que el
+  // front pollea el job (solo ve los suyos).
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (!webhookUrl) {
-    // Sin webhook configurado → MOCK (dev / v1 sin n8n).
-    return NextResponse.json(MOCK_FIXTURE)
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
 
+  const webhookUrl = process.env.N8N_AGENT_WEBHOOK_URL
+
+  // Sin webhook configurado → MOCK (dev / v1 sin n8n). El job se crea ya
+  // resuelto para que el front igual ejercite el camino de polling.
+  if (!webhookUrl) {
+    const { data: job, error } = await supabaseAdmin
+      .from('agent_jobs')
+      .insert({
+        session_id: sessionId,
+        department,
+        user_id: user.id,
+        request: { message },
+        status: 'done',
+        result: MOCK_FIXTURE,
+        updated_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+
+    if (error || !job) {
+      console.error('[agente-ia/chat] mock insert error:', error)
+      return NextResponse.json({ error: 'No se pudo crear el job' }, { status: 500 })
+    }
+
+    return NextResponse.json({ jobId: job.id })
+  }
+
+  // Crea el job pending: Supabase es la fuente de verdad. n8n lo completa
+  // por jobId cuando termina (~100s después).
+  const { data: job, error: insertErr } = await supabaseAdmin
+    .from('agent_jobs')
+    .insert({
+      session_id: sessionId,
+      department,
+      user_id: user.id,
+      request: { message },
+    })
+    .select('id')
+    .single()
+
+  if (insertErr || !job) {
+    console.error('[agente-ia/chat] insert error:', insertErr)
+    return NextResponse.json({ error: 'No se pudo crear el job' }, { status: 500 })
+  }
+
+  // Dispara n8n esperando SOLO el ack 202 (no el resultado). n8n responde al
+  // toque vía "Respond to Webhook" temprano y sigue procesando en background.
   try {
     const n8nRes = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(90_000),
+      body: JSON.stringify({ ...body, jobId: job.id }),
+      signal: AbortSignal.timeout(10_000),
     })
 
     if (!n8nRes.ok) {
-      const text = await n8nRes.text().catch(() => '')
-      console.error('[agente-ia/chat] n8n error:', n8nRes.status, text)
+      console.error('[agente-ia/chat] n8n ack no-ok:', n8nRes.status)
+      await supabaseAdmin
+        .from('agent_jobs')
+        .update({ status: 'error', error: `n8n ${n8nRes.status}`, updated_at: new Date().toISOString() })
+        .eq('id', job.id)
       return NextResponse.json({ error: `Error en n8n: ${n8nRes.status}` }, { status: 502 })
     }
-
-    const data = await n8nRes.json().catch(() => ({}))
-    return NextResponse.json(data)
   } catch (err) {
-    const isTimeout = err instanceof Error && err.name === 'TimeoutError'
-    console.error('[agente-ia/chat] fetch error:', err)
-    return NextResponse.json(
-      { error: isTimeout ? 'El agente tardó demasiado — intentá de nuevo' : 'Error de conexión con n8n' },
-      { status: isTimeout ? 504 : 502 }
-    )
+    // No pudimos ni despachar el job → lo marcamos error al toque (sin esperar
+    // el TTL del front). El TTL cubre el caso "n8n recibió pero murió después".
+    console.error('[agente-ia/chat] n8n dispatch error:', err)
+    await supabaseAdmin
+      .from('agent_jobs')
+      .update({ status: 'error', error: 'No se pudo despachar a n8n', updated_at: new Date().toISOString() })
+      .eq('id', job.id)
+    return NextResponse.json({ error: 'No se pudo iniciar el agente' }, { status: 502 })
   }
+
+  return NextResponse.json({ jobId: job.id })
 }
