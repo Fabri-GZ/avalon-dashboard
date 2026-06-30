@@ -10,6 +10,7 @@ export const SECTIONS = {
   ADMIN_CLIENTS: 'admin_clients',
   SETTINGS:      'settings',
   AGENT_IA:      'agent_ia',
+  REPORTES:      'reportes',
 } as const;
 
 export type SectionKey = typeof SECTIONS[keyof typeof SECTIONS];
@@ -26,4 +27,5 @@ export const NAV_ITEMS = [
   { id: SECTIONS.ADMIN_CLIENTS, name: 'Clientes',   icon: 'FiUsers',        href: '/admin/clients' },
   { id: SECTIONS.SETTINGS,      name: 'Ajustes',    icon: 'FiSettings',     href: '/dashboard/settings' },
   { id: SECTIONS.AGENT_IA,      name: 'Agente IA',  icon: 'LuSparkles',     href: '/dashboard/agente-ia' },
+  { id: SECTIONS.REPORTES,      name: 'Reportes',   icon: 'FiBarChart2',    href: '/dashboard/reportes' },
 ] as const;

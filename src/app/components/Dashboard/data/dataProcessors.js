@@ -199,4 +199,5 @@ export const navigation = [
   { id: 'pm',         name: 'Proyectos', icon: 'FiClipboard',      href: '/dashboard/pm' },
   { id: 'account',    name: 'Cuenta',    icon: 'FiUser',           href: '/dashboard/account' },
   { id: 'agent_ia',  name: 'Agente IA', icon: 'LuSparkles',       href: '/dashboard/agente-ia' },
+  { id: 'reportes',  name: 'Reportes',  icon: 'FiBarChart2',      href: '/dashboard/reportes' },
 ];

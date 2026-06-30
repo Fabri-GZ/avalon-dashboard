@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { RxDashboard } from "react-icons/rx";
-import { FiGlobe, FiDollarSign, FiMessageSquare, FiUser, FiShield, FiArrowLeft, FiShare2, FiBriefcase, FiClipboard, FiUsers, FiSettings } from "react-icons/fi";
+import { FiGlobe, FiDollarSign, FiMessageSquare, FiUser, FiShield, FiArrowLeft, FiShare2, FiBriefcase, FiClipboard, FiUsers, FiSettings, FiBarChart2 } from "react-icons/fi";
 import { LuSparkles, LuSun as Sun, LuMoon as Moon, LuSettings as Settings, LuLogOut as LogOut, LuUser as User, LuChevronsUpDown as ChevronsUpDown, LuCheck as Check, LuBuilding2 as Building2, LuChevronDown as ChevronDown } from "react-icons/lu";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,7 @@ const iconMap = {
   FiClipboard,
   FiUsers,
   FiSettings,
+  FiBarChart2,
   LuSparkles,
 };
 
@@ -307,6 +308,15 @@ const Sidebar = ({
     }
   }, [theme, themeReady]);
 
+  // The entrance stagger needs a per-item delay, but that same delay must NOT
+  // leak into hover-in/out transitions. Once the stagger has played, flip this
+  // flag so every interactive transition is snappy (no delay).
+  const [navMounted, setNavMounted] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setNavMounted(true), 700);
+    return () => clearTimeout(t);
+  }, []);
+
   const showSwitcher = ['admin_global', 'cm', 'pm'].includes(userRole);
 
   return (
@@ -386,14 +396,20 @@ const Sidebar = ({
               }
 
               const Icon = iconMap[item.icon];
-              const isActive = activeSection === item.id;
+              // Derive active state from the href (the real source of truth for
+              // "where am I"), not from the RBAC id — these diverge when the URL
+              // slug differs from the section key (e.g. /agente-ia vs id 'agent_ia').
+              // Fall back to activeSection for href-less items (settings variant).
+              const isActive = item.href
+                ? pathname === item.href || pathname?.startsWith(`${item.href}/`)
+                : activeSection === item.id;
 
               return (
                 <motion.button
                   key={item.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.08, duration: 0.3 }}
+                  transition={navMounted ? { duration: 0.15 } : { delay: idx * 0.08, duration: 0.3 }}
                   whileHover={{ x: 4 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {

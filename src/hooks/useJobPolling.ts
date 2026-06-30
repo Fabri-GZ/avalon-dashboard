@@ -9,41 +9,76 @@ const POLL_INTERVAL_MS = 3_000
 // colchón para hashtags nicho lentos sin colgar al CM indefinidamente.
 const TTL_MS = 140_000
 
-export interface JobPollHandlers {
-  onDone: (result: TrendResponse) => void
+export interface JobPollHandlers<T> {
+  onDone: (result: T) => void
   onError: (message: string) => void
 }
 
 /**
- * Pollea `agent_jobs` por jobId vía el browser client (RLS select-own) cada 3s
- * y llama `onDone`/`onError` cuando el job resuelve (o al vencer el TTL de 140s,
- * si n8n cayó sin escribir). Pasá `jobId` null para no pollear.
+ * Config opcional para reusar el hook con otras tablas de jobs (ej. `reports`).
+ * Los defaults reproducen EXACTAMENTE el comportamiento del CM sobre `agent_jobs`,
+ * así que el call-site del CM no cambia.
+ */
+export interface JobPollConfig<T> {
+  table?: string // default 'agent_jobs'
+  select?: string // default 'status, result, error'
+  getDone?: (row: Record<string, unknown>) => T // cómo extraer el payload de done
+  getError?: (row: Record<string, unknown>) => string | null
+  pollIntervalMs?: number
+  ttlMs?: number
+}
+
+/**
+ * Pollea una tabla de jobs por id vía el browser client (RLS) cada 3s y llama
+ * `onDone`/`onError` cuando el job resuelve (o al vencer el TTL, si el worker
+ * cayó sin escribir). Pasá `jobId` null para no pollear.
+ *
+ * Default: `agent_jobs` (CM). Para `reports` u otra tabla, pasá `config`.
  *
  * Los handlers se leen por ref, así que cambiar su identidad entre renders no
  * reinicia el polling: el effect depende solo de `jobId`.
  */
-export function useJobPolling(jobId: string | null, handlers: JobPollHandlers) {
+export function useJobPolling<T = TrendResponse>(
+  jobId: string | null,
+  handlers: JobPollHandlers<T>,
+  config?: JobPollConfig<T>,
+) {
   const handlersRef = useRef(handlers)
   useEffect(() => {
     handlersRef.current = handlers
   })
 
+  // El config también se lee por ref: cambiar su identidad no reinicia el poll.
+  const configRef = useRef(config)
+  useEffect(() => {
+    configRef.current = config
+  })
+
   useEffect(() => {
     if (!jobId) return
+
+    const cfg = configRef.current
+    const table = cfg?.table ?? 'agent_jobs'
+    const select = cfg?.select ?? 'status, result, error'
+    const getDone = cfg?.getDone ?? ((row: Record<string, unknown>) => row.result as T)
+    const getError =
+      cfg?.getError ?? ((row: Record<string, unknown>) => (row.error as string | null) ?? null)
+    const pollInterval = cfg?.pollIntervalMs ?? POLL_INTERVAL_MS
+    const ttl = cfg?.ttlMs ?? TTL_MS
 
     const supabase = createClient()
     const startedAt = Date.now()
     let active = true
     let timer: ReturnType<typeof setTimeout>
 
-    const expired = () => Date.now() - startedAt > TTL_MS
+    const expired = () => Date.now() - startedAt > ttl
 
     async function poll() {
       if (!active) return
 
       const { data, error } = await supabase
-        .from('agent_jobs')
-        .select('status, result, error')
+        .from(table)
+        .select(select)
         .eq('id', jobId)
         .single()
 
@@ -55,26 +90,28 @@ export function useJobPolling(jobId: string | null, handlers: JobPollHandlers) {
           handlersRef.current.onError('No se pudo leer el estado del job.')
           return
         }
-        timer = setTimeout(poll, POLL_INTERVAL_MS)
+        timer = setTimeout(poll, pollInterval)
         return
       }
 
-      if (data.status === 'done') {
-        handlersRef.current.onDone(data.result as TrendResponse)
+      const row = data as unknown as Record<string, unknown>
+
+      if (row.status === 'done') {
+        handlersRef.current.onDone(getDone(row))
         return
       }
 
-      if (data.status === 'error') {
-        handlersRef.current.onError(data.error ?? 'El agente falló.')
+      if (row.status === 'error') {
+        handlersRef.current.onError(getError(row) ?? 'El job falló.')
         return
       }
 
-      // pending: seguir mientras no expire el TTL.
+      // pending/running: seguir mientras no expire el TTL.
       if (expired()) {
-        handlersRef.current.onError('El agente tardó demasiado. Probá de nuevo.')
+        handlersRef.current.onError('El job tardó demasiado. Probá de nuevo.')
         return
       }
-      timer = setTimeout(poll, POLL_INTERVAL_MS)
+      timer = setTimeout(poll, pollInterval)
     }
 
     poll()

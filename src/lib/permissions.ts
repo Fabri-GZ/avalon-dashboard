@@ -1,8 +1,8 @@
 import { SectionKey, SECTIONS } from './sections';
 
-export type Role = 'admin_global' | 'client_user' | 'comercial' | 'pm' | 'cm';
+export type Role = 'admin_global' | 'client_user' | 'comercial' | 'pm' | 'cm' | 'paid_media';
 
-export const KNOWN_ROLES: Role[] = ['admin_global', 'client_user', 'comercial', 'pm', 'cm'];
+export const KNOWN_ROLES: Role[] = ['admin_global', 'client_user', 'comercial', 'pm', 'cm', 'paid_media'];
 
 // Only routes that require a specific section permission (gated routes).
 // Routes not listed here are allowed by default (e.g. /dashboard/account, /dashboard/settings).
@@ -16,6 +16,7 @@ export const ROUTE_SECTION_MAP: Array<{ prefix: string; section: SectionKey }> =
   { prefix: '/dashboard/overview',   section: SECTIONS.OVERVIEW },
   { prefix: '/admin',                section: SECTIONS.ADMIN_CLIENTS },
   { prefix: '/dashboard/agente-ia',  section: SECTIONS.AGENT_IA },
+  { prefix: '/dashboard/reportes',   section: SECTIONS.REPORTES },
 ];
 
 export function requiredSectionFor(pathname: string): SectionKey | null {
@@ -30,12 +31,13 @@ export function defaultRouteForRole(role: Role): string {
     cm:           '/dashboard/agente-ia',
     pm:           '/dashboard/pm',
     comercial:    '/dashboard/commercial',
+    paid_media:   '/dashboard/reportes',
   };
   return map[role] ?? '/dashboard/overview';
 }
 
 export function isInternalRole(role: Role): boolean {
-  return ['admin_global', 'pm', 'cm', 'comercial'].includes(role);
+  return ['admin_global', 'pm', 'cm', 'comercial', 'paid_media'].includes(role);
 }
 
 export type DashboardContext = {
