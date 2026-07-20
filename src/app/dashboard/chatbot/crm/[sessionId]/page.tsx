@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/app/utils/supabase/server'
 import { getLeadWithMessages } from '@/lib/crm/queries'
+import { resolveClientId } from '@/lib/crm/resolveClientId'
 import { ConversationView } from '@/components/crm/ConversationView'
 
 type Props = {
@@ -10,7 +11,10 @@ type Props = {
 export default async function CrmConversationPage({ params }: Props) {
   const { sessionId } = await params
   const supabase = await createClient()
-  const result = await getLeadWithMessages(supabase, sessionId)
+  const clientId = await resolveClientId(supabase)
+  if (!clientId) notFound()
+
+  const result = await getLeadWithMessages(supabase, clientId, sessionId)
 
   if (!result) notFound()
 
