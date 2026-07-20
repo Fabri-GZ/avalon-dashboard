@@ -45,3 +45,9 @@ next-env.d.ts
 
 # local pnpm/npm config (machine-specific)
 .npmrc
+
+# agent tooling (per-machine, replicated across assistants)
+.agents/
+.atl/
+.claude/
+.windsurf/
