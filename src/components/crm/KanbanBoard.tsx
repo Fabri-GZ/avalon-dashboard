@@ -10,7 +10,7 @@ import { updateStageAction } from '@/app/actions/crm-actions'
 import type { Channel, CrmDateRange, Lead, Stage } from '@/lib/crm/types'
 import { STAGE_UPDATE_ERROR_MESSAGES } from '@/lib/crm/types'
 
-const STAGES: Stage[] = ['nuevo', 'conversando', 'derivado', 'cerrado', 'sin_respuesta']
+const STAGES: Stage[] = ['conversando', 'derivado', 'cerrado']
 
 interface CrmFilters {
   search: string
@@ -53,11 +53,9 @@ export function KanbanBoard({ leads, initialDateRange }: KanbanBoardProps) {
 
   const columns = useMemo(() => {
     const map: Record<Stage, Lead[]> = {
-      nuevo: [],
       conversando: [],
       derivado: [],
       cerrado: [],
-      sin_respuesta: [],
     }
     for (const lead of filtered) {
       if (map[lead.stage]) map[lead.stage].push(lead)

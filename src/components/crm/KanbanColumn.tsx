@@ -7,11 +7,9 @@ import { LeadCard } from './LeadCard'
 import type { Lead, Stage } from '@/lib/crm/types'
 
 const STAGE_META: Record<Stage, { label: string; dot: string; ring: string }> = {
-  nuevo: { label: 'Nuevo', dot: 'bg-sky-500', ring: 'border-sky-500/30' },
   conversando: { label: 'Conversando', dot: 'bg-amber-500', ring: 'border-amber-500/30' },
   derivado: { label: 'Derivado', dot: 'bg-violet-500', ring: 'border-violet-500/30' },
   cerrado: { label: 'Cerrado', dot: 'bg-emerald-500', ring: 'border-emerald-500/30' },
-  sin_respuesta: { label: 'Sin respuesta', dot: 'bg-zinc-400', ring: 'border-zinc-400/30' },
 }
 
 export function KanbanColumn({

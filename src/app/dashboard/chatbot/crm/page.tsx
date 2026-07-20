@@ -1,5 +1,7 @@
+import { notFound } from 'next/navigation'
 import { createClient } from '@/app/utils/supabase/server'
-import { getLeads } from '@/lib/crm/queries'
+import { getLeadsPage } from '@/lib/crm/queries'
+import { resolveClientId } from '@/lib/crm/resolveClientId'
 import { validateDateRange } from '@/lib/validateDateRange'
 import { KanbanBoard } from '@/components/crm/KanbanBoard'
 import type { CrmDateRange } from '@/lib/crm/types'
@@ -15,7 +17,10 @@ export default async function CrmPage({ searchParams }: Props) {
   const dateRange = validateDateRange<CrmDateRange>(range, VALID_CRM_RANGES, '30d')
 
   const supabase = await createClient()
-  const leads = await getLeads(supabase, { dateRange })
+  const clientId = await resolveClientId(supabase)
+  if (!clientId) notFound()
+
+  const leads = await getLeadsPage(supabase, clientId, { dateRange })
 
   return <KanbanBoard leads={leads} initialDateRange={dateRange} />
 }

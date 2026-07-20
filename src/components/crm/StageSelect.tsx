@@ -23,16 +23,6 @@ const STAGE_META: Record<
     description: string
   }
 > = {
-  nuevo: {
-    label: 'Nuevo',
-    dot: 'bg-sky-500',
-    badge: 'bg-sky-500/10 text-sky-700 ring-sky-500/20 dark:text-sky-300',
-    chevron: 'text-sky-700/70 dark:text-sky-300/70',
-    text: 'text-sky-700 dark:text-sky-300',
-    rowTint: 'bg-sky-500/10',
-    rowTintHover: 'focus:bg-sky-500/15 focus:text-sky-700 dark:focus:text-sky-300',
-    description: 'Lead recién ingresado, aún sin contacto',
-  },
   conversando: {
     label: 'Conversando',
     dot: 'bg-amber-500',
@@ -62,16 +52,6 @@ const STAGE_META: Record<
     rowTint: 'bg-emerald-500/10',
     rowTintHover: 'focus:bg-emerald-500/15 focus:text-emerald-700 dark:focus:text-emerald-300',
     description: 'Lead concretado',
-  },
-  sin_respuesta: {
-    label: 'Sin respuesta',
-    dot: 'bg-zinc-400',
-    badge: 'bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:text-zinc-400',
-    chevron: 'text-zinc-600/70 dark:text-zinc-400/70',
-    text: 'text-zinc-600 dark:text-zinc-400',
-    rowTint: 'bg-zinc-500/10',
-    rowTintHover: 'focus:bg-zinc-500/15 focus:text-zinc-600 dark:focus:text-zinc-400',
-    description: 'Sin respuesta del lead',
   },
 }
 
