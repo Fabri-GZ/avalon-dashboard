@@ -14,9 +14,14 @@ export default async function CrmConversationPage({ params }: Props) {
   const clientId = await resolveClientId(supabase)
   if (!clientId) notFound()
 
-  const result = await getLeadWithMessages(supabase, clientId, sessionId)
+  const [result, clientRes] = await Promise.all([
+    getLeadWithMessages(supabase, clientId, sessionId),
+    supabase.from('clients').select('webhook_derivar_url').eq('id', clientId).maybeSingle(),
+  ])
 
   if (!result) notFound()
 
-  return <ConversationView lead={result.lead} messages={result.messages} />
+  const hasWebhook = !!(clientRes.data?.webhook_derivar_url)
+
+  return <ConversationView lead={result.lead} messages={result.messages} hasWebhook={hasWebhook} />
 }

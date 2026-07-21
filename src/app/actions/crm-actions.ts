@@ -42,7 +42,7 @@ export async function deriveLeadAction(
 
   const { data: lead } = await supabase
     .from('leads')
-    .select('contacto, details')
+    .select('details, clients(client_key, webhook_derivar_url)')
     .eq('client_id', clientId)
     .eq('session_id', sessionId)
     .eq('channel', 'whatsapp')
@@ -50,24 +50,23 @@ export async function deriveLeadAction(
 
   if (!lead) return { success: false, error: 'lead_not_found' }
 
-  // TRANSITIONAL (PR3): payload keys are still GN-only, read out of `details`.
-  // Per-client webhook resolution + a generic `{ client_key, session_id,
-  // details }` payload is PR6 scope.
-  const details = (lead.details ?? {}) as LeadDetails
+  type LeadForDerive = {
+    details: LeadDetails | null
+    clients: { client_key: string | null; webhook_derivar_url: string | null } | null
+  }
 
-  const webhookUrl = process.env.N8N_WEBHOOK_DERIVAR_URL
+  const client = (lead as unknown as LeadForDerive).clients
+  const webhookUrl = client?.webhook_derivar_url
   if (!webhookUrl) return { success: false, error: 'missing_webhook_url' }
+
+  const clientKey = client?.client_key ?? ''
+  const details = (lead as unknown as LeadForDerive).details ?? {}
 
   try {
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_id: sessionId,
-        material: details.material ?? null,
-        ubicacion: details.ubicacion ?? null,
-        detalle_aberturas: details.detalle_aberturas ?? null,
-      }),
+      body: JSON.stringify({ client_key: clientKey, session_id: sessionId, details }),
     })
 
     if (!response.ok) {

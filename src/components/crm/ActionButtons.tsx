@@ -11,30 +11,36 @@ export function ActionButtons({
   sessionId,
   stage,
   phone,
+  hasWebhook,
 }: {
   sessionId: string
   stage: Stage
   phone: string | null
+  hasWebhook: boolean
 }) {
   const [pending, startTransition] = useTransition()
   const router = useRouter()
-  const disabled = stage === 'derivado' || stage === 'cerrado'
+  const stageDisabled = stage === 'derivado' || stage === 'cerrado'
+  const disabled = !hasWebhook || stageDisabled
   const waPhone = phone?.replace(/\D/g, '') ?? sessionId
 
   function handleDerive() {
     startTransition(async () => {
       const result = await deriveLeadAction(sessionId)
       if (!result.success) {
-        if (result.error === 'window_closed') {
-          toast.error('La ventana de 24 hs está cerrada. El lead no puede recibir mensajes.')
-        } else {
-          toast.error('Error al derivar. Intentá de nuevo.')
-        }
+        toast.error('Error al derivar. Intentá de nuevo.')
         return
       }
       toast.success('Lead derivado correctamente.')
       router.refresh()
     })
+  }
+
+  function deriveLabel() {
+    if (pending) return 'Derivando…'
+    if (stageDisabled) return 'Ya derivado'
+    if (!hasWebhook) return 'Sin integración'
+    return 'Derivar automáticamente'
   }
 
   return (
@@ -54,7 +60,7 @@ export function ActionButtons({
         ) : (
           <GitBranch className="h-4 w-4" />
         )}
-        {pending ? 'Derivando…' : disabled ? 'Ya derivado' : 'Derivar automáticamente'}
+        {deriveLabel()}
       </button>
 
       <a
