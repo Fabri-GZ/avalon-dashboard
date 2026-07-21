@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { createClient as createServerClient } from '@/app/utils/supabase/server'
 import type { Role } from '@/lib/permissions'
 
@@ -12,14 +12,26 @@ type ServerClient = Awaited<ReturnType<typeof createServerClient>>
 // (`CrmClientSync.tsx` mirrors the *result* of this function back into the
 // dashboard context -- it never trusts the param itself). It is honored ONLY
 // for `admin_global`: any other role passing it, or an admin_global passing a
-// `client_id` that doesn't exist, gets redirected back to the bare CRM route
-// so the URL stops lying about which client is actually being shown, and the
-// normal fallback resolution below picks a client they're allowed to see.
+// `client_id` that doesn't exist, calls `notFound()`.
 //
-// Known tradeoff: the redirect drops any other search params (`q`,
-// `pages_*`) present on an invalid/unauthorized request. Acceptable because
-// this only fires on a malformed or unauthorized `?client=`, not on normal
-// navigation.
+// Why 404 and not 403 or a redirect: a 404 does not distinguish "this client
+// does not exist" from "it exists but is not yours" -- a `client_user` who
+// tries `?client=<someone-else's-uuid>` gets the exact same response as one
+// who tries a random uuid, which is what stops them from probing which ids
+// are valid. A 403 (or a redirect that lands somewhere different for "exists"
+// vs "doesn't exist") would leak that distinction.
+//
+// Why not `redirect()`: on Next 16.1.4 deployed to Vercel, calling
+// `redirect()` from inside a Server Component's render -- including from a
+// nested async helper like this one, not just the top level -- produces a
+// broken RSC payload when the target is the *same* pathname the request came
+// from (this route is the textbook case, since it always redirects back to
+// itself). The board renders empty and React throws error #310 on hydration.
+// `notFound()` does not share this failure mode: it renders the nearest
+// `not-found` boundary within the same request, no navigation involved. Do
+// not reintroduce `redirect()` here for this reason alone -- see
+// `next.config.mjs:8` for the same hazard documented against
+// `reactCompiler: true`.
 export async function resolveClientId(
   supabase: ServerClient,
   requestedClientId?: string | null,
@@ -39,11 +51,13 @@ export async function resolveClientId(
 
   const role = profile.role as Role
 
-  // The param check comes before the client_user return on purpose: a
-  // client_user resolves to their own client either way, but leaving `?client=`
-  // in the URL would keep it claiming a client that isn't the one on screen.
+  // Ordered above the client_user return on purpose. Falling through would
+  // resolve their own client and render a board while the URL still named a
+  // different one -- a page that quietly contradicts its own address. A param
+  // this role can never legitimately produce (the switcher only renders for
+  // admin_global) is treated as a bad request instead.
   if (requestedClientId && role !== 'admin_global') {
-    redirect('/dashboard/chatbot/crm')
+    notFound()
   }
 
   if (role === 'client_user') {
@@ -58,7 +72,7 @@ export async function resolveClientId(
       .maybeSingle()
 
     if (!requested) {
-      redirect('/dashboard/chatbot/crm')
+      notFound()
     }
 
     return requestedClientId
