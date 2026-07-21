@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/app/utils/supabase/server'
 import { supabaseAdmin } from '@/app/utils/supabase/admin'
 import type { GenerateReportRequest } from '@/lib/reportes/types'
-import { updatePassword } from '@/lib/auth-actions'
 
 // Encola la generación de un reporte de paid media. Espeja el patrón async de
 // `agente-ia/chat`: Supabase es la fuente de verdad; n8n completa el job por
@@ -89,7 +88,6 @@ export async function POST(req: NextRequest) {
     )
     .select('id')
     .single()
-
 
   if (upsertErr || !job) {
     console.error('[api/reportes] upsert error:', upsertErr)
