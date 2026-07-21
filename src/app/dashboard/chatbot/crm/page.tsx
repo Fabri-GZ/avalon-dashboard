@@ -4,6 +4,7 @@ import { getLeadsColumn, getStageCounts, parseColumnPages } from '@/lib/crm/quer
 import { resolveClientId } from '@/lib/crm/resolveClientId'
 import { validateDateRange } from '@/lib/validateDateRange'
 import { KanbanBoard } from '@/components/crm/KanbanBoard'
+import { CrmClientSync } from '@/components/crm/CrmClientSync'
 import type { CrmDateRange, Stage } from '@/lib/crm/types'
 
 const VALID_CRM_RANGES = ['7d', '30d', '90d', 'todo'] as const
@@ -18,8 +19,10 @@ export default async function CrmPage({ searchParams }: Props) {
   const dateRange = validateDateRange<CrmDateRange>(params.range, VALID_CRM_RANGES, '30d')
   const q = params.q?.trim() || undefined
 
+  const requestedClientId = params.client?.trim() || undefined
+
   const supabase = await createClient()
-  const clientId = await resolveClientId(supabase)
+  const clientId = await resolveClientId(supabase, requestedClientId)
   if (!clientId) notFound()
 
   // Each column carries its own page count, so "cargar más" on one column
@@ -47,11 +50,14 @@ export default async function CrmPage({ searchParams }: Props) {
   ) as Record<Stage, (typeof columnResults)[number]>
 
   return (
-    <KanbanBoard
-      columns={columns}
-      counts={counts}
-      initialDateRange={dateRange}
-      initialQuery={q ?? ''}
-    />
+    <>
+      <CrmClientSync clientId={clientId} />
+      <KanbanBoard
+        columns={columns}
+        counts={counts}
+        initialDateRange={dateRange}
+        initialQuery={q ?? ''}
+      />
+    </>
   )
 }

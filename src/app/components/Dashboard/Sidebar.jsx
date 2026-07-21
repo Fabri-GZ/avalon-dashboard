@@ -276,6 +276,15 @@ const Sidebar = ({
     // (so changing client from a client tracker switches to the new one).
     if (pathname?.startsWith('/dashboard/pm/')) {
       router.push(`/dashboard/pm/${id}`);
+      return;
+    }
+
+    // Same idea for the CRM: switching clients from inside the CRM mirrors
+    // the pick into `?client=`, which `resolveClientId` (server-side) honors
+    // only for admin_global. `replace`, not `push`, so the switcher doesn't
+    // pile up history entries the way a normal navigation would.
+    if (pathname?.startsWith('/dashboard/chatbot/crm')) {
+      router.replace(`/dashboard/chatbot/crm?client=${id}`);
     }
   };
 

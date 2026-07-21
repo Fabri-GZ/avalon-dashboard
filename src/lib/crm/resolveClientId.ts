@@ -1,17 +1,29 @@
+import { redirect } from 'next/navigation'
 import { createClient as createServerClient } from '@/app/utils/supabase/server'
 import type { Role } from '@/lib/permissions'
 
 type ServerClient = Awaited<ReturnType<typeof createServerClient>>
 
 // Resolves the effective `client_id` for the CRM section, server-side only --
-// it is never taken from the client (query params, form data, etc.).
+// it is never taken from the client (query params, form data, etc.) without
+// being validated against the resolved role first.
 //
-// PR5 will honor `?client=<uuid>` here (CompanySwitcher sync), scoped to
-// admin_global only. Until then this always resolves a single client_id, so
-// the extension point is this function's signature: it will start accepting
-// an optional `requestedClientId` argument and validate it against the
-// resolved role before trusting it.
-export async function resolveClientId(supabase: ServerClient): Promise<string | null> {
+// `requestedClientId` is `?client=<uuid>` from the CompanySwitcher sync
+// (`CrmClientSync.tsx` mirrors the *result* of this function back into the
+// dashboard context -- it never trusts the param itself). It is honored ONLY
+// for `admin_global`: any other role passing it, or an admin_global passing a
+// `client_id` that doesn't exist, gets redirected back to the bare CRM route
+// so the URL stops lying about which client is actually being shown, and the
+// normal fallback resolution below picks a client they're allowed to see.
+//
+// Known tradeoff: the redirect drops any other search params (`q`,
+// `pages_*`) present on an invalid/unauthorized request. Acceptable because
+// this only fires on a malformed or unauthorized `?client=`, not on normal
+// navigation.
+export async function resolveClientId(
+  supabase: ServerClient,
+  requestedClientId?: string | null,
+): Promise<string | null> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -27,8 +39,29 @@ export async function resolveClientId(supabase: ServerClient): Promise<string | 
 
   const role = profile.role as Role
 
+  // The param check comes before the client_user return on purpose: a
+  // client_user resolves to their own client either way, but leaving `?client=`
+  // in the URL would keep it claiming a client that isn't the one on screen.
+  if (requestedClientId && role !== 'admin_global') {
+    redirect('/dashboard/chatbot/crm')
+  }
+
   if (role === 'client_user') {
     return profile.client_id
+  }
+
+  if (requestedClientId) {
+    const { data: requested } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('id', requestedClientId)
+      .maybeSingle()
+
+    if (!requested) {
+      redirect('/dashboard/chatbot/crm')
+    }
+
+    return requestedClientId
   }
 
   // Everything else -- admin_global and pm -- falls through to the same query.

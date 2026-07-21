@@ -14,9 +14,12 @@ import { parseColumnPages } from '@/lib/crm/queries'
 const PAGES_PARAM_PREFIX = 'pages_'
 const QUERY_PARAM = 'q'
 
-// PR5 adds `?client=`, honored server-side only for `admin_global` (see
-// `resolveClientId.ts`). Not read or written here yet -- this is the extension
-// point: a `client` field would follow the same get/set pattern as `q`.
+// `?client=` (CompanySwitcher sync) is intentionally NOT read or written
+// here: it's resolved and validated server-side only, in `resolveClientId.ts`,
+// and set by `Sidebar.jsx`'s `handleClientChange` directly via
+// `router.replace`. Mirroring it into this hook would let client-side code
+// read an unvalidated param -- exactly what `resolveClientId` exists to
+// avoid.
 
 export interface CrmParams {
   q: string
