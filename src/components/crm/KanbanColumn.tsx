@@ -2,7 +2,7 @@
 
 import { useDroppable } from '@dnd-kit/react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LuLock as Lock } from 'react-icons/lu'
+import { LuLock as Lock, LuChevronDown as ChevronDown } from 'react-icons/lu'
 import { LeadCard } from './LeadCard'
 import type { Lead, Stage } from '@/lib/crm/types'
 
@@ -15,11 +15,19 @@ const STAGE_META: Record<Stage, { label: string; dot: string; ring: string }> = 
 export function KanbanColumn({
   stage,
   leads,
+  total,
+  hasMore,
+  onLoadMore,
   isDragActive,
   draggedFromStage,
 }: {
   stage: Stage
   leads: Lead[]
+  /** Server-side exact count for the stage (`getStageCounts`), independent of
+   * how many rows are currently loaded in `leads`. */
+  total: number
+  hasMore: boolean
+  onLoadMore: () => void
   isDragActive?: boolean
   draggedFromStage?: Stage | null
 }) {
@@ -53,7 +61,7 @@ export function KanbanColumn({
           />
         )}
         <span className="ml-auto rounded-full bg-background px-2 py-0.5 text-xs font-bold tabular-nums text-foreground">
-          {leads.length}
+          {total}
         </span>
       </div>
 
@@ -95,6 +103,16 @@ export function KanbanColumn({
                     Suelte el lead aquí
                   </span>
                 </motion.div>
+              )}
+              {hasMore && (
+                <button
+                  type="button"
+                  onClick={onLoadMore}
+                  className="mx-auto mt-1 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  Cargar más
+                </button>
               )}
             </>
           )}

@@ -64,20 +64,6 @@ export function capitalize(value: string | null): string {
   return t.charAt(0).toUpperCase() + t.slice(1)
 }
 
-const PROVINCE: Record<string, string> = {
-  buenos_aires: 'Buenos Aires',
-  resto_pais: 'Resto del País',
-}
-
-// "buenos_aires - Benavidez" → "Buenos Aires · Benavidez"
-export function prettifyLocation(value: string | null): string {
-  if (!value) return ''
-  const [prov, ...rest] = value.split(/\s*-\s*/)
-  const provLabel = PROVINCE[prov.trim().toLowerCase()] ?? prettify(prov)
-  const loc = rest.join(' - ').trim()
-  return loc ? `${provLabel} · ${prettify(loc)}` : provLabel
-}
-
 // Bot messages arrive clean; user messages arrive as
 // "Mensaje: <texto>\nFecha actual: <iso>" and may wrap <Image>/<Caption> tags.
 export function cleanMessage(content: string | null): string {

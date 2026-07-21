@@ -5,22 +5,8 @@ import { LuUser as User, LuGripVertical as GripVertical } from 'react-icons/lu'
 import { useDraggable } from '@dnd-kit/react'
 import { Feedback } from '@dnd-kit/dom'
 import { relativeTime, initials } from '@/lib/crm/format'
+import { LeadBadges } from './LeadBadges'
 import type { Lead } from '@/lib/crm/types'
-
-const INTENCION_STYLE: Record<string, { label: string; className: string }> = {
-  presupuesto: {
-    label: 'Presupuesto',
-    className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300',
-  },
-  postventa: {
-    label: 'Postventa',
-    className: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300',
-  },
-  otro: {
-    label: 'Otro',
-    className: 'bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300',
-  },
-}
 
 export function LeadCard({ lead, isDragActive }: { lead: Lead; isDragActive?: boolean }) {
   const { ref, handleRef, isDragging } = useDraggable({
@@ -68,18 +54,7 @@ export function LeadCard({ lead, isDragActive }: { lead: Lead; isDragActive?: bo
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-2">
-          {lead.intencion ? (
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                INTENCION_STYLE[lead.intencion]?.className ??
-                'bg-muted text-muted-foreground'
-              }`}
-            >
-              {INTENCION_STYLE[lead.intencion]?.label ?? lead.intencion}
-            </span>
-          ) : (
-            <span />
-          )}
+          <LeadBadges lead={lead} />
           <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
             {relativeTime(lead.last_message_at)}
           </span>

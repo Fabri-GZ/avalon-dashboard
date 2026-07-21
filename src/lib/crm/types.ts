@@ -3,40 +3,34 @@ export type Channel = 'whatsapp'
 export type Intencion = 'presupuesto' | 'postventa' | 'otro'
 export type CrmDateRange = '7d' | '30d' | '90d' | 'todo'
 
-// TRANSITIONAL (PR3 of crm-multicliente): these keys physically live inside
-// `leads.details` jsonb now (this is Grupo Norte's vocabulary specifically).
-// PR4 replaces this shape with a per-client discriminated union driven by
-// `src/lib/crm/registry.ts`. Until then, `queries.ts` flattens `details` back
-// into these same top-level fields so existing components keep compiling
-// unchanged. Do not treat this as the final design.
-export interface LeadDetails {
-  material?: string | null
-  ubicacion?: string | null
-  cantidad_aberturas?: string | null
-  detalle_aberturas?: string | null
-  tipo_derivacion?: string | null
-  comercial_asignado?: string | null
-}
+// The known `clients.client_key` vocabularies as of this batch -- documented
+// for readability only, NOT an exhaustive runtime constraint. `Lead.client_key`
+// stays `string`: a client can exist without a registry entry (see design D2),
+// and the UI must degrade gracefully instead of narrowing types against it.
+export type ClientKey = 'grupo-norte' | 'fz-motos' | 'viviera'
+
+// `details` is untyped jsonb (design D2): its shape is entirely driven by
+// whichever client's chatbot prompt in n8n wrote it, and those prompts change
+// without a deploy. `src/lib/crm/registry.ts` is the single place that
+// interprets these keys per `client_key` -- nothing else should assume a
+// specific field exists on it.
+export type LeadDetails = Record<string, unknown>
 
 export interface Lead {
   client_id: string
+  client_key: string
   channel: Channel
   session_id: string
   nombre: string | null
   contacto: string | null
   stage: Stage
   intencion: string | null
-  material: string | null
-  ubicacion: string | null
-  cantidad_aberturas: string | null
-  detalle_aberturas: string | null
   derivado: boolean | null
-  tipo_derivacion: string | null
-  comercial_asignado: string | null
   last_snippet: string | null
   first_contact_at: string | null
   last_message_at: string | null
   calificado: boolean | null
+  details: LeadDetails
 }
 
 export interface Message {
