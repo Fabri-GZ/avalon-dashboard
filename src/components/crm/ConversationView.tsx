@@ -26,7 +26,7 @@ function toDateKey(iso: string): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 }
 
-export function ConversationView({ lead, messages }: { lead: Lead; messages: Message[] }) {
+export function ConversationView({ lead, messages, hasWebhook }: { lead: Lead; messages: Message[]; hasWebhook: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -49,6 +49,7 @@ export function ConversationView({ lead, messages }: { lead: Lead; messages: Mes
             sessionId={lead.session_id}
             stage={lead.stage}
             phone={lead.contacto}
+            hasWebhook={hasWebhook}
           />
         </div>
 
