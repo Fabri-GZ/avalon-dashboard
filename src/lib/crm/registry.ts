@@ -41,9 +41,39 @@ export interface BadgeDescriptor {
   className: string
 }
 
+export interface IntencionStyle {
+  label: string
+  className: string
+}
+
+type IntencionStyleMap = Record<string, IntencionStyle>
+
 interface ClientRegistryEntry {
   fields: DetailFieldDescriptor[]
   badges: (details: LeadDetails) => BadgeDescriptor[]
+  /** Optional per-client override for `intencion` labels/styles. Falls back
+   * to `SHARED_INTENCION_STYLE` for keys not present here, then to a neutral
+   * muted style showing the raw value. */
+  intencion?: IntencionStyleMap
+}
+
+// Shared default `intencion` vocabulary across clients that don't define
+// their own (Grupo Norte, Viviera). Moved here (verbatim) from
+// `LeadBadges.tsx` so per-client overrides (e.g. FZ Motos) can layer on top
+// without duplicating these three styles.
+const SHARED_INTENCION_STYLE: IntencionStyleMap = {
+  presupuesto: {
+    label: 'Presupuesto',
+    className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300',
+  },
+  postventa: {
+    label: 'Postventa',
+    className: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300',
+  },
+  otro: {
+    label: 'Otro',
+    className: 'bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300',
+  },
 }
 
 function asString(raw: unknown): string | null {
@@ -178,30 +208,32 @@ const REGISTRY: Record<string, ClientRegistryEntry> = {
         format: (raw) => asString(raw),
       },
     ],
+    intencion: {
+      compra_bici: {
+        label: 'Bici',
+        className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300',
+      },
+      compra_moto: {
+        label: 'Moto',
+        className: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300',
+      },
+      accesorios: {
+        label: 'Accesorios',
+        className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-500/20 dark:text-cyan-300',
+      },
+      otro: {
+        label: 'Otro',
+        className: 'bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300',
+      },
+    },
     badges: (details) => {
       const badges: BadgeDescriptor[] = []
 
-      const producto = asPrettyString(details.producto)
-      if (producto) {
-        badges.push({
-          key: 'producto',
-          label: producto,
-          className: 'bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300',
-        })
-      }
-
       const matchStock = asString(details.match_stock)
-      if (matchStock === 'en_stock') {
+      if (matchStock === 'sustituto') {
         badges.push({
           key: 'match_stock',
-          label: 'En stock',
-          className:
-            'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300',
-        })
-      } else if (matchStock === 'sustituto') {
-        badges.push({
-          key: 'match_stock',
-          label: 'Sustituto disponible',
+          label: 'Sustituto',
           className: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300',
         })
       } else if (matchStock === 'sin_stock') {
@@ -236,4 +268,11 @@ export function getDetailFields(clientKey: string): DetailFieldDescriptor[] {
 
 export function getClientBadges(clientKey: string, details: LeadDetails): BadgeDescriptor[] {
   return REGISTRY[clientKey]?.badges(details) ?? []
+}
+
+export function getIntencionBadge(clientKey: string, intencion: string | null): IntencionStyle | null {
+  if (!intencion) return null
+  const entry = REGISTRY[clientKey]?.intencion?.[intencion] ?? SHARED_INTENCION_STYLE[intencion]
+  if (entry) return entry
+  return { label: intencion, className: 'bg-muted text-muted-foreground' }
 }

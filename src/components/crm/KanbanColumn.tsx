@@ -44,7 +44,7 @@ export function KanbanColumn({
 
   return (
     <div
-      className={`flex w-72 shrink-0 flex-col rounded-xl border border-border bg-muted/30 transition-all duration-200 ${
+      className={`flex w-80 shrink-0 flex-col rounded-xl border border-border bg-muted/30 transition-all duration-200 ${
         isDragActive && !isDropTarget ? 'opacity-60' : 'opacity-100'
       } ${isValidHover ? 'ring-2 ring-primary/50 bg-primary/5' : ''} ${
         isBlockedHover ? 'ring-2 ring-destructive/40 bg-destructive/5' : ''
