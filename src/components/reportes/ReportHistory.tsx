@@ -10,7 +10,7 @@ const STATUS: Record<
   ReportStatus | 'none',
   { label: string; cls: string; dot: string; spin?: boolean }
 > = {
-  pending: { label: 'En cola', cls: 'bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:text-zinc-400', dot: 'bg-zinc-400' },
+  pending: { label: 'En cola', cls: 'bg-orange-500/10 text-orange-700 ring-orange-500/20 dark:text-orange-400', dot: 'bg-orange-500' },
   running: { label: 'Generando…', cls: 'bg-amber-500/10 text-amber-700 ring-amber-500/20 dark:text-amber-400', dot: 'bg-amber-500', spin: true },
   done: { label: 'Listo', cls: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20 dark:text-emerald-400', dot: 'bg-emerald-500' },
   error: { label: 'Error', cls: 'bg-destructive/10 text-destructive ring-destructive/20', dot: 'bg-destructive' },
