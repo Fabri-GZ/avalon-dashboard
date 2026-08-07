@@ -28,6 +28,15 @@ export interface ReportManifest {
   period: { year: number; month: number; label: string };
   copy: { summary: string; highlights: string[] };
   components: ReportComponent[]; // ordenado: define qué se renderiza y en qué orden
+  // Optional so existing rows with `manifest: null` or without this key keep
+  // parsing — written by n8n once the compute step's primaryConversion output
+  // is merged in (see compute.js resolveConfiguredConversion()).
+  primary_conversion?: {
+    action_type: string;
+    label: string;
+    origin: 'config' | 'detected';
+    config_error: { field: string; value: string; reason: string } | null;
+  };
 }
 
 export interface ReportComponent {
@@ -40,6 +49,25 @@ export interface GenerateReportRequest {
   accountId: string;
   year: number;
   month: number; // 1-12
+}
+
+// Fila de ad_accounts que viaja al webhook de n8n. snake_case a propósito:
+// misma clave en la DB, en el payload y en raw.account dentro de compute.js.
+export interface ReportWebhookAccount {
+  id: string;
+  name: string;
+  currency: string | null;
+  primary_action_type: string | null;
+}
+
+// Body real que route.ts postea al webhook de n8n (distinto de
+// GenerateReportRequest, que es lo que el front postea a /api/reportes).
+export interface GenerateReportWebhookPayload {
+  jobId: string;
+  accountId: string;
+  year: number;
+  month: number;
+  account: ReportWebhookAccount;
 }
 
 // Respuesta del enqueue: el route devuelve el jobId al toque, sin esperar el

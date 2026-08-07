@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/app/utils/supabase/server'
 import { supabaseAdmin } from '@/app/utils/supabase/admin'
-import type { GenerateReportRequest } from '@/lib/reportes/types'
+import type { GenerateReportRequest, GenerateReportWebhookPayload } from '@/lib/reportes/types'
 
 // Encola la generación de un reporte de paid media. Espeja el patrón async de
 // `agente-ia/chat`: Supabase es la fuente de verdad; n8n completa el job por
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   // que la cuenta exista en ad_accounts.
   const { data: account, error: accErr } = await supabaseAdmin
     .from('ad_accounts')
-    .select('id, name')
+    .select('id, name, currency, primary_action_type')
     .eq('id', accountId)
     .single()
 
@@ -97,10 +97,23 @@ export async function POST(req: NextRequest) {
   // Dispara n8n esperando SOLO el ack 202 (no el HTML). n8n responde temprano y
   // sigue procesando en background.
   try {
+    const webhookPayload: GenerateReportWebhookPayload = {
+      jobId: job.id,
+      accountId: account.id, // kept: the live n8n workflow still reads body.accountId directly
+      year,
+      month,
+      account: {
+        id: account.id,
+        name: account.name,
+        currency: account.currency,
+        primary_action_type: account.primary_action_type,
+      },
+    }
+
     const n8nRes = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId: job.id, accountId: account.id, year, month }),
+      body: JSON.stringify(webhookPayload),
       signal: AbortSignal.timeout(10_000),
     })
 
