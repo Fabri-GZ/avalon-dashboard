@@ -60,8 +60,13 @@ export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
-              <tr className="text-left text-[10.5px] uppercase tracking-wider text-muted-foreground/80">
-                <th className="px-5 py-2.5 font-semibold">Cuenta</th>
+              {/* 10.5px was below the point where an uppercase, wide-tracked label
+                  stays comfortably readable; the /80 opacity on an already muted
+                  colour pushed it further down. Size and contrast both go up. */}
+              <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+                {/* Constrained so the account column stops sizing itself to the
+                    longest name on one line. Names wrap in the cell below. */}
+                <th className="w-[24%] px-5 py-2.5 font-semibold">Cuenta</th>
                 <th className="px-5 py-2.5 font-semibold">Último reporte</th>
                 <th className="px-5 py-2.5 font-semibold">Generado</th>
                 <th className="px-5 py-2.5 font-semibold">Estado</th>
@@ -71,7 +76,20 @@ export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
             <tbody>
               {rows.map(({ account, latest }) => (
                 <tr key={account.id} className="border-t border-border/60">
-                  <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-foreground">{account.name}</td>
+                  <td className="px-5 py-3.5 font-semibold text-foreground">
+                    {/* line-clamp sits on an inner span, never on the <td>: the
+                        utility sets display:-webkit-box, which would stop the
+                        cell from being a table-cell and break the row layout.
+
+                        `title` carries the exact same string as the text content,
+                        never an abbreviation. No aria-label — line-clamp only
+                        clips visually, so assistive tech already reads the whole
+                        name from the text node, and a label would override it
+                        with a duplicate. */}
+                    <span className="line-clamp-2 break-words" title={account.name}>
+                      {account.name}
+                    </span>
+                  </td>
                   <td className="px-5 py-3.5 text-muted-foreground">
                     {latest ? periodLabel(latest.period_year, latest.period_month) : '—'}
                   </td>
