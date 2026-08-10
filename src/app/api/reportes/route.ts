@@ -80,6 +80,10 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         report_url: null,
         error: null,
+        // Se limpia junto con `error`: si no, un reporte que falló y después se
+        // regenera bien queda en `done` arrastrando el error_detail de la corrida
+        // anterior, y el campo que se mira para debuggear miente.
+        error_detail: null,
         manifest: null,
         requested_by: user.id,
         updated_at: new Date().toISOString(),
