@@ -1,10 +1,11 @@
 'use client'
 
-import { LuPlus, LuExternalLink, LuRotateCw, LuLoader } from 'react-icons/lu'
+import { LuPlus, LuLoader } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type { AccountRow, Report, ReportStatus } from '@/lib/reportes/types'
 import { periodLabel, generatedAt } from '@/lib/reportes/format'
+import { ReportRowAction } from './ReportRowAction'
 
 const STATUS: Record<
   ReportStatus | 'none',
@@ -80,42 +81,15 @@ export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
                   <td className="px-5 py-3.5">
                     <StatusBadge status={latest?.status ?? 'none'} />
                   </td>
-                  <td className="px-5 py-3.5 text-right">
-                    {latest?.status === 'done' && latest.report_url && (
-                      <Button
-                        asChild
-                        size="sm"
-                        variant="outline"
-                        className="hover:bg-secondary hover:text-foreground"
-                      >
-                        <a href={latest.report_url} target="_blank" rel="noopener noreferrer">
-                          <LuExternalLink /> Ver
-                        </a>
-                      </Button>
-                    )}
-                    {latest?.status === 'error' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="hover:bg-secondary hover:text-foreground"
-                        onClick={() => onRetry(latest)}
-                      >
-                        <LuRotateCw /> Reintentar
-                      </Button>
-                    )}
-                    {!latest && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="hover:bg-secondary hover:text-foreground"
-                        onClick={() => onGenerateFor(account.id)}
-                      >
-                        <LuPlus /> Generar
-                      </Button>
-                    )}
-                    {(latest?.status === 'pending' || latest?.status === 'running') && (
-                      <span className="text-xs text-muted-foreground">En curso…</span>
-                    )}
+                  <td className="px-5 py-3.5">
+                    <div className="flex justify-end">
+                      <ReportRowAction
+                        latest={latest}
+                        accountId={account.id}
+                        onGenerateFor={onGenerateFor}
+                        onRetry={onRetry}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
