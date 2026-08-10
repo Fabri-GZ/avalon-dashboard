@@ -9,16 +9,18 @@ export function periodLabel(year: number, month: number) {
   return `${MONTHS[month - 1]} ${year}`
 }
 
-// "hoy 14:32" / "ayer" / "24/06" según cuán reciente sea.
+// "Hoy 14:32" / "Ayer" / "24/06" según cuán reciente sea.
 export function generatedAt(iso: string) {
   const d = new Date(iso)
   const now = new Date()
   const sameDay = d.toDateString() === now.toDateString()
   if (sameDay) {
-    return `hoy ${d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`
+    // hour12: false — es-AR rinde 12h por defecto ("02:32 p. m."), que en una
+    // tabla densa ocupa casi el doble y se lee peor que "14:32".
+    return `Hoy ${d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}`
   }
   const yest = new Date(now)
   yest.setDate(now.getDate() - 1)
-  if (d.toDateString() === yest.toDateString()) return 'ayer'
+  if (d.toDateString() === yest.toDateString()) return 'Ayer'
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
 }
