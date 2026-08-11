@@ -32,7 +32,7 @@ export function GenerationBlocker({ accountName, periodLabel }: Props) {
       >
         <LuLoader aria-hidden className="size-5 shrink-0 animate-spin text-primary motion-reduce:animate-none" />
         <p className="text-sm font-medium text-foreground">
-          Generando reporte — {accountName} · {periodLabel}
+          Generando reporte: {accountName} · {periodLabel}
         </p>
       </div>
     </div>,

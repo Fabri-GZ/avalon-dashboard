@@ -40,20 +40,13 @@ export function ReportRowActions({
 }: Props) {
   const isCard = variant === 'card'
 
-  // Las variantes `dark:` son obligatorias, no decorativas: el `outline` de
-  // shadcn trae `dark:hover:bg-input/50` propio. Una clase sin prefijo `dark:`
-  // no lo pisa — en modo oscuro conviven las dos y gana la del `dark:` por
-  // orden en la hoja, así que el hover salía gris neutro en vez de violeta.
-  // Y el tinte tiene que ser más fuerte en oscuro: un 5% de #a047ff sobre
-  // #111116 es invisible, mientras que sobre #fff se percibe bien.
-  const hover =
-    'transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground ' +
-    'dark:hover:border-primary/50 dark:hover:bg-primary/15'
-  const primaryClass = isCard
-    ? `h-11 flex-1 justify-center ${hover}`
-    : `h-8 w-34 justify-center ${hover}`
+  // Acá vivía un override del hover, porque el `outline` de shadcn cambiaba el
+  // color del texto contra un token invertido. Eso ahora lo resuelve la propia
+  // variante `outline` en `components/ui/button.tsx`, así que estas clases solo
+  // definen tamaño: el hover se hereda y hay una sola fuente de verdad.
+  const primaryClass = isCard ? 'h-11 flex-1 justify-center' : 'h-8 w-34 justify-center'
   // `group` es obligatorio: las capas de la flecha reaccionan con group-hover.
-  const iconClass = `group shrink-0 ${hover} ${isCard ? 'size-11' : 'size-8'}`
+  const iconClass = `group shrink-0 ${isCard ? 'size-11' : 'size-8'}`
 
   return (
     <div className={isCard ? 'flex gap-2' : 'flex items-center gap-2'}>
