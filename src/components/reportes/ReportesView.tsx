@@ -9,9 +9,12 @@ import {
   cardVariants as _card,
 } from '@/app/components/Dashboard/data/dataProcessors'
 import type { AccountOption, AccountRow, Report, ReportFilter } from '@/lib/reportes/types'
+import { periodLabel } from '@/lib/reportes/format'
 import { ReportesTopbar } from './ReportesTopbar'
 import { ReportHistory } from './ReportHistory'
 import { ReportSheet } from './ReportSheet'
+import { GenerationBlocker } from './GenerationBlocker'
+import { GenerationResultModal } from './GenerationResultModal'
 
 const containerVariants = _container as Variants
 const cardVariants = _card as Variants
@@ -27,10 +30,21 @@ interface Props {
   initialHistory: Report[]
 }
 
+/**
+ * El resultado terminal de una generación, que es lo único que el modal
+ * muestra. Un TTL vencido NO produce uno: el job no terminó, solo dejamos de
+ * mirarlo.
+ */
+interface TerminalResult {
+  kind: 'done' | 'error'
+  report: Report
+}
+
 export function ReportesView({ accounts, initialHistory }: Props) {
   const reducedMotion = useReducedMotion()
   const [reports, setReports] = useState<Report[]>(initialHistory)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
+  const [result, setResult] = useState<TerminalResult | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<ReportFilter>('todas')
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -51,14 +65,37 @@ export function ReportesView({ accounts, initialHistory }: Props) {
       onDone: (report) => {
         upsertLocal(report)
         setActiveJobId(null)
-        toast.success('Reporte listo')
+        // El modal reemplaza al toast para los finales: es la superficie que
+        // ofrece "Ver reporte" y "Reintentar". Dejar los dos duplicaba el
+        // aviso y el toast se iba solo justo cuando había algo que decidir.
+        setResult({ kind: 'done', report })
       },
-      onError: (msg) => {
-        setReports((prev) =>
-          prev.map((x) => (x.id === activeJobId ? { ...x, status: 'error', error: msg } : x)),
-        )
+      onError: (msg, reason) => {
+        const jobId = activeJobId
         setActiveJobId(null)
-        toast.error(msg)
+
+        // Fix C6. Un TTL vencido no es un final: la fila de la DB sigue en
+        // `pending`/`running` y el barredor de jobs colgados la resuelve del
+        // lado del servidor. Si estampáramos `error` acá, la tabla mostraría
+        // un estado que la DB no tiene hasta el próximo refresh — y encima
+        // ofrecería "Reintentar" sobre un job que quizás está por terminar
+        // bien. Se avisa y se deja la fila como está.
+        if (reason === 'timeout') {
+          toast.info(msg)
+          return
+        }
+
+        const failed = reports.find((x) => x.id === jobId)
+        setReports((prev) =>
+          prev.map((x) => (x.id === jobId ? { ...x, status: 'error', error: msg } : x)),
+        )
+        if (failed) {
+          setResult({ kind: 'error', report: { ...failed, status: 'error', error: msg } })
+        } else {
+          // La fila no está en memoria (llegó de otra pestaña). No hay a qué
+          // ofrecerle "Reintentar", así que el aviso va por toast.
+          toast.error(msg)
+        }
       },
     },
     {
@@ -78,10 +115,32 @@ export function ReportesView({ accounts, initialHistory }: Props) {
     return map
   }, [reports])
 
+  // El último reporte que de verdad se puede abrir, que no es lo mismo que el
+  // último reporte. `latestByAccount` ignora el estado, así que en cuanto se
+  // encola uno nuevo pasa a ser la fila `pending` y el link al anterior
+  // desaparece de la tabla — justo mientras el usuario espera el reemplazo.
+  //
+  // El filtro por `report_url` no es defensivo de más: una fila puede quedar en
+  // `done` con la URL en null (pasó con DECOPOINT), y ahí el botón abriría un
+  // link vacío, que es peor que no ofrecer el botón.
+  const lastDoneByAccount = useMemo(() => {
+    const map = new Map<string, Report>()
+    for (const r of reports) {
+      if (r.status !== 'done' || !r.report_url) continue
+      const cur = map.get(r.account_id)
+      if (!cur || r.created_at > cur.created_at) map.set(r.account_id, r)
+    }
+    return map
+  }, [reports])
+
   const rows: AccountRow[] = useMemo(() => {
     const q = norm(search)
     return accounts
-      .map((account) => ({ account, latest: latestByAccount.get(account.id) ?? null }))
+      .map((account) => ({
+        account,
+        latest: latestByAccount.get(account.id) ?? null,
+        lastDone: lastDoneByAccount.get(account.id) ?? null,
+      }))
       .filter(({ account, latest }) => {
         if (q && !norm(account.name).includes(q)) return false
         if (filter === 'todas') return true
@@ -90,7 +149,22 @@ export function ReportesView({ accounts, initialHistory }: Props) {
         if (filter === 'proceso') return latest?.status === 'pending' || latest?.status === 'running'
         return true
       })
-  }, [accounts, latestByAccount, search, filter])
+  }, [accounts, latestByAccount, lastDoneByAccount, search, filter])
+
+  // La fila que se está generando, para que el blocker pueda nombrar cuenta y
+  // período. Sale de `reports` y no de un state aparte porque `handleGenerate`
+  // ya la inserta ahí antes de arrancar el polling: duplicarla en otro state
+  // sería una segunda fuente de verdad que hay que mantener sincronizada.
+  const activeReport = useMemo(
+    () => (activeJobId ? (reports.find((r) => r.id === activeJobId) ?? null) : null),
+    [activeJobId, reports],
+  )
+
+  // Un solo job a la vez en toda la sección: el bloqueo real vive en la DB, así
+  // que mientras uno corre no hay ningún trigger de generar/reintentar que
+  // tenga sentido. El blocker tapa la pantalla, pero eso solo detiene al mouse
+  // — `disabled` es lo que también detiene al teclado.
+  const busy = activeJobId !== null
 
   async function handleGenerate(accountId: string, year: number, month: number) {
     if (activeJobId) {
@@ -157,6 +231,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
       <motion.div variants={reducedMotion ? undefined : cardVariants}>
         <ReportHistory
           rows={rows}
+          busy={busy}
           onNew={() => openSheet(null)}
           onGenerateFor={(id) => openSheet(id)}
           onRetry={(r) => handleGenerate(r.account_id, r.period_year, r.period_month)}
@@ -169,6 +244,34 @@ export function ReportesView({ accounts, initialHistory }: Props) {
           defaultAccountId={preselect}
           onGenerate={handleGenerate}
           onClose={() => setSheetOpen(false)}
+        />
+      )}
+
+      {activeReport && (
+        <GenerationBlocker
+          accountName={activeReport.account_name}
+          periodLabel={periodLabel(activeReport.period_year, activeReport.period_month)}
+        />
+      )}
+
+      {result && (
+        <GenerationResultModal
+          kind={result.kind}
+          accountName={result.report.account_name}
+          periodLabel={periodLabel(result.report.period_year, result.report.period_month)}
+          reportUrl={result.report.report_url}
+          message={result.report.error}
+          onRetry={() => {
+            // El modal se cierra primero: si no, el blocker del job nuevo
+            // aparecería debajo de un diálogo que habla del job anterior.
+            setResult(null)
+            handleGenerate(
+              result.report.account_id,
+              result.report.period_year,
+              result.report.period_month,
+            )
+          }}
+          onClose={() => setResult(null)}
         />
       )}
     </motion.div>

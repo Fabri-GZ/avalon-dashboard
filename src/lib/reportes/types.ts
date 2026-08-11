@@ -89,5 +89,13 @@ export type ReportFilter = 'todas' | 'done' | 'proceso' | 'error';
 // Fila del historial por cuenta: cada cuenta con su último reporte (o null).
 export interface AccountRow {
   account: AccountOption;
+  /** Most recent report by `created_at`, whatever its status. Drives the period
+   *  column and the status badge. */
   latest: Report | null;
+  /** Most recent report that is actually readable: `done` AND carrying a
+   *  `report_url`. Deliberately separate from `latest` — while a new report is
+   *  generating, `latest` is the pending row, and without this the link to the
+   *  last good report would vanish from the table exactly while the user waits
+   *  for its replacement. */
+  lastDone: Report | null;
 }

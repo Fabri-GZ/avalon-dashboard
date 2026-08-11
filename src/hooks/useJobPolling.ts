@@ -9,9 +9,24 @@ const POLL_INTERVAL_MS = 3_000
 // colchón para hashtags nicho lentos sin colgar al CM indefinidamente.
 const TTL_MS = 140_000
 
+/**
+ * Por qué el fallo viene clasificado y no como un solo `onError`:
+ *
+ * - `job`     — el worker escribió `status: 'error'` en la fila. Es un final:
+ *               la fila de la DB ya dice `error` y el job no sigue corriendo.
+ * - `timeout` — se venció el TTL, o las lecturas fallaron hasta agotarlo. NO
+ *               es un final: la fila sigue en `pending`/`running` y el worker
+ *               puede terminar perfectamente después de que dejamos de mirar.
+ *
+ * Sin esta distinción el llamador no puede hacer otra cosa que tratar a los
+ * dos igual, y estampar `error` local sobre una fila que en la DB sigue
+ * `pending` deja a la tabla mintiendo hasta el próximo refresh.
+ */
+export type JobPollFailure = 'job' | 'timeout'
+
 export interface JobPollHandlers<T> {
   onDone: (result: T) => void
-  onError: (message: string) => void
+  onError: (message: string, reason: JobPollFailure) => void
 }
 
 /**
@@ -87,7 +102,10 @@ export function useJobPolling<T = TrendResponse>(
       // Error de lectura (red/transitorio): reintenta hasta agotar el TTL.
       if (error || !data) {
         if (expired()) {
-          handlersRef.current.onError('No se pudo leer el estado del job.')
+          // `timeout`, no `job`: nunca llegamos a leer la fila, así que no
+          // sabemos en qué estado quedó. Lo único cierto es que dejamos de
+          // mirar.
+          handlersRef.current.onError('No se pudo leer el estado del job.', 'timeout')
           return
         }
         timer = setTimeout(poll, pollInterval)
@@ -102,13 +120,15 @@ export function useJobPolling<T = TrendResponse>(
       }
 
       if (row.status === 'error') {
-        handlersRef.current.onError(getError(row) ?? 'El job falló.')
+        handlersRef.current.onError(getError(row) ?? 'El job falló.', 'job')
         return
       }
 
       // pending/running: seguir mientras no expire el TTL.
       if (expired()) {
-        handlersRef.current.onError('El job tardó demasiado. Probá de nuevo.')
+        // La fila queda como está: `pending`/`running` es su estado real en la
+        // DB en este instante. Dejamos de pollear, no damos el job por muerto.
+        handlersRef.current.onError('El job tardó demasiado. Probá de nuevo.', 'timeout')
         return
       }
       timer = setTimeout(poll, pollInterval)

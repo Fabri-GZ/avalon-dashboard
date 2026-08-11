@@ -13,6 +13,13 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  experimental: {
+    // Turbopack's HTTP client is Rust-based and ignores NODE_TLS_REJECT_UNAUTHORIZED,
+    // so next/font/google fails to reach fonts.googleapis.com behind a TLS-intercepting
+    // proxy and silently falls back to Arial. Reading the OS certificate store lets it
+    // validate the intercepting CA instead of skipping validation altogether.
+    turbopackUseSystemTlsCerts: true,
+  },
 };
 
 export default nextConfig;

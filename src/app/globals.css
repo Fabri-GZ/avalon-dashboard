@@ -6,7 +6,7 @@
   --toastify-color-success: #059669;
   --toastify-color-error: #DC2626;
   --toastify-toast-bd-radius: 10px;
-  --toastify-font-family: Poppins, sans-serif;
+  --toastify-font-family: var(--font-poppins);
   --toastify-toast-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
   --toastify-toast-min-height: 56px;
   --toastify-toast-padding: 12px 14px;
@@ -96,7 +96,13 @@ html {
 body {
   margin: 0;
   padding: 0;
-  font-family: Poppins, Arial, sans-serif;
+  font-family: var(--font-poppins);
+}
+
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-unbounded);
+  }
 }
 
 @theme inline {
@@ -142,8 +148,19 @@ body {
   --radius-avatar: 0.5rem;
   --radius-card: 0.75rem;
   --shadow-card: 0 1px 3px rgba(0,0,0,0.05);
-  --font-poppins: Poppins, sans-serif;
-  --font-unbounded: Poppins, sans-serif;
+  /* next/font already emits its own Arial chain into these source vars, so the
+     fallback goes inside var() instead of after it: no duplication when the font
+     loads, and a real fallback if the var is ever missing. */
+  --font-poppins: var(--font-poppins-sans, Arial, sans-serif);
+  --font-unbounded: var(--font-unbounded-display, Arial, sans-serif);
+  --font-body: var(--font-poppins-sans, Arial, sans-serif);
+
+  /* Expone los --status-* como utilidades de color (text-status-done,
+     bg-status-error, etc.) y como var(--color-status-*) para color-mix. */
+  --color-status-pending: var(--status-pending);
+  --color-status-running: var(--status-running);
+  --color-status-done: var(--status-done);
+  --color-status-error: var(--status-error);
 }
 
 :root {
@@ -181,6 +198,16 @@ body {
   --chart-3: oklch(0.65 0.22 320); /* rosa */
   --chart-4: oklch(0.70 0.18 270); /* lila */
   --chart-5: oklch(0.60 0.15 300); /* violeta */
+
+  /* Estado de reportes. Un token por estado alimenta el texto, el punto, el
+     fondo y el anillo del badge, así el color no puede desincronizarse entre
+     las partes. Scope: sección Reportes — ningún otro módulo se migra acá.
+     Reemplazan a amber-500/emerald-500/orange-500 crudos, que en modo claro
+     no llegaban a 4.5:1 (running quedaba en ~3.9:1, error en ~4.0:1). */
+  --status-pending: oklch(0.44 0.13 55);
+  --status-running: oklch(0.44 0.11 75);
+  --status-done: oklch(0.44 0.12 160);
+  --status-error: oklch(0.44 0.18 27);
 }
 
 .dark {
@@ -213,4 +240,11 @@ body {
   --chart-3: oklch(0.70 0.22 320);
   --chart-4: oklch(0.75 0.18 270);
   --chart-5: oklch(0.65 0.15 300);
+
+  /* Estado de reportes en dark: mismo hue y croma, lightness invertida para
+     leer sobre --card: #111116. */
+  --status-pending: oklch(0.78 0.14 55);
+  --status-running: oklch(0.82 0.13 75);
+  --status-done: oklch(0.80 0.14 160);
+  --status-error: oklch(0.72 0.17 27);
 }
