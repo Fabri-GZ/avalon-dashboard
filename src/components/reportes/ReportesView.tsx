@@ -78,10 +78,32 @@ export function ReportesView({ accounts, initialHistory }: Props) {
     return map
   }, [reports])
 
+  // El último reporte que de verdad se puede abrir, que no es lo mismo que el
+  // último reporte. `latestByAccount` ignora el estado, así que en cuanto se
+  // encola uno nuevo pasa a ser la fila `pending` y el link al anterior
+  // desaparece de la tabla — justo mientras el usuario espera el reemplazo.
+  //
+  // El filtro por `report_url` no es defensivo de más: una fila puede quedar en
+  // `done` con la URL en null (pasó con DECOPOINT), y ahí el botón abriría un
+  // link vacío, que es peor que no ofrecer el botón.
+  const lastDoneByAccount = useMemo(() => {
+    const map = new Map<string, Report>()
+    for (const r of reports) {
+      if (r.status !== 'done' || !r.report_url) continue
+      const cur = map.get(r.account_id)
+      if (!cur || r.created_at > cur.created_at) map.set(r.account_id, r)
+    }
+    return map
+  }, [reports])
+
   const rows: AccountRow[] = useMemo(() => {
     const q = norm(search)
     return accounts
-      .map((account) => ({ account, latest: latestByAccount.get(account.id) ?? null }))
+      .map((account) => ({
+        account,
+        latest: latestByAccount.get(account.id) ?? null,
+        lastDone: lastDoneByAccount.get(account.id) ?? null,
+      }))
       .filter(({ account, latest }) => {
         if (q && !norm(account.name).includes(q)) return false
         if (filter === 'todas') return true
@@ -90,7 +112,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
         if (filter === 'proceso') return latest?.status === 'pending' || latest?.status === 'running'
         return true
       })
-  }, [accounts, latestByAccount, search, filter])
+  }, [accounts, latestByAccount, lastDoneByAccount, search, filter])
 
   async function handleGenerate(accountId: string, year: number, month: number) {
     if (activeJobId) {

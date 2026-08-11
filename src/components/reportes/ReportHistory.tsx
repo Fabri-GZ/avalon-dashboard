@@ -1,36 +1,13 @@
 'use client'
 
-import { LuPlus, LuLoader } from 'react-icons/lu'
+import { LuPlus } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import type { AccountRow, Report, ReportStatus } from '@/lib/reportes/types'
+import type { AccountRow, Report } from '@/lib/reportes/types'
 import { periodLabel, generatedAt } from '@/lib/reportes/format'
-import { ReportRowAction } from './ReportRowAction'
-
-const STATUS: Record<
-  ReportStatus | 'none',
-  { label: string; cls: string; dot: string; spin?: boolean }
-> = {
-  pending: { label: 'En cola', cls: 'bg-orange-500/10 text-orange-700 ring-orange-500/20 dark:text-orange-400', dot: 'bg-orange-500' },
-  running: { label: 'Generando…', cls: 'bg-amber-500/10 text-amber-700 ring-amber-500/20 dark:text-amber-400', dot: 'bg-amber-500', spin: true },
-  done: { label: 'Listo', cls: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20 dark:text-emerald-400', dot: 'bg-emerald-500' },
-  error: { label: 'Error', cls: 'bg-destructive/10 text-destructive ring-destructive/20', dot: 'bg-destructive' },
-  none: { label: 'Sin reporte', cls: 'bg-secondary text-muted-foreground ring-border', dot: 'bg-muted-foreground/50' },
-}
-
-function StatusBadge({ status }: { status: ReportStatus | 'none' }) {
-  const s = STATUS[status]
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${s.cls}`}>
-      {s.spin ? (
-        <LuLoader className="h-3 w-3 animate-spin" />
-      ) : (
-        <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-      )}
-      {s.label}
-    </span>
-  )
-}
+import { ReportCard } from './ReportCard'
+import { ReportRowActions } from './ReportRowActions'
+import { StatusBadge } from './StatusBadge'
 
 interface Props {
   rows: AccountRow[]
@@ -57,8 +34,12 @@ export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
       {rows.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">No hay cuentas que coincidan.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
+        // Ya no hay `overflow-x-auto` ni `min-w-[640px]`: en vez de empujar la
+        // tabla a scrollear de costado en mobile, abajo de `sm` se renderiza una
+        // lista de cards. `sm` es el breakpoint que ya usan ReportSheet,
+        // TaskCard y ReportesTopbar — no se inventa uno nuevo para esto.
+        <div className="hidden sm:block">
+          <table className="w-full text-sm">
             <thead>
               {/* 10.5px was below the point where an uppercase, wide-tracked label
                   stays comfortably readable; the /80 opacity on an already muted
@@ -70,12 +51,19 @@ export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
                 <th className="px-5 py-2.5 font-semibold">Último reporte</th>
                 <th className="px-5 py-2.5 font-semibold">Generado</th>
                 <th className="px-5 py-2.5 font-semibold">Estado</th>
-                <th className="px-5 py-2.5 text-right font-semibold">Acción</th>
+                <th className="px-5 py-2.5 font-semibold">Acción</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ account, latest }) => (
-                <tr key={account.id} className="border-t border-border/60">
+              {/* Antes no había hover de fila: con 22 cuentas, nada seguía el
+                  ojo a lo ancho de 5 columnas. `secondary` es el token de hover
+                  que ya usa el resto del repo, y al 50% se distingue del fondo
+                  sin bajarle el contraste al texto de la fila. */}
+              {rows.map(({ account, latest, lastDone }) => (
+                <tr
+                  key={account.id}
+                  className="border-t border-border/60 transition-colors hover:bg-secondary/50"
+                >
                   <td className="px-5 py-3.5 font-semibold text-foreground">
                     {/* line-clamp sits on an inner span, never on the <td>: the
                         utility sets display:-webkit-box, which would stop the
@@ -99,21 +87,35 @@ export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
                   <td className="px-5 py-3.5">
                     <StatusBadge status={latest?.status ?? 'none'} />
                   </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex justify-end">
-                      <ReportRowAction
-                        latest={latest}
-                        accountId={account.id}
-                        onGenerateFor={onGenerateFor}
-                        onRetry={onRetry}
-                      />
-                    </div>
+                  <td className="w-px whitespace-nowrap px-5 py-3.5">
+                    <ReportRowActions
+                      latest={latest}
+                      lastDone={lastDone}
+                      accountId={account.id}
+                      onGenerateFor={onGenerateFor}
+                      onRetry={onRetry}
+                    />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {rows.length > 0 && (
+        <ul className="space-y-2.5 p-3 sm:hidden">
+          {rows.map(({ account, latest, lastDone }) => (
+            <ReportCard
+              key={account.id}
+              account={account}
+              latest={latest}
+              lastDone={lastDone}
+              onGenerateFor={onGenerateFor}
+              onRetry={onRetry}
+            />
+          ))}
+        </ul>
       )}
     </Card>
   )
