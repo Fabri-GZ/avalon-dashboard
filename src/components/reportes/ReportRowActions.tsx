@@ -34,8 +34,15 @@ export function ReportRowActions({
 }: Props) {
   const isCard = variant === 'card'
 
+  // Las variantes `dark:` son obligatorias, no decorativas: el `outline` de
+  // shadcn trae `dark:hover:bg-input/50` propio. Una clase sin prefijo `dark:`
+  // no lo pisa — en modo oscuro conviven las dos y gana la del `dark:` por
+  // orden en la hoja, así que el hover salía gris neutro en vez de violeta.
+  // Y el tinte tiene que ser más fuerte en oscuro: un 5% de #a047ff sobre
+  // #111116 es invisible, mientras que sobre #fff se percibe bien.
   const hover =
-    'transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground'
+    'transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground ' +
+    'dark:hover:border-primary/50 dark:hover:bg-primary/15'
   const primaryClass = isCard
     ? `h-11 flex-1 justify-center ${hover}`
     : `h-8 w-34 justify-center ${hover}`
@@ -113,24 +120,59 @@ function Primary({
  * The glyph is split into layers so only the arrow moves on hover: the box is
  * the frame you are leaving, and it has to stay put. Animating the whole glyph
  * flies the box away with the arrow, which contradicts what the icon means.
+ *
+ * Motion, and why the two properties are timed apart:
+ *
+ * Opacity runs at 200ms while transform runs at 380ms — deliberately, not by
+ * accident. A single shared duration makes both arrows sit at ~50% opacity in
+ * different positions through the middle of the transition, so you see two
+ * ghosts crossing and it reads as a stutter. Fading nearly twice as fast means
+ * the outgoing arrow is gone well before it finishes travelling, and the
+ * incoming one has arrived before it becomes fully visible. Only one arrow is
+ * ever really legible at a time.
+ *
+ * The easing carries no overshoot either. cubic-bezier(0.34, 1.56, 0.64, 1)
+ * works on a hero button, but here the travel is 7px inside a 15px glyph, so
+ * the overshoot is about a pixel: too small to read as a bounce, big enough to
+ * read as a glitch.
  */
+// Las dos duraciones van en `style` inline y no en una clase arbitraria de
+// Tailwind: un valor con comas anidadas dentro de `cubic-bezier()` depende de
+// cómo lo parsee el generador, y si no emite la clase no queda transición
+// ninguna — las flechas saltarían de golpe, que es peor que el bug original.
+// Acá el valor es literal y no depende de nadie. `StatusBadge` ya usa `style`
+// por la misma razón con `color-mix`.
+const EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)'
+
+const ARROW_MOTION = {
+  // `translate` va primero y NO es opcional. Tailwind v4 dejó de componer
+  // `transform` para las utilidades de traslación: `translate-x-[7px]` emite
+  // `translate: var(--tw-translate-x) var(--tw-translate-y)`, la propiedad CSS
+  // individual. Una transición sobre `transform` apunta entonces a algo que
+  // nunca cambia — la opacidad interpolaba y la posición saltaba de golpe, que
+  // es exactamente el tirón que se veía. El panel de Animations lo mostró sin
+  // lugar a dudas: solo había tracks de `opacity`, ninguno de posición.
+  // `transform` queda listado por si alguna utilidad futura vuelve a usarlo.
+  transition: `translate 380ms ${EASE_OUT}, transform 380ms ${EASE_OUT}, opacity 200ms ease-out`,
+} as const
+
 function ViewButton({ report, className }: { report: Report; className: string }) {
   const label = `Ver el reporte de ${periodLabel(report.period_year, report.period_month)}`
 
   return (
     <Button asChild size="icon-sm" variant="outline" className={className}>
       <a href={report.report_url!} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}>
-        <span className="relative block size-[15px] motion-reduce:[&_*]:!transform-none">
+        <span className="relative block size-[15px] motion-reduce:[&_*]:!translate-none motion-reduce:[&_*]:!transition-none">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute inset-0 size-[15px]">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
           </svg>
           {/* Sale */}
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute inset-0 size-[15px] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-[7px] group-hover:-translate-y-[7px] group-hover:opacity-0">
+          <svg style={ARROW_MOTION} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute inset-0 size-[15px] group-hover:translate-x-[7px] group-hover:-translate-y-[7px] group-hover:opacity-0">
             <path d="M15 3h6v6" />
             <path d="M10 14 21 3" />
           </svg>
           {/* Entra */}
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute inset-0 size-[15px] -translate-x-[7px] translate-y-[7px] opacity-0 transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-0 group-hover:translate-y-0 group-hover:opacity-100">
+          <svg style={ARROW_MOTION} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute inset-0 size-[15px] -translate-x-[7px] translate-y-[7px] opacity-0 group-hover:translate-x-0 group-hover:translate-y-0 group-hover:opacity-100">
             <path d="M15 3h6v6" />
             <path d="M10 14 21 3" />
           </svg>

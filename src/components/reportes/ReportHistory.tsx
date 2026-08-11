@@ -20,7 +20,10 @@ export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       {/* Header */}
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-5 py-4">
+      {/* gap-y-3: cuando el header envuelve en mobile, el botón cae debajo del
+          título y con gap-y-1 quedaban pegados. En desktop no cambia nada,
+          porque ahí nunca envuelve. */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-3 border-b border-border px-5 py-4">
         <h2 className="text-[15px] font-semibold tracking-tight">Historial por cuenta</h2>
         <Button
           size="sm"
@@ -57,8 +60,12 @@ export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
             <tbody>
               {/* Antes no había hover de fila: con 22 cuentas, nada seguía el
                   ojo a lo ancho de 5 columnas. `secondary` es el token de hover
-                  que ya usa el resto del repo, y al 50% se distingue del fondo
-                  sin bajarle el contraste al texto de la fila. */}
+                  que ya usa el resto del repo.
+                  Va al 100%, no al 50%: `--secondary` está definido en los dos
+                  temas (#f4f1f8 en claro, #212129 en oscuro), así que a opacidad
+                  plena el salto contra `--card` se percibe igual en ambos. Al
+                  50% el delta en oscuro (#111116 → ~#191920) quedaba por debajo
+                  del umbral de percepción y el hover parecía no existir. */}
               {rows.map(({ account, latest, lastDone }) => (
                 <tr
                   key={account.id}
