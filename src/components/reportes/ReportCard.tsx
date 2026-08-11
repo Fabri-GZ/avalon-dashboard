@@ -6,6 +6,7 @@ import { ReportRowActions } from './ReportRowActions'
 import { StatusBadge } from './StatusBadge'
 
 interface Props extends AccountRow {
+  busy?: boolean
   onGenerateFor: (accountId: string) => void
   onRetry: (report: Report) => void
 }
@@ -19,7 +20,14 @@ interface Props extends AccountRow {
  * raises the controls to 44px so they clear the touch-target minimum the 32px
  * table variant does not need.
  */
-export function ReportCard({ account, latest, lastDone, onGenerateFor, onRetry }: Props) {
+export function ReportCard({
+  account,
+  latest,
+  lastDone,
+  busy = false,
+  onGenerateFor,
+  onRetry,
+}: Props) {
   return (
     <li className="rounded-md border border-border bg-card px-4 py-3 shadow-sm transition-all duration-200 ease-in">
       <div className="flex items-start justify-between gap-3">
@@ -48,6 +56,7 @@ export function ReportCard({ account, latest, lastDone, onGenerateFor, onRetry }
           latest={latest}
           lastDone={lastDone}
           accountId={account.id}
+          busy={busy}
           onGenerateFor={onGenerateFor}
           onRetry={onRetry}
           variant="card"

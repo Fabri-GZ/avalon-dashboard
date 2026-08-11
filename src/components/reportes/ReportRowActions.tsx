@@ -11,6 +11,11 @@ interface Props {
   accountId: string
   onGenerateFor: (accountId: string) => void
   onRetry: (report: Report) => void
+  /**
+   * A report is generating somewhere in the section. Only one job runs at a
+   * time, so every primary control goes inert — not just this row's.
+   */
+  busy?: boolean
   /** Cards on mobile need 44px targets and a full-width primary. */
   variant?: 'table' | 'card'
 }
@@ -30,6 +35,7 @@ export function ReportRowActions({
   accountId,
   onGenerateFor,
   onRetry,
+  busy = false,
   variant = 'table',
 }: Props) {
   const isCard = variant === 'card'
@@ -56,8 +62,13 @@ export function ReportRowActions({
         accountId={accountId}
         onGenerateFor={onGenerateFor}
         onRetry={onRetry}
+        busy={busy}
         className={primaryClass}
       />
+      {/* El botón de ver NO se deshabilita con `busy`: abre un reporte ya
+          terminado en otra pestaña, no toca el job en curso. Deshabilitarlo
+          sacaría el único acceso al reporte anterior justo durante el minuto
+          y medio en que el usuario espera el reemplazo. */}
       {lastDone ? (
         <ViewButton report={lastDone} className={iconClass} />
       ) : (
@@ -73,8 +84,12 @@ function Primary({
   accountId,
   onGenerateFor,
   onRetry,
+  busy,
   className,
-}: Pick<Props, 'latest' | 'accountId' | 'onGenerateFor' | 'onRetry'> & { className: string }) {
+}: Pick<Props, 'latest' | 'accountId' | 'onGenerateFor' | 'onRetry'> & {
+  busy: boolean
+  className: string
+}) {
   if (latest?.status === 'pending' || latest?.status === 'running') {
     return (
       <Button size="sm" variant="outline" className={className} disabled>
@@ -90,6 +105,7 @@ function Primary({
         variant="outline"
         className={`${className} [&:hover_svg]:rotate-180 [&_svg]:transition-transform`}
         onClick={() => onRetry(latest)}
+        disabled={busy}
       >
         <LuRotateCw /> Reintentar
       </Button>
@@ -105,6 +121,7 @@ function Primary({
       variant="outline"
       className={`${className} [&:hover_svg]:rotate-90 [&:hover_svg]:scale-110 [&_svg]:transition-transform`}
       onClick={() => onGenerateFor(accountId)}
+      disabled={busy}
     >
       <LuPlus /> Generar
     </Button>

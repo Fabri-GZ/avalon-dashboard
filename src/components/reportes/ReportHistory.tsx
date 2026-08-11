@@ -11,12 +11,14 @@ import { StatusBadge } from './StatusBadge'
 
 interface Props {
   rows: AccountRow[]
+  /** Hay un reporte generándose: ningún trigger de la sección acepta clicks. */
+  busy?: boolean
   onNew: () => void
   onGenerateFor: (accountId: string) => void
   onRetry: (report: Report) => void
 }
 
-export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
+export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetry }: Props) {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       {/* Header */}
@@ -25,10 +27,18 @@ export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
           porque ahí nunca envuelve. */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-3 border-b border-border px-5 py-4">
         <h2 className="text-[15px] font-semibold tracking-tight">Historial por cuenta</h2>
+        {/* El `id` no es para estilar: es el ancla de restauración de foco de
+            `useFocusTrap`. Cuando el modal de resultado se cierra y el elemento
+            que lo abrió ya no está en el DOM — pasa siempre que el resultado lo
+            dispara el polling y no un click, o cuando la fila se re-renderiza
+            con otro estado — el foco vuelve acá en vez de caer al <body>. Si se
+            renombra, hay que renombrar `FALLBACK_TRIGGER_ID` en el hook. */}
         <Button
+          id="reportes-generate-trigger"
           size="sm"
           className="ml-auto font-bold transition-all hover:shadow-md hover:shadow-primary/30 active:scale-[0.98]"
           onClick={onNew}
+          disabled={busy}
         >
           <LuPlus /> Generar reporte
         </Button>
@@ -99,6 +109,7 @@ export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
                       latest={latest}
                       lastDone={lastDone}
                       accountId={account.id}
+                      busy={busy}
                       onGenerateFor={onGenerateFor}
                       onRetry={onRetry}
                     />
@@ -118,6 +129,7 @@ export function ReportHistory({ rows, onNew, onGenerateFor, onRetry }: Props) {
               account={account}
               latest={latest}
               lastDone={lastDone}
+              busy={busy}
               onGenerateFor={onGenerateFor}
               onRetry={onRetry}
             />
