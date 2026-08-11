@@ -154,6 +154,13 @@ body {
   --font-poppins: var(--font-poppins-sans, Arial, sans-serif);
   --font-unbounded: var(--font-unbounded-display, Arial, sans-serif);
   --font-body: var(--font-poppins-sans, Arial, sans-serif);
+
+  /* Expone los --status-* como utilidades de color (text-status-done,
+     bg-status-error, etc.) y como var(--color-status-*) para color-mix. */
+  --color-status-pending: var(--status-pending);
+  --color-status-running: var(--status-running);
+  --color-status-done: var(--status-done);
+  --color-status-error: var(--status-error);
 }
 
 :root {
@@ -191,6 +198,16 @@ body {
   --chart-3: oklch(0.65 0.22 320); /* rosa */
   --chart-4: oklch(0.70 0.18 270); /* lila */
   --chart-5: oklch(0.60 0.15 300); /* violeta */
+
+  /* Estado de reportes. Un token por estado alimenta el texto, el punto, el
+     fondo y el anillo del badge, así el color no puede desincronizarse entre
+     las partes. Scope: sección Reportes — ningún otro módulo se migra acá.
+     Reemplazan a amber-500/emerald-500/orange-500 crudos, que en modo claro
+     no llegaban a 4.5:1 (running quedaba en ~3.9:1, error en ~4.0:1). */
+  --status-pending: oklch(0.44 0.13 55);
+  --status-running: oklch(0.44 0.11 75);
+  --status-done: oklch(0.44 0.12 160);
+  --status-error: oklch(0.44 0.18 27);
 }
 
 .dark {
@@ -223,4 +240,11 @@ body {
   --chart-3: oklch(0.70 0.22 320);
   --chart-4: oklch(0.75 0.18 270);
   --chart-5: oklch(0.65 0.15 300);
+
+  /* Estado de reportes en dark: mismo hue y croma, lightness invertida para
+     leer sobre --card: #111116. */
+  --status-pending: oklch(0.78 0.14 55);
+  --status-running: oklch(0.82 0.13 75);
+  --status-done: oklch(0.80 0.14 160);
+  --status-error: oklch(0.72 0.17 27);
 }

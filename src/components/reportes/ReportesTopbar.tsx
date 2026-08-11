@@ -42,7 +42,10 @@ function Controls({ search, onSearchChange, filter, onFilterChange, total }: Pro
           value={local}
           onChange={(e) => setLocal(e.target.value)}
           placeholder="Buscar cuenta…"
-          className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+          // El /70 sobre un color ya muted dejaba el placeholder por debajo de
+          // 4.5:1 en dark. A opacidad plena sigue leyéndose como placeholder
+          // (es más claro que --foreground) pero es legible.
+          className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
         />
       </div>
 
