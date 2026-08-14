@@ -57,6 +57,7 @@ export default async function CrmPage({ searchParams }: Props) {
         counts={counts}
         initialDateRange={dateRange}
         initialQuery={q ?? ''}
+        clientId={clientId}
       />
     </>
   )

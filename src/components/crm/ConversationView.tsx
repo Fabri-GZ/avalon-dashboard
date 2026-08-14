@@ -26,7 +26,19 @@ function toDateKey(iso: string): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 }
 
-export function ConversationView({ lead, messages, hasWebhook }: { lead: Lead; messages: Message[]; hasWebhook: boolean }) {
+export function ConversationView({
+  lead,
+  messages,
+  hasWebhook,
+  backHref,
+}: {
+  lead: Lead
+  messages: Message[]
+  hasWebhook: boolean
+  /** Built with `crmHref` from the server-resolved client id, so going back
+   * cannot land on a different client's board. */
+  backHref: string
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -35,7 +47,7 @@ export function ConversationView({ lead, messages, hasWebhook }: { lead: Lead; m
       className="flex h-full flex-col gap-4 p-6"
     >
       <Link
-        href="/dashboard/chatbot/crm"
+        href={backHref}
         className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />

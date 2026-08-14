@@ -5,10 +5,20 @@ import { LuUser as User, LuGripVertical as GripVertical } from 'react-icons/lu'
 import { useDraggable } from '@dnd-kit/react'
 import { Feedback } from '@dnd-kit/dom'
 import { relativeTime, initials } from '@/lib/crm/format'
+import { crmLeadHref } from '@/lib/crm/href'
 import { LeadBadges } from './LeadBadges'
 import type { Lead } from '@/lib/crm/types'
 
-export function LeadCard({ lead, isDragActive }: { lead: Lead; isDragActive?: boolean }) {
+export function LeadCard({
+  lead,
+  clientId,
+  isDragActive,
+}: {
+  lead: Lead
+  /** Server-resolved client id -- see `crmLeadHref`. */
+  clientId?: string | null
+  isDragActive?: boolean
+}) {
   const { ref, handleRef, isDragging } = useDraggable({
     id: lead.session_id,
     plugins: [Feedback.configure({ feedback: 'clone' })],
@@ -27,7 +37,7 @@ export function LeadCard({ lead, isDragActive }: { lead: Lead; isDragActive?: bo
       }`}
     >
       <Link
-        href={`/dashboard/chatbot/crm/${lead.session_id}`}
+        href={crmLeadHref(lead.session_id, clientId)}
         className={`block rounded-lg border border-border bg-card p-3 shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md ${
           isDragging ? 'border-dashed' : ''
         }`}
