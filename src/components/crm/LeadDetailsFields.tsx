@@ -10,7 +10,10 @@ function Field({ icon: Icon, label, value }: { icon: IconType; label: string; va
         <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           {label}
         </span>
-        <span className="text-sm font-medium text-foreground">{value}</span>
+        {/* `pre-line` so a field whose `format` returns newlines (Viviera's
+            accumulated `notas`) renders as a list instead of one run-on line.
+            Single-line values are unaffected. */}
+        <span className="whitespace-pre-line text-sm font-medium text-foreground">{value}</span>
       </div>
     </div>
   )

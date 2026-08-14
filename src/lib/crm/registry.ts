@@ -120,6 +120,38 @@ function derivationField(): DetailFieldDescriptor {
   }
 }
 
+// Shared by any client whose bot books meetings. `reunion_at` is written once,
+// in ISO, by the `set_reunion` RPC when the slot is confirmed -- the raw
+// instant goes to the DB and the formatting decision stays here, so the value
+// can also be sorted or compared later. `reunion` (boolean) is the older flag
+// and still covers leads booked before `reunion_at` existed.
+function reunionField(): DetailFieldDescriptor {
+  return {
+    key: 'reunion_at',
+    label: 'Reunión',
+    icon: CalendarClock,
+    format: (raw, details) => {
+      const iso = asString(raw)
+      if (!iso) return details.reunion === true ? 'Confirmada' : null
+      const date = new Date(iso)
+      if (Number.isNaN(date.getTime())) return 'Confirmada'
+      return capitalize(
+        date.toLocaleString('es-AR', {
+          weekday: 'long',
+          day: '2-digit',
+          month: 'long',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      )
+    },
+    showWhen: (lead) => {
+      const details = lead.details as LeadDetails
+      return !!details.reunion_at || details.reunion === true
+    },
+  }
+}
+
 const REGISTRY: Record<string, ClientRegistryEntry> = {
   'grupo-norte': {
     fields: [
@@ -254,10 +286,32 @@ const REGISTRY: Record<string, ClientRegistryEntry> = {
   'viviera': {
     fields: [
       {
-        key: 'reunion',
-        label: 'Reunión',
-        icon: CalendarClock,
+        key: 'proyecto',
+        label: 'Proyecto',
+        icon: Building2,
+        // The bot emits it lowercase (`novo` / `tower`) but the brand is
+        // uppercase everywhere the client sees it.
+        format: (raw) => asString(raw)?.toUpperCase() ?? null,
+      },
+      {
+        key: 'interes',
+        label: 'Tipología',
+        icon: Layers,
         format: (raw) => asPrettyString(raw),
+      },
+      reunionField(),
+      {
+        key: 'notas',
+        label: 'Notas',
+        icon: StickyNote,
+        // Accumulated turn by turn by `guardarCRM`, pipe-separated. Split so
+        // the comercial reads a list instead of one long run-on line.
+        format: (raw) =>
+          asString(raw)
+            ?.split('|')
+            .map((n) => n.trim())
+            .filter(Boolean)
+            .join('\n') ?? null,
       },
       derivationField(),
     ],
