@@ -46,7 +46,10 @@ export interface IntencionStyle {
   className: string
 }
 
-type IntencionStyleMap = Record<string, IntencionStyle>
+// `null` means "this client deliberately hides the badge for that value". It is
+// distinct from a missing key, which falls through to `SHARED_INTENCION_STYLE`.
+// Used when a value is so common it carries no signal -- see the `viviera` entry.
+type IntencionStyleMap = Record<string, IntencionStyle | null>
 
 interface ClientRegistryEntry {
   fields: DetailFieldDescriptor[]
@@ -258,7 +261,48 @@ const REGISTRY: Record<string, ClientRegistryEntry> = {
       },
       derivationField(),
     ],
-    badges: () => [],
+    // Only `visita_proyecto` earns a badge. Anyone who writes to a real estate
+    // chatbot wants an apartment, so `compra_depto` is the default and would sit
+    // on nearly every card without saying anything -- the same trap FZ's
+    // "En stock" badge fell into. Wanting to *visit* is the milestone: it marks
+    // a lead that showed intent, which matters most when it then goes quiet
+    // without ever being derived.
+    intencion: {
+      compra_depto: null,
+      otro: null,
+      visita_proyecto: {
+        label: 'Visita',
+        className: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300',
+      },
+    },
+    badges: (details) => {
+      const badges: BadgeDescriptor[] = []
+
+      const proyecto = asString(details.proyecto)
+      if (proyecto === 'novo' || proyecto === 'tower') {
+        badges.push({
+          key: 'proyecto',
+          label: proyecto.toUpperCase(),
+          className:
+            proyecto === 'tower'
+              ? 'bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300'
+              : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300',
+        })
+      }
+
+      // `interes` is stored as the bot emits it ("3 ambientes"); the card shows
+      // the short form so three badges still fit on one line.
+      const interes = asString(details.interes)
+      if (interes) {
+        badges.push({
+          key: 'interes',
+          label: interes.replace(/ambientes?/i, 'amb.'),
+          className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-500/20 dark:text-cyan-300',
+        })
+      }
+
+      return badges
+    },
   },
 }
 
@@ -272,7 +316,11 @@ export function getClientBadges(clientKey: string, details: LeadDetails): BadgeD
 
 export function getIntencionBadge(clientKey: string, intencion: string | null): IntencionStyle | null {
   if (!intencion) return null
-  const entry = REGISTRY[clientKey]?.intencion?.[intencion] ?? SHARED_INTENCION_STYLE[intencion]
-  if (entry) return entry
+  // Key presence, not truthiness: a client maps a value to `null` to hide it, and
+  // `??` would send that straight to the shared map and render it anyway.
+  const perClient = REGISTRY[clientKey]?.intencion
+  if (perClient && intencion in perClient) return perClient[intencion]
+  const shared = SHARED_INTENCION_STYLE[intencion]
+  if (shared) return shared
   return { label: intencion, className: 'bg-muted text-muted-foreground' }
 }
