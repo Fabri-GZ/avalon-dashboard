@@ -15,6 +15,7 @@ const STAGE_META: Record<Stage, { label: string; dot: string; ring: string }> = 
 export function KanbanColumn({
   stage,
   leads,
+  clientId,
   total,
   hasMore,
   onLoadMore,
@@ -23,6 +24,8 @@ export function KanbanColumn({
 }: {
   stage: Stage
   leads: Lead[]
+  /** Server-resolved client id, forwarded to each card's link. */
+  clientId?: string | null
   /** Server-side exact count for the stage (`getStageCounts`), independent of
    * how many rows are currently loaded in `leads`. */
   total: number
@@ -88,7 +91,12 @@ export function KanbanColumn({
           ) : (
             <>
               {leads.map((lead) => (
-                <LeadCard key={lead.session_id} lead={lead} isDragActive={isDragActive} />
+                <LeadCard
+                  key={lead.session_id}
+                  lead={lead}
+                  clientId={clientId}
+                  isDragActive={isDragActive}
+                />
               ))}
               {showPlaceholder && (
                 <motion.div

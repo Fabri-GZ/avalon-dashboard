@@ -19,6 +19,9 @@ interface KanbanBoardProps {
   counts: Record<Stage, number>
   initialDateRange: CrmDateRange
   initialQuery: string
+  /** Server-resolved client id, forwarded down to each lead link so opening a
+   * conversation stays inside the client the board is showing. */
+  clientId?: string | null
 }
 
 // A lead confirmed-moved to a new stage, retained past its server-fetched
@@ -37,7 +40,13 @@ interface PendingMove {
   lead: Lead
 }
 
-export function KanbanBoard({ columns, counts, initialDateRange, initialQuery }: KanbanBoardProps) {
+export function KanbanBoard({
+  columns,
+  counts,
+  initialDateRange,
+  initialQuery,
+  clientId,
+}: KanbanBoardProps) {
   const [localCounts, setLocalCounts] = useState(counts)
   const [pinned, setPinned] = useState<Record<string, PinnedLead>>({})
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null)
@@ -176,6 +185,7 @@ export function KanbanBoard({ columns, counts, initialDateRange, initialQuery }:
                 key={stage}
                 stage={stage}
                 leads={columnsView[stage]}
+                clientId={clientId}
                 total={localCounts[stage]}
                 hasMore={columns[stage].hasMore}
                 onLoadMore={() => loadMore(stage)}
