@@ -14,6 +14,17 @@ export const tooltipStyle = {
     borderRadius: '8px',
     fontSize: '12px',
   },
+  // Sin `labelStyle` Recharts usa su default `#666`, pensado para fondo claro:
+  // sobre `--background` en dark da ~2.4:1 y la etiqueta desaparece. El fondo
+  // ya venía tematizado; el texto no. Se fijan los dos o ninguno.
+  labelStyle: {
+    color: 'var(--foreground)',
+    fontWeight: 600,
+    marginBottom: '2px',
+  },
+  itemStyle: {
+    color: 'var(--muted-foreground)',
+  },
 }
 
 export const axisTickStyle = {

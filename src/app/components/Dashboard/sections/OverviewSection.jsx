@@ -156,7 +156,12 @@ const OverviewSection = ({ client, socialInsights, websiteAnalytics, socialDemog
                 width={40}
                 tickFormatter={(value) => formatNumber(value)}
               />
-              <Tooltip />
+              {/* Sin props renderiza el default de Recharts: caja blanca y
+                  texto `#666`, ilegible sobre el fondo oscuro. */}
+              <Tooltip
+                contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--secondary)' }}
+                labelStyle={{ color: 'var(--foreground)' }}
+              />
               <Area type="monotone" dataKey="sessions" fill="var(--accent)" stroke="var(--chart-1)" name="Sesiones" />
             </AreaChart>
           </ResponsiveContainer>
