@@ -11,6 +11,7 @@ export const SECTIONS = {
   SETTINGS:      'settings',
   AGENT_IA:      'agent_ia',
   REPORTES:      'reportes',
+  PAID_MEDIA_CLIENTES: 'paid_media_clientes',
 } as const;
 
 export type SectionKey = typeof SECTIONS[keyof typeof SECTIONS];
