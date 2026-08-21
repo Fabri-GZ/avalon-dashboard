@@ -56,6 +56,7 @@ export function ReportCard({
           latest={latest}
           lastDone={lastDone}
           accountId={account.id}
+          platform={account.platform}
           busy={busy}
           onGenerateFor={onGenerateFor}
           onRetry={onRetry}

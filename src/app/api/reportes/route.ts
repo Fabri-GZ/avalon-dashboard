@@ -51,12 +51,21 @@ export async function POST(req: NextRequest) {
   // que la cuenta exista en ad_accounts.
   const { data: account, error: accErr } = await supabaseAdmin
     .from('ad_accounts')
-    .select('id, name, currency, primary_action_type')
+    .select('id, name, currency, primary_action_type, platform')
     .eq('id', accountId)
     .single()
 
   if (accErr || !account) {
     return NextResponse.json({ error: 'Cuenta inexistente' }, { status: 400 })
+  }
+
+  // Belt-and-suspenders (D7): la UI ya deshabilita "Generar" para cuentas que
+  // no son de Meta, pero un botón deshabilitado es UI, no una restricción real.
+  if (account.platform !== 'meta') {
+    return NextResponse.json(
+      { error: 'El pipeline de reportes solo soporta cuentas de Meta por ahora' },
+      { status: 400 },
+    )
   }
 
   const webhookUrl = process.env.N8N_REPORTES_WEBHOOK_URL
