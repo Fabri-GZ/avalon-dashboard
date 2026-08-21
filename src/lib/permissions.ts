@@ -17,6 +17,7 @@ export const ROUTE_SECTION_MAP: Array<{ prefix: string; section: SectionKey }> =
   { prefix: '/admin',                section: SECTIONS.ADMIN_CLIENTS },
   { prefix: '/dashboard/agente-ia',  section: SECTIONS.AGENT_IA },
   { prefix: '/dashboard/reportes',   section: SECTIONS.REPORTES },
+  { prefix: '/dashboard/paid-media', section: SECTIONS.PAID_MEDIA_CLIENTES },
 ];
 
 export function requiredSectionFor(pathname: string): SectionKey | null {
