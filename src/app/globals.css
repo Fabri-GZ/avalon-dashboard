@@ -178,7 +178,7 @@ body {
   --muted: #f1f1f8; 
   --muted-foreground: #364153; /* gris medio */
   --accent: #e8d9ff; /* violeta muy claro */
-  --accent-foreground: #f3f4f6; 
+  --accent-foreground: #161619; /* texto oscuro sobre el violeta claro del hover */
   --destructive: #e80010; /* rojo */
   --destructive-foreground: #fff;
   --border: #dddde4; /* gris claro con tinte violeta */
@@ -225,7 +225,7 @@ body {
   --muted: #212129;
   --muted-foreground: #8e8e9b;
   --accent: #2b2653; /* violeta oscuro para hover */
-  --accent-foreground: #0b0b0f; /* violeta claro */
+  --accent-foreground: #f3f4f6; /* texto claro sobre el violeta oscuro del hover */
   --destructive: #ff252b; /* rojo más claro */
   --destructive-foreground: #f8f8f8;
   --border: #2d2c38;
