@@ -190,7 +190,10 @@ const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile, user
 
 const NavGroup = ({ item, idx, pathname, onNavigate }) => {
   const Icon = iconMap[item.icon];
-  const groupActive = pathname?.startsWith("/dashboard/chatbot");
+  // Generalized from a hardcoded "/dashboard/chatbot" check so any group
+  // (e.g. the "Paid Media" group carrying id 'reportes') highlights/expands
+  // based on its own children's routes, not just the Bot group's.
+  const groupActive = item.children?.some((c) => pathname?.startsWith(c.href)) ?? false;
   const [manualOpen, setManualOpen] = useState(false);
   const open = manualOpen || groupActive;
 
@@ -386,7 +389,29 @@ const Sidebar = ({
                   { id: "security", name: "Seguridad", icon: "FiShield" }
                 ]
               : (allowedSections
-                  ? dashboardNavigation.filter(item => allowedSections.includes(item.id))
+                  ? dashboardNavigation
+                      .filter(item => allowedSections.includes(item.id))
+                      // Top-level filtering above only gates the group itself
+                      // (e.g. 'reportes'); children are never filtered by the
+                      // line above. Without this, an unfinished child route
+                      // (Clientes) would render for every user who has the
+                      // parent group, defeating the "ships invisible" design
+                      // (D-H). `!c.section` is load-bearing: it is the default
+                      // that keeps existing section-less children (Bot group)
+                      // rendering exactly as before this change.
+                      .map(item =>
+                        item.children
+                          ? {
+                              ...item,
+                              children: item.children.filter(
+                                c => !c.section || allowedSections.includes(c.section)
+                              ),
+                            }
+                          : item
+                      )
+                      // Drop a group entirely once none of its children survive
+                      // the filter above, so an empty parent never renders.
+                      .filter(item => !item.children || item.children.length > 0)
                   : dashboardNavigation)
             ).map((item, idx) => {
               if (item.children) {

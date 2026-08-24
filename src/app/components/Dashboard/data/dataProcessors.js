@@ -199,5 +199,17 @@ export const navigation = [
   { id: 'pm',         name: 'Proyectos', icon: 'FiClipboard',      href: '/dashboard/pm' },
   { id: 'account',    name: 'Cuenta',    icon: 'FiUser',           href: '/dashboard/account' },
   { id: 'agent_ia',  name: 'Agente IA', icon: 'LuSparkles',       href: '/dashboard/agente-ia' },
-  { id: 'reportes',  name: 'Reportes',  icon: 'FiBarChart2',      href: '/dashboard/reportes' },
+  {
+    // `id` stays 'reportes' on purpose: it is the RBAC key paid_media users
+    // already hold. Renaming it to e.g. 'paid_media' would make the whole
+    // group disappear for them (Sidebar filters top-level items by `id`),
+    // which means losing Reportes — a live production regression.
+    id: 'reportes',
+    name: 'Paid Media',
+    icon: 'FiBarChart2',
+    children: [
+      { id: 'reportes-reportes', name: 'Reportes', href: '/dashboard/reportes' },
+      { id: 'reportes-clientes', name: 'Clientes', href: '/dashboard/paid-media/clientes', section: 'paid_media_clientes' },
+    ],
+  },
 ];
