@@ -109,6 +109,7 @@ export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetr
                       latest={latest}
                       lastDone={lastDone}
                       accountId={account.id}
+                      platform={account.platform}
                       busy={busy}
                       onGenerateFor={onGenerateFor}
                       onRetry={onRetry}

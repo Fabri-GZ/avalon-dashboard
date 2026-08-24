@@ -20,6 +20,10 @@ import { Button } from '@/components/ui/button'
 import { MONTHS } from '@/lib/reportes/format'
 import type { AccountOption } from '@/lib/reportes/types'
 
+// Mismo mensaje que ReportRowActions: el pipeline de n8n solo sabe leer
+// insights de Meta hoy, así que no hay generación posible para google/tiktok.
+const NON_META_REASON = 'El pipeline de reportes solo soporta cuentas de Meta por ahora'
+
 function defaultPeriod() {
   const now = new Date()
   const d = new Date(now.getFullYear(), now.getMonth() - 1, 1)
@@ -93,8 +97,10 @@ export function ReportSheet({ accounts, defaultAccountId, onGenerate, onClose }:
     }
   }
 
+  const selectedIsNonMeta = selected !== null && selected.platform !== 'meta'
+
   function submit() {
-    if (!accountId) return
+    if (!accountId || selectedIsNonMeta) return
     onGenerate(accountId, year, month)
     handleClose()
   }
@@ -163,9 +169,12 @@ export function ReportSheet({ accounts, defaultAccountId, onGenerate, onClose }:
               >
                 {accounts.map((a) => {
                   const active = a.id === accountId
+                  const nonMeta = a.platform !== 'meta'
                   return (
                     <DropdownMenuItem
                       key={a.id}
+                      disabled={nonMeta}
+                      title={nonMeta ? NON_META_REASON : undefined}
                       onSelect={() => setAccountId(a.id)}
                       className={`flex items-start gap-3 rounded-lg px-3 py-2.5 ${
                         active
@@ -179,7 +188,9 @@ export function ReportSheet({ accounts, defaultAccountId, onGenerate, onClose }:
                           {a.name}
                         </div>
                         <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                          {a.business_name ? `${a.business_name} · ` : ''}{a.id}
+                          {nonMeta
+                            ? NON_META_REASON
+                            : `${a.business_name ? `${a.business_name} · ` : ''}${a.id}`}
                         </div>
                       </div>
                       {active && <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
@@ -233,14 +244,16 @@ export function ReportSheet({ accounts, defaultAccountId, onGenerate, onClose }:
 
           <Button
             className="h-11 w-full text-sm font-bold transition-all hover:shadow-md hover:shadow-primary/30 active:scale-[0.98]"
-            disabled={!accountId}
+            disabled={!accountId || selectedIsNonMeta}
             onClick={submit}
           >
             <LuFileChartColumn className="size-4" /> Generar reporte
           </Button>
 
           <p className="rounded-lg bg-secondary px-3 py-2.5 text-[11.5px] text-muted-foreground">
-            Se genera en segundo plano. Vas a ver el estado en el historial y un link cuando esté listo.
+            {selectedIsNonMeta
+              ? NON_META_REASON
+              : 'Se genera en segundo plano. Vas a ver el estado en el historial y un link cuando esté listo.'}
           </p>
         </div>
       </div>

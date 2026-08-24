@@ -2,13 +2,18 @@
 
 import { LuLoader, LuPlus, LuRotateCw } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
-import type { Report } from '@/lib/reportes/types'
+import type { Platform, Report } from '@/lib/reportes/types'
 import { periodLabel } from '@/lib/reportes/format'
+
+// Mismo mensaje que ReportSheet: el pipeline de n8n solo sabe leer insights de
+// Meta hoy, así que no hay generación posible para google/tiktok todavía.
+const NON_META_REASON = 'El pipeline de reportes solo soporta cuentas de Meta por ahora'
 
 interface Props {
   latest: Report | null
   lastDone: Report | null
   accountId: string
+  platform: Platform
   onGenerateFor: (accountId: string) => void
   onRetry: (report: Report) => void
   /**
@@ -33,6 +38,7 @@ export function ReportRowActions({
   latest,
   lastDone,
   accountId,
+  platform,
   onGenerateFor,
   onRetry,
   busy = false,
@@ -53,6 +59,7 @@ export function ReportRowActions({
       <Primary
         latest={latest}
         accountId={accountId}
+        platform={platform}
         onGenerateFor={onGenerateFor}
         onRetry={onRetry}
         busy={busy}
@@ -75,14 +82,27 @@ export function ReportRowActions({
 function Primary({
   latest,
   accountId,
+  platform,
   onGenerateFor,
   onRetry,
   busy,
   className,
-}: Pick<Props, 'latest' | 'accountId' | 'onGenerateFor' | 'onRetry'> & {
+}: Pick<Props, 'latest' | 'accountId' | 'platform' | 'onGenerateFor' | 'onRetry'> & {
   busy: boolean
   className: string
 }) {
+  // Non-Meta accounts never have a report to view/retry in practice, but the
+  // guard runs before the status branches anyway: the API rejects these
+  // regardless, and a disabled button that explains why is cheaper than
+  // letting the click reach the server just to bounce.
+  if (platform !== 'meta') {
+    return (
+      <Button size="sm" variant="outline" className={className} disabled title={NON_META_REASON}>
+        <LuPlus /> Generar
+      </Button>
+    )
+  }
+
   if (latest?.status === 'pending' || latest?.status === 'running') {
     return (
       <Button size="sm" variant="outline" className={className} disabled>

@@ -76,11 +76,16 @@ export interface EnqueueResponse {
   jobId: string;
 }
 
+// Plataforma de la cuenta. Solo 'meta' tiene pipeline de generación hoy —
+// google/tiktok existen en ad_accounts pero Reportes las deshabilita.
+export type Platform = 'meta' | 'google' | 'tiktok';
+
 // Cuenta para el picker (subset de ad_accounts).
 export interface AccountOption {
   id: string;
   name: string;
   business_name?: string | null;
+  platform: Platform;
 }
 
 // Filtro de estado del topbar.
