@@ -1,6 +1,7 @@
 import { createClient } from '@/app/utils/supabase/server'
 import { ClientesView } from '@/components/paid-media/ClientesView'
 import { parseFilters } from '@/lib/paid-media/filters'
+import { fetchAccountsWithReports } from '@/lib/paid-media/reports-presence'
 import type { AdAccountRow, FundingMethodOption, ManagementStatus, Platform } from '@/lib/paid-media/types'
 
 // Server Component: el guard de ruta lo hace el middleware (ROUTE_SECTION_MAP
@@ -26,7 +27,7 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
   const supabase = await createClient()
   const filters = parseFilters(await searchParams)
 
-  const [statusesRes, fundingMethodsRes, peopleRes] = await Promise.all([
+  const [statusesRes, fundingMethodsRes, peopleRes, trashCountRes, accountsWithReports] = await Promise.all([
     supabase
       .from('ad_account_management_status')
       .select('key, label, sort_order, is_active')
@@ -42,6 +43,10 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
     // volver a "Todos" primero. Estado y plataforma no sufren esto porque
     // salen de tablas lookup.
     supabase.from('ad_accounts').select('pm_name, operator_name').is('deleted_at', null),
+    // Count only, for the entry-point badge — the papelera page itself does
+    // its own full query for the deleted rows.
+    supabase.from('ad_accounts').select('id', { count: 'exact', head: true }).not('deleted_at', 'is', null),
+    fetchAccountsWithReports(supabase),
   ])
 
   const statuses = (statusesRes.data ?? []) as ManagementStatus[]
@@ -85,6 +90,8 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
       operators={distinctSorted(people.map((p) => p.operator_name))}
       pmNames={distinctSorted(people.map((p) => p.pm_name))}
       filters={filters}
+      trashCount={trashCountRes.count ?? 0}
+      accountsWithReports={accountsWithReports}
     />
   )
 }
