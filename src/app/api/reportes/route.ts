@@ -49,10 +49,14 @@ export async function POST(req: NextRequest) {
 
   // Snapshot del nombre de la cuenta (estable aunque luego se renombre) + valida
   // que la cuenta exista en ad_accounts.
+  // Belt-and-suspenders (D7): `supabaseAdmin` is the service-role client, so
+  // RLS never applies here — the `deleted_at` filter has to be explicit or a
+  // soft-deleted account would still validate through this route.
   const { data: account, error: accErr } = await supabaseAdmin
     .from('ad_accounts')
     .select('id, name, currency, primary_action_type, platform')
     .eq('id', accountId)
+    .is('deleted_at', null)
     .single()
 
   if (accErr || !account) {

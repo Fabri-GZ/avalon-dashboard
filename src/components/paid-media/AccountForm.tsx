@@ -37,6 +37,7 @@ const ERROR_MESSAGES: Record<ActionError, { field?: 'id' | 'management_status'; 
   invalid_value: {
     message: 'Alguno de los valores ingresados no es válido (revisá plataforma, financiamiento o presupuesto).',
   },
+  not_found: { message: 'La cuenta ya no existe o fue movida a la papelera.' },
   db_error: { message: 'Ocurrió un error inesperado. Probá de nuevo.' },
 }
 

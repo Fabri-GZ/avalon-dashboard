@@ -9,7 +9,11 @@ export default async function ReportesPage() {
   const supabase = await createClient()
 
   const [accountsRes, historyRes] = await Promise.all([
-    supabase.from('ad_accounts').select('id, name, business_name, platform').order('name'),
+    supabase
+      .from('ad_accounts')
+      .select('id, name, business_name, platform')
+      .is('deleted_at', null)
+      .order('name'),
     supabase
       .from('reports')
       .select(
