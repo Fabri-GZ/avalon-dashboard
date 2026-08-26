@@ -6,9 +6,8 @@ import { LuX as X, LuPencil as Pencil, LuPlus as Plus } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { SheetShell } from '@/components/ui/sheet-shell'
 import { AccountForm } from './AccountForm'
-import type { AdAccountRow, ClientGroup, ManagementStatus, Platform } from '@/lib/paid-media/types'
-
-const PLATFORM_LABEL: Record<Platform, string> = { meta: 'Meta', google: 'Google', tiktok: 'TikTok' }
+import { formatBudget } from '@/lib/paid-media/format'
+import { PLATFORM_LABEL, type AdAccountRow, type ClientGroup, type FundingMethodOption, type ManagementStatus } from '@/lib/paid-media/types'
 
 type Panel = { mode: 'view' } | { mode: 'create' } | { mode: 'edit'; account: AdAccountRow }
 
@@ -16,8 +15,18 @@ interface Props {
   /** `null` means "create a brand-new client" — there is nothing to view yet. */
   group: ClientGroup | null
   statuses: ManagementStatus[]
+  fundingMethods: FundingMethodOption[]
   existingClientNames: string[]
+  /** Valores distintos del dataset completo (sin filtrar), para `AccountForm`. */
+  pmNames: string[]
+  operators: string[]
   onClose: () => void
+  /**
+   * "Asignar cliente" (unassigned-accounts table) reuses this sheet in edit
+   * mode instead of view mode — jumping straight to the form that already
+   * writes `client_name` via `updateAccountAction`, no new Server Action.
+   */
+  editAccount?: AdAccountRow
 }
 
 /**
@@ -26,16 +35,32 @@ interface Props {
  * swaps the body for `AccountForm`, still inside the same sheet — no second
  * portal/backdrop stack.
  */
-export function ClientDetailSheet({ group, statuses, existingClientNames, onClose }: Props) {
+export function ClientDetailSheet({
+  group,
+  statuses,
+  fundingMethods,
+  existingClientNames,
+  pmNames,
+  operators,
+  onClose,
+  editAccount,
+}: Props) {
   const router = useRouter()
-  const [panel, setPanel] = useState<Panel>(group ? { mode: 'view' } : { mode: 'create' })
+  const [panel, setPanel] = useState<Panel>(
+    editAccount ? { mode: 'edit', account: editAccount } : group ? { mode: 'view' } : { mode: 'create' },
+  )
 
   const statusLabel = useMemo(() => {
     const map = new Map(statuses.map((s) => [s.key, s.label]))
     return (key: string | null) => (key ? (map.get(key) ?? key) : null)
   }, [statuses])
 
-  const ariaLabel = group ? group.clientName : 'Nuevo cliente'
+  const fundingLabel = useMemo(() => {
+    const map = new Map(fundingMethods.map((f) => [f.key, f.label]))
+    return (key: string | null) => (key ? (map.get(key) ?? key) : null)
+  }, [fundingMethods])
+
+  const ariaLabel = editAccount ? `Asignar cliente — ${editAccount.name}` : group ? group.clientName : 'Nuevo cliente'
 
   function handleSaved(requestClose: () => void) {
     router.refresh()
@@ -47,7 +72,11 @@ export function ClientDetailSheet({ group, statuses, existingClientNames, onClos
   }
 
   return (
-    <SheetShell ariaLabel={ariaLabel} onClose={onClose} maxWidthClassName="sm:max-w-[560px]">
+    // Más ancho en desktop: el cuerpo muestra los datos del cliente más una
+    // tarjeta por cuenta con hasta ocho campos, y a 560px las URLs y las notas
+    // se truncaban casi siempre. Debajo de `sm` no cambia nada: sigue siendo
+    // un bottom sheet a ancho completo.
+    <SheetShell ariaLabel={ariaLabel} onClose={onClose} maxWidthClassName="sm:max-w-[820px]">
       {(requestClose) => (
         <>
           <div className="sticky top-0 flex justify-center bg-card pt-3 pb-1 sm:hidden">
@@ -57,7 +86,7 @@ export function ClientDetailSheet({ group, statuses, existingClientNames, onClos
           <div className="flex items-start justify-between border-b border-border px-5 pt-4 pb-3">
             <div>
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {group ? 'Cliente' : 'Nuevo cliente'}
+                {editAccount ? 'Asignar cliente' : group ? 'Cliente' : 'Nuevo cliente'}
               </p>
               <h2 className="text-base font-semibold leading-snug">{ariaLabel}</h2>
             </div>
@@ -87,15 +116,15 @@ export function ClientDetailSheet({ group, statuses, existingClientNames, onClos
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Presupuesto mensual total
                   </p>
-                  <p className="tabular-nums text-foreground">
-                    {group.totalMonthlyBudget !== null
-                      ? group.totalMonthlyBudget.toLocaleString('es-AR', {
-                          style: 'currency',
-                          currency: 'USD',
-                          maximumFractionDigits: 0,
-                        })
-                      : '—'}
-                  </p>
+                  {group.budgetByCurrency.length > 0 ? (
+                    <p className="flex flex-wrap gap-x-2 tabular-nums text-foreground">
+                      {group.budgetByCurrency.map(({ currency, total }) => (
+                        <span key={currency}>{formatBudget(total, currency)}</span>
+                      ))}
+                    </p>
+                  ) : (
+                    <p className="text-foreground">—</p>
+                  )}
                 </div>
               </div>
 
@@ -106,10 +135,27 @@ export function ClientDetailSheet({ group, statuses, existingClientNames, onClos
                 </Button>
               </div>
 
+              {/* Toda la tarjeta edita, no solo el lápiz. El control es un
+                  botón que cubre la tarjeta (`absolute inset-0`) en vez de un
+                  `onClick` sobre el contenedor: así hay un único elemento
+                  interactivo real —alcanzable por teclado y con nombre
+                  accesible— y los enlaces de estrategia/sitio/Instagram siguen
+                  funcionando por encima (`relative z-10`) sin quedar anidados
+                  dentro de un botón. El lápiz queda como indicación visual, ya
+                  no como el único blanco. */}
               <div className="space-y-2.5">
                 {group.accounts.map((account) => (
-                  <div key={account.id} className="rounded-lg border border-border p-3.5">
-                    <div className="flex items-start justify-between gap-2">
+                  <div
+                    key={account.id}
+                    className="group relative rounded-lg border border-border p-3.5 transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 hover:border-primary/40 hover:bg-secondary/40"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setPanel({ mode: 'edit', account })}
+                      aria-label={`Editar ${account.name}`}
+                      className="absolute inset-0 z-0 cursor-pointer rounded-lg outline-none"
+                    />
+                    <div className="pointer-events-none flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-foreground">{account.name}</p>
                         <p className="mt-0.5 text-[11px] text-muted-foreground">
@@ -117,33 +163,32 @@ export function ClientDetailSheet({ group, statuses, existingClientNames, onClos
                           {statusLabel(account.management_status) ? ` · ${statusLabel(account.management_status)}` : ''}
                         </p>
                       </div>
-                      <button
-                        onClick={() => setPanel({ mode: 'edit', account })}
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80"
-                        aria-label={`Editar ${account.name}`}
+                      <span
+                        aria-hidden
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:bg-muted/80"
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                      </button>
+                      </span>
                     </div>
-                    <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px] text-muted-foreground">
+                    <dl className="pointer-events-none relative mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px] text-muted-foreground">
                       {account.funding_method && (
                         <div>
                           <dt className="inline font-medium text-foreground">Financiamiento: </dt>
-                          <dd className="inline">
-                            {account.funding_method === 'linea_credito' ? 'Línea de crédito' : 'Tarjeta'}
-                          </dd>
+                          <dd className="inline">{fundingLabel(account.funding_method) ?? account.funding_method}</dd>
                         </div>
                       )}
                       {account.monthly_budget !== null && (
                         <div>
                           <dt className="inline font-medium text-foreground">Presupuesto: </dt>
                           <dd className="inline tabular-nums">
-                            {account.monthly_budget.toLocaleString('es-AR', {
-                              style: 'currency',
-                              currency: 'USD',
-                              maximumFractionDigits: 0,
-                            })}
+                            {formatBudget(account.monthly_budget, account.currency)}
                           </dd>
+                        </div>
+                      )}
+                      {account.monthly_budget_note && (
+                        <div className="col-span-2">
+                          <dt className="inline font-medium text-foreground">Nota de presupuesto: </dt>
+                          <dd className="inline">{account.monthly_budget_note}</dd>
                         </div>
                       )}
                       {account.geo && (
@@ -160,7 +205,7 @@ export function ClientDetailSheet({ group, statuses, existingClientNames, onClos
                               href={account.strategy_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-primary underline underline-offset-2"
+                              className="pointer-events-auto relative z-10 text-primary underline underline-offset-2"
                             >
                               {account.strategy_url}
                             </a>
@@ -175,7 +220,7 @@ export function ClientDetailSheet({ group, statuses, existingClientNames, onClos
                               href={account.website_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-primary underline underline-offset-2"
+                              className="pointer-events-auto relative z-10 text-primary underline underline-offset-2"
                             >
                               {account.website_url}
                             </a>
@@ -190,7 +235,7 @@ export function ClientDetailSheet({ group, statuses, existingClientNames, onClos
                               href={account.instagram_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-primary underline underline-offset-2"
+                              className="pointer-events-auto relative z-10 text-primary underline underline-offset-2"
                             >
                               {account.instagram_url}
                             </a>
@@ -214,7 +259,10 @@ export function ClientDetailSheet({ group, statuses, existingClientNames, onClos
             <AccountForm
               mode="create"
               statuses={statuses}
+              fundingMethods={fundingMethods}
               existingClientNames={existingClientNames}
+              pmNames={pmNames}
+              operators={operators}
               defaultClientName={group?.clientName}
               onSaved={() => handleSaved(requestClose)}
               onCancel={() => (group ? setPanel({ mode: 'view' }) : requestClose())}
@@ -226,9 +274,12 @@ export function ClientDetailSheet({ group, statuses, existingClientNames, onClos
               mode="edit"
               account={panel.account}
               statuses={statuses}
+              fundingMethods={fundingMethods}
               existingClientNames={existingClientNames}
+              pmNames={pmNames}
+              operators={operators}
               onSaved={() => handleSaved(requestClose)}
-              onCancel={() => setPanel({ mode: 'view' })}
+              onCancel={() => (group ? setPanel({ mode: 'view' }) : requestClose())}
             />
           )}
         </>

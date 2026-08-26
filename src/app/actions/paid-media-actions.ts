@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/app/utils/supabase/server'
-import type { FundingMethod, Platform } from '@/lib/paid-media/types'
+import type { Currency, Platform } from '@/lib/paid-media/types'
 
 // Server Actions + RLS (D3), following `crm-actions.ts` exactly. Never the
 // `src/app/admin/create-client/` pattern (fetch → API route →
@@ -27,7 +27,9 @@ export interface AccountInput {
   platform: Platform
   client_name: string | null
   management_status: string | null
-  funding_method: FundingMethod | null
+  // Free FK key into `ad_account_funding_method` (T1) — an open, seeded
+  // lookup, not a closed union.
+  funding_method: string | null
   pm_name: string | null
   operator_name: string | null
   geo: string | null
@@ -36,6 +38,8 @@ export interface AccountInput {
   website_url: string | null
   instagram_url: string | null
   monthly_budget: number | null
+  monthly_budget_note: string | null
+  currency: Currency
 }
 
 function mapPostgresError(code: string | undefined): ActionError {

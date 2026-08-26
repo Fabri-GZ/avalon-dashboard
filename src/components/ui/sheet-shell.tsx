@@ -98,7 +98,13 @@ export function SheetShell({
           ${isClosing ? 'animate-sheet-down sm:animate-sheet-fade-out' : 'animate-sheet-up sm:animate-sheet-fade'}`}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={trapTab}
-        onAnimationEnd={isClosing ? onClose : undefined}
+        // `animationend` burbujea: sin el chequeo de target, la animación de
+        // cualquier descendiente terminaba el cierre antes de tiempo. El
+        // desmonte tiene que depender solo de la animación de salida del
+        // propio sheet.
+        onAnimationEnd={
+          isClosing ? (e) => { if (e.target === e.currentTarget) onClose() } : undefined
+        }
       >
         {children(requestClose)}
       </div>
