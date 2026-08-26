@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { motion, useReducedMotion, type Variants } from 'framer-motion'
 import { LuUserPlus as UserPlus } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
@@ -12,30 +13,67 @@ import {
 } from '@/app/components/Dashboard/data/dataProcessors'
 import { ClientDetailSheet } from './ClientDetailSheet'
 import { groupByClient } from '@/lib/paid-media/group'
-import { PLATFORM_LABEL, type AdAccountRow, type ClientGroup, type ManagementStatus, type Platform } from '@/lib/paid-media/types'
+import { formatBudget } from '@/lib/paid-media/format'
+import { buildHref, type ClientesFilters } from '@/lib/paid-media/filters'
+import {
+  PLATFORM_BADGE_CLASS,
+  PLATFORM_LABEL,
+  type AdAccountRow,
+  type ClientGroup,
+  type FundingMethodOption,
+  type ManagementStatus,
+} from '@/lib/paid-media/types'
 
 const containerVariants = _container as Variants
 const cardVariants = _card as Variants
 
-const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
-
 interface Props {
   accounts: AdAccountRow[]
   statuses: ManagementStatus[]
+  fundingMethods: FundingMethodOption[]
+  /**
+   * Valores distintos de `operator_name` / `pm_name` sobre el dataset COMPLETO
+   * (query aparte en `page.tsx`, sin filtros). No se derivan de `accounts`:
+   * `accounts` ya viene filtrado, así que al filtrar por un operador el
+   * desplegable solo ofrecía ese mismo operador y no había forma de cambiar a
+   * otro sin volver a "Todos" primero.
+   */
+  operators: string[]
+  pmNames: string[]
+  /** The filters `page.tsx` already applied server-side. */
+  filters: ClientesFilters
 }
 
 /**
  * Lista de clientes (agrupados por `client_name`), con búsqueda y filtros
- * por estado/plataforma/operador. Seleccionar una fila abre el detalle en un
- * side sheet (`ClientDetailSheet`), desde donde se crean/editan cuentas.
+ * por estado/plataforma/operador aplicados server-side (`page.tsx`). Los
+ * filtros se aplican en diferido: `ClientesTopbar`/`ClientesFilterSheet`
+ * escriben en un `draft` local y una única navegación (`router.push`) los
+ * confirma. Seleccionar una fila abre el detalle en un side sheet
+ * (`ClientDetailSheet`), desde donde se crean/editan cuentas.
  */
-export function ClientesView({ accounts, statuses }: Props) {
+export function ClientesView({
+  accounts,
+  statuses,
+  fundingMethods,
+  operators,
+  pmNames,
+  filters,
+}: Props) {
   const reducedMotion = useReducedMotion()
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('todos')
-  const [platformFilter, setPlatformFilter] = useState('todos')
-  const [operatorFilter, setOperatorFilter] = useState('todos')
+  const router = useRouter()
+  const pathname = usePathname()
+  const [isPending, startTransition] = useTransition()
+  const [draft, setDraft] = useState<ClientesFilters>(filters)
   const [detailTarget, setDetailTarget] = useState<ClientGroup | 'new' | null>(null)
+  const [assignTarget, setAssignTarget] = useState<AdAccountRow | null>(null)
+
+  // Resync the draft after a real navigation lands (new `filters` prop from
+  // `page.tsx`) — covers browser back/forward and direct URL edits, not
+  // just the in-component apply flow.
+  useEffect(() => {
+    setDraft(filters)
+  }, [filters])
 
   const existingClientNames = useMemo(
     () => Array.from(new Set(accounts.map((a) => a.client_name).filter((n): n is string => Boolean(n)))),
@@ -47,23 +85,17 @@ export function ClientesView({ accounts, statuses }: Props) {
     return (key: string | null) => (key ? (map.get(key) ?? key) : null)
   }, [statuses])
 
-  const operators = useMemo(() => {
-    const distinct = new Set(accounts.map((a) => a.operator_name).filter((o): o is string => Boolean(o)))
-    return Array.from(distinct).sort((a, b) => a.localeCompare(b))
-  }, [accounts])
+  const assignedAccounts = useMemo(() => accounts.filter((a) => a.client_name), [accounts])
+  const unassignedAccounts = useMemo(() => accounts.filter((a) => !a.client_name), [accounts])
 
-  const filteredAccounts = useMemo(() => {
-    const q = norm(search)
-    return accounts.filter((a) => {
-      if (q && !norm(a.client_name ?? '').includes(q) && !norm(a.name).includes(q)) return false
-      if (statusFilter !== 'todos' && a.management_status !== statusFilter) return false
-      if (platformFilter !== 'todos' && a.platform !== platformFilter) return false
-      if (operatorFilter !== 'todos' && a.operator_name !== operatorFilter) return false
-      return true
+  const groups = useMemo(() => groupByClient(assignedAccounts), [assignedAccounts])
+
+  function applyDraft(next: ClientesFilters) {
+    setDraft(next)
+    startTransition(() => {
+      router.push(buildHref(pathname, next))
     })
-  }, [accounts, search, statusFilter, platformFilter, operatorFilter])
-
-  const groups = useMemo(() => groupByClient(filteredAccounts), [filteredAccounts])
+  }
 
   return (
     <motion.div
@@ -73,21 +105,15 @@ export function ClientesView({ accounts, statuses }: Props) {
       className="flex flex-col gap-5"
     >
       <ClientesTopbar
-        search={search}
-        onSearchChange={setSearch}
+        draft={draft}
+        onApply={applyDraft}
         statuses={statuses}
-        statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
-        platformFilter={platformFilter}
-        onPlatformChange={setPlatformFilter}
         operators={operators}
-        operatorFilter={operatorFilter}
-        onOperatorChange={setOperatorFilter}
         total={groups.length}
       />
 
       <motion.div variants={reducedMotion ? undefined : cardVariants}>
-        <Card className="gap-0 overflow-hidden py-0">
+        <Card className={`gap-0 overflow-hidden py-0 transition-opacity ${isPending ? 'opacity-50' : ''}`}>
           {/* Acción primaria en la cabecera de la sección, no en el topbar:
               el topbar acota lo que se mira (buscar/filtrar) y no muta nada;
               lo que modifica el conjunto vive dentro de la sección. Mismo
@@ -129,7 +155,7 @@ export function ClientesView({ accounts, statuses }: Props) {
                             <span
                               key={account.id}
                               title={`${account.name}${statusLabel(account.management_status) ? ` — ${statusLabel(account.management_status)}` : ''}`}
-                              className="inline-flex items-center rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
+                              className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${PLATFORM_BADGE_CLASS[account.platform]}`}
                             >
                               {PLATFORM_LABEL[account.platform]}
                             </span>
@@ -139,9 +165,62 @@ export function ClientesView({ accounts, statuses }: Props) {
                       <td className="px-5 py-3.5 text-muted-foreground">{group.pmName ?? '—'}</td>
                       <td className="px-5 py-3.5 text-muted-foreground">{group.operatorName ?? '—'}</td>
                       <td className="px-5 py-3.5 text-muted-foreground tabular-nums">
-                        {group.totalMonthlyBudget !== null
-                          ? group.totalMonthlyBudget.toLocaleString('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-                          : '—'}
+                        {group.budgetByCurrency.length > 0 ? (
+                          <div className="flex flex-wrap gap-x-2">
+                            {group.budgetByCurrency.map(({ currency, total }) => (
+                              <span key={currency}>{formatBudget(total, currency)}</span>
+                            ))}
+                          </div>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        <Card className="mt-5 gap-0 overflow-hidden py-0">
+          <div className="border-b border-border px-5 py-4">
+            <h2 className="text-[15px] font-semibold tracking-tight">Cuentas sin asignar</h2>
+          </div>
+
+          {unassignedAccounts.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              Todas las cuentas activas tienen un cliente asignado.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="px-5 py-2.5 font-semibold">Cuenta</th>
+                    <th className="px-5 py-2.5 font-semibold">Plataforma</th>
+                    <th className="px-5 py-2.5 font-semibold">Estado</th>
+                    <th className="px-5 py-2.5 font-semibold" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {unassignedAccounts.map((account) => (
+                    <tr key={account.id} className="border-t border-border/60">
+                      <td className="px-5 py-3.5 font-medium text-foreground">{account.name}</td>
+                      <td className="px-5 py-3.5">
+                        <span
+                          className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${PLATFORM_BADGE_CLASS[account.platform]}`}
+                        >
+                          {PLATFORM_LABEL[account.platform]}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-muted-foreground">
+                        {statusLabel(account.management_status) ?? '—'}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <Button size="sm" variant="outline" onClick={() => setAssignTarget(account)}>
+                          Asignar cliente
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -152,12 +231,40 @@ export function ClientesView({ accounts, statuses }: Props) {
         </Card>
       </motion.div>
 
+      {/* `key` por destino, no decorativo: el cierre del sheet es diferido
+          (animación → `onAnimationEnd` → `onClose`), así que sin key React
+          reutilizaba la MISMA instancia entre destinos y arrastraba su estado
+          interno. Abrir un cliente, cerrarlo y tocar "Nuevo cliente" antes de
+          que termine la animación reusaba la instancia con `isClosing` todavía
+          en `true` y el panel en "view": el sheet quedaba invisible (las
+          animaciones son `both`, así que el fill deja el elemento fuera de
+          pantalla) y su `onAnimationEnd` pendiente disparaba `onClose`, que
+          ponía el destino nuevo en `null`. Resultado: el botón "Nuevo cliente"
+          no hacía nada. Con key, cada destino monta una instancia limpia. */}
       {detailTarget && (
         <ClientDetailSheet
+          key={detailTarget === 'new' ? 'nuevo-cliente' : `cliente:${detailTarget.clientName}`}
           group={detailTarget === 'new' ? null : detailTarget}
           statuses={statuses}
+          fundingMethods={fundingMethods}
           existingClientNames={existingClientNames}
+          pmNames={pmNames}
+          operators={operators}
           onClose={() => setDetailTarget(null)}
+        />
+      )}
+
+      {assignTarget && (
+        <ClientDetailSheet
+          key={`cuenta:${assignTarget.id}`}
+          group={null}
+          editAccount={assignTarget}
+          statuses={statuses}
+          fundingMethods={fundingMethods}
+          existingClientNames={existingClientNames}
+          pmNames={pmNames}
+          operators={operators}
+          onClose={() => setAssignTarget(null)}
         />
       )}
     </motion.div>

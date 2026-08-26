@@ -2,68 +2,52 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { LuSearch as Search } from 'react-icons/lu'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { PLATFORM_LABEL, type ManagementStatus, type Platform } from '@/lib/paid-media/types'
+import { LuSearch as Search, LuSlidersHorizontal as SlidersHorizontal } from 'react-icons/lu'
+import { ClientesFilterSheet } from './ClientesFilterSheet'
+import type { ClientesFilters } from '@/lib/paid-media/filters'
+import type { ManagementStatus } from '@/lib/paid-media/types'
 
 // Same slot CrmTopbar, InsightsTopbar and ReportesTopbar portal into: search
 // and filters live in the dashboard header, not in a band under it.
 const HEADER_SLOT_ID = 'dashboard-header-slot'
 
-// Radix `Select`, never a native `<select>`: the option list of a native one is
-// painted by the OS, so it ignores the theme tokens and is unreadable in dark.
-const TRIGGER_CLASS = 'h-9 w-[10.5rem]'
-
 interface Props {
-  search: string
-  onSearchChange: (s: string) => void
+  /** Filtros ya aplicados (los que `page.tsx` usó server-side). */
+  draft: ClientesFilters
+  /** Fires exactly one navigation, regardless of how many dimensions changed. */
+  onApply: (draft: ClientesFilters) => void
   statuses: ManagementStatus[]
-  statusFilter: string
-  onStatusChange: (s: string) => void
-  platformFilter: string
-  onPlatformChange: (p: string) => void
   operators: string[]
-  operatorFilter: string
-  onOperatorChange: (o: string) => void
   total: number
 }
 
-function Controls({
-  search,
-  onSearchChange,
-  statuses,
-  statusFilter,
-  onStatusChange,
-  platformFilter,
-  onPlatformChange,
-  operators,
-  operatorFilter,
-  onOperatorChange,
-  total,
-}: Props) {
-  const [local, setLocal] = useState(search)
+function Controls({ draft, onApply, statuses, operators, total }: Props) {
+  const [localSearch, setLocalSearch] = useState(draft.q)
+  const [sheetOpen, setSheetOpen] = useState(false)
 
+  // Search stays debounced + push-on-type (D-D): it is a continuous
+  // control, unlike the discrete selects "Aplicar" is meant to collapse.
   useEffect(() => {
     const id = setTimeout(() => {
-      if (local !== search) onSearchChange(local)
+      if (localSearch !== draft.q) onApply({ ...draft, q: localSearch })
     }, 250)
     return () => clearTimeout(id)
-  }, [local]) // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localSearch])
+
+  // Las tres dimensiones discretas ya no se ven en la cabecera (se configuran
+  // dentro del sheet), así que el botón tiene que decir cuántas están activas:
+  // sin eso, una lista filtrada es indistinguible de una lista completa.
+  const activeCount = [draft.status, draft.platform, draft.operator].filter(Boolean).length
 
   return (
     <div className="flex items-center gap-2 sm:gap-3">
-      {/* Search */}
+      {/* Search — se queda en la cabecera, fuera del sheet. */}
       <div className="relative w-40 sm:w-44 lg:w-56">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
-          value={local}
-          onChange={(e) => setLocal(e.target.value)}
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
           placeholder="Buscar cliente…"
           // Placeholder at full muted opacity, not /70: the extra transparency
           // drops it under 4.5:1 in dark. Same call as ReportesTopbar.
@@ -71,59 +55,40 @@ function Controls({
         />
       </div>
 
-      {/* Filters — desktop only. Three variable-length selects do not fit a
-          tablet header, and unlike Reportes the options come from data, so a
-          pill row is not an option. Mobile filtering needs a sheet like the
-          CRM's; until it exists, search still works at every width. */}
-      <div className="hidden items-center gap-2 lg:flex">
-        <Select value={statusFilter} onValueChange={onStatusChange}>
-          <SelectTrigger className={TRIGGER_CLASS} aria-label="Filtrar por estado">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="popper" className="border-border">
-            <SelectItem value="todos">Todos los estados</SelectItem>
-            {statuses.map((s) => (
-              <SelectItem key={s.key} value={s.key}>
-                {s.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={platformFilter} onValueChange={onPlatformChange}>
-          <SelectTrigger className={TRIGGER_CLASS} aria-label="Filtrar por plataforma">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="popper" className="border-border">
-            <SelectItem value="todos">Todas las plataformas</SelectItem>
-            {(Object.keys(PLATFORM_LABEL) as Platform[]).map((p) => (
-              <SelectItem key={p} value={p}>
-                {PLATFORM_LABEL[p]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={operatorFilter} onValueChange={onOperatorChange}>
-          <SelectTrigger className={TRIGGER_CLASS} aria-label="Filtrar por operador">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="popper" className="border-border">
-            <SelectItem value="todos">Todos los operadores</SelectItem>
-            {operators.map((o) => (
-              <SelectItem key={o} value={o}>
-                {o}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Un solo punto de entrada a los filtros, igual en desktop y en mobile.
+          Antes desktop mostraba tres `Select` sueltos más un "Aplicar" propio;
+          el sheet ya hacía lo mismo en mobile, así que ahora los dos comparten
+          la misma pantalla y el mismo comportamiento diferido. */}
+      <button
+        type="button"
+        onClick={() => setSheetOpen(true)}
+        className="relative flex h-9 shrink-0 items-center gap-2 rounded-lg border border-border bg-background px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground lg:px-3 hover:border-primary duration-150 ease-in"
+        aria-label={activeCount > 0 ? `Filtros (${activeCount} activos)` : 'Filtros'}
+      >
+        <SlidersHorizontal className="h-4 w-4" />
+        <span className="hidden lg:inline">Filtrar</span>
+        {activeCount > 0 && (
+          <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
+            {activeCount}
+          </span>
+        )}
+      </button>
 
       {/* Total — desktop */}
       <div className="hidden items-baseline gap-1 border-l border-border pl-3 md:flex">
         <span className="text-lg font-bold tabular-nums leading-none text-foreground">{total}</span>
         <span className="text-xs text-muted-foreground">{total === 1 ? 'cliente' : 'clientes'}</span>
       </div>
+
+      {sheetOpen && (
+        <ClientesFilterSheet
+          draft={draft}
+          statuses={statuses}
+          operators={operators}
+          onApply={onApply}
+          onClose={() => setSheetOpen(false)}
+        />
+      )}
     </div>
   )
 }

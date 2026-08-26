@@ -12,18 +12,14 @@ const buttonVariants = cva(
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-        // El hover NO cambia el color del texto, y no es una preferencia
-        // estética: `hover:text-accent-foreground`, que es lo que trae shadcn,
-        // apunta a un token que está invertido entre temas. En claro
-        // `--accent-foreground` es #f3f4f6 (casi blanco) sobre un `--accent`
-        // de #e8d9ff, y en oscuro es #0b0b0f (casi negro). En los dos casos el
-        // texto desaparecía al pasar el mouse.
-        //
-        // No se arregla el token porque tres lugares lo usan como relleno
-        // neutro claro en vez de como foreground — los tracks de progreso de
-        // ChatbotSection y el texto sobre violeta de Login/Register — y ahí el
-        // valor actual sí es el correcto. Invertirlo los rompe. El arreglo
-        // vive acá, que es donde el token se usaba con su semántica real.
+        // El hover NO cambia el color del texto. Cuando se escribió esto,
+        // `--accent-foreground` estaba invertido entre temas y el
+        // `hover:text-accent-foreground` de shadcn borraba el label; el token
+        // ya se corrigió en `globals.css` (claro #161619 sobre `--accent`
+        // #e8d9ff = 13.6:1, oscuro #f3f4f6 sobre #2b2653 = 12.7:1), así que
+        // hoy la razón es otra: estas variantes no usan `bg-accent` sino un
+        // tinte de `--primary`, y `--accent-foreground` no es el foreground
+        // que le corresponde a ese fondo. `hover:text-foreground` sí.
         //
         // El fondo es un tinte de `--primary` en vez de `--accent`: el
         // #e8d9ff crudo era demasiado saturado para un hover. El tinte va más
