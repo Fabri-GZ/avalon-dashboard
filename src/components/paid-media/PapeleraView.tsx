@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   LuArchive as Archive,
@@ -156,7 +157,7 @@ function TrashCard({
 }
 
 export function PapeleraView({ rows, accountsWithReports }: Props) {
-  const router = useRouter()
+  const { refresh } = useRouter()
   const [isPending, startTransition] = useTransition()
   const [restoringId, setRestoringId] = useState<string | null>(null)
 
@@ -165,7 +166,7 @@ export function PapeleraView({ rows, accountsWithReports }: Props) {
     startTransition(async () => {
       await restoreAccountAction(id)
       setRestoringId(null)
-      router.refresh()
+      refresh()
     })
   }
 
@@ -173,9 +174,9 @@ export function PapeleraView({ rows, accountsWithReports }: Props) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
         <Button asChild size="sm" variant="ghost" className="-ml-2 text-muted-foreground">
-          <a href="/dashboard/paid-media/clientes">
+          <Link href="/dashboard/paid-media/clientes">
             <ChevronLeft className="size-4" /> Clientes
-          </a>
+          </Link>
         </Button>
       </div>
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
+import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, useReducedMotion, type Variants } from 'framer-motion'
 import { LuTrash2 as Trash2, LuUserPlus as UserPlus } from 'react-icons/lu'
@@ -129,10 +130,10 @@ export function ClientesView({
             <h2 className="text-[15px] font-semibold tracking-tight">Clientes</h2>
             <div className="ml-auto flex items-center gap-2">
               <Button asChild size="sm" variant="ghost">
-                <a href="/dashboard/paid-media/clientes/papelera">
+                <Link href="/dashboard/paid-media/clientes/papelera">
                   <Trash2 className="size-3.5" /> Papelera
                   <span className="ml-1 rounded bg-secondary px-1.5 text-xs tabular-nums">{trashCount}</span>
-                </a>
+                </Link>
               </Button>
               <Button size="sm" onClick={() => setDetailTarget('new')}>
                 <UserPlus className="size-3.5" /> Nuevo cliente
