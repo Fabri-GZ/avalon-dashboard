@@ -34,7 +34,7 @@ interface Props {
   /** Valores ya existentes, para autocompletar. */
   options: string[]
   placeholder: string
-  /** Sustantivo del ítem "crear": «Crear {createLabel} «X»». */
+  /** Sustantivo del ítem "crear": "Crear {createLabel} X". */
   createLabel: string
   /** Pregunta del aviso de casi-coincidencia. */
   nearMatchQuestion: string
@@ -199,13 +199,17 @@ export function NameCombobox({
         <p className="mt-1.5 flex items-start gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-2 text-xs text-amber-700 dark:text-amber-400">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            Existe "{nearMatch}", {nearMatchQuestion}{' '}
+            {/* Las comillas van DENTRO de la expresión, no como texto JSX:
+                `react/no-unescaped-entities` solo mira los nodos de texto, así
+                que esto renderiza las mismas comillas rectas sin obligar a
+                escribir `&quot;` en el fuente. */}
+            Existe {`"${nearMatch}"`}, {nearMatchQuestion}{' '}
             <button
               type="button"
               onClick={() => selectExisting(nearMatch)}
               className="font-semibold underline underline-offset-2"
             >
-              Usar "{nearMatch}"
+              Usar {`"${nearMatch}"`}
             </button>
           </span>
         </p>
@@ -251,7 +255,7 @@ export function NameCombobox({
               }`}
             >
               <Plus className="h-3.5 w-3.5 shrink-0" />
-              Crear {createLabel} «{normalizedTyped}»
+              Crear {createLabel} {`"${normalizedTyped}"`}
             </button>
           )}
         </div>
