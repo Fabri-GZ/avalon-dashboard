@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'react-toastify'
-import { LuTrash2 as Trash2 } from 'react-icons/lu'
+import { LuCircleAlert as CircleAlert, LuTrash2 as Trash2 } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
@@ -16,6 +17,7 @@ import {
   restoreAccountAction,
   updateAccountAction,
   type ActionError,
+  type ExistingAccountInfo,
 } from '@/app/actions/paid-media-actions'
 import { parseBudgetInput } from '@/lib/paid-media/format'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
@@ -110,6 +112,7 @@ export function AccountForm({
 
   const [error, setError] = useState<ActionError | null>(null)
   const [pending, startTransition] = useTransition()
+  const router = useRouter()
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
 
   const errorInfo = error ? ERROR_MESSAGES[error] : null
@@ -193,11 +196,56 @@ export function AccountForm({
           : await updateAccountAction(input.id, input)
 
       if (!result.success) {
+        if (result.error === 'duplicate_account' && result.existingAccount) {
+          showDuplicateToast(result.existingAccount)
+          return
+        }
         setError(result.error ?? 'db_error')
         return
       }
       onSaved()
     })
+  }
+
+  /**
+   * El `act_` es la PK, así que "ya existe activa" y "está en la papelera"
+   * llegan como el MISMO `23505`. Sin separarlas, el usuario recibe un error
+   * sobre una fila que no puede ver en ninguna pantalla.
+   *
+   * Va por toast y NO por el error inline del campo: el toast es el que puede
+   * llevar el botón a la papelera, y duplicar el aviso en los dos lados es
+   * justo lo que `ReportesView` ya decidió no hacer para los finales de
+   * generación. Cuando el lookup no devuelve fila (`existingAccount` ausente)
+   * se cae al error inline de siempre, que sigue siendo correcto.
+   */
+  function showDuplicateToast(existing: ExistingAccountInfo) {
+    const inTrash = existing.deletedAt !== null
+
+    toast(
+      ({ closeToast }) => (
+        <ToastCard
+          tone="danger"
+          icon={<CircleAlert className="size-5" />}
+          title="Esa cuenta ya existe"
+          body={
+            inTrash
+              ? `${id.trim()} pertenece a ${existing.name}, que está en la papelera. Si es la cuenta que querías cargar, podés restaurarla desde ahí.`
+              : `${id.trim()} ya está cargada como ${existing.name}.`
+          }
+          actionLabel={inTrash ? 'Ir a la papelera' : undefined}
+          onAction={
+            inTrash
+              ? () => {
+                  router.push('/dashboard/paid-media/clientes/papelera')
+                  closeToast()
+                }
+              : undefined
+          }
+          onClose={closeToast}
+        />
+      ),
+      { autoClose: 8000, closeButton: false, icon: false },
+    )
   }
 
   return (
