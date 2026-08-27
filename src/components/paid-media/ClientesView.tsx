@@ -132,7 +132,7 @@ export function ClientesView({
               <Button asChild size="sm" variant="ghost">
                 <Link href="/dashboard/paid-media/clientes/papelera">
                   <Trash2 className="size-3.5" /> Papelera
-                  <span className="ml-1 rounded bg-secondary px-1.5 text-xs tabular-nums">{trashCount}</span>
+                  <span className="ml-1 rounded bg-secondary px-2 text-xs tabular-nums">{trashCount}</span>
                 </Link>
               </Button>
               <Button size="sm" onClick={() => setDetailTarget('new')}>

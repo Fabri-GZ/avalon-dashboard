@@ -51,7 +51,7 @@ function Controls({ draft, onApply, statuses, operators, total }: Props) {
           placeholder="Buscar cliente…"
           // Placeholder at full muted opacity, not /70: the extra transparency
           // drops it under 4.5:1 in dark. Same call as ReportesTopbar.
-          className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+          className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none transition-all text-accent-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
         />
       </div>
 
