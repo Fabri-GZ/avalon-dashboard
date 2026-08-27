@@ -66,7 +66,7 @@ const CompanySwitcher = ({ clients, selectedClient, onClientChange, mobile, user
               )}
             </div>
             <div className="grid flex-1 text-left leading-tight">
-              <span className="truncate font-semibold text-foreground text-md">
+              <span className="truncate font-semibold text-foreground text-base">
                 {selectedClient?.company_name || "Seleccionar Empresa"}
               </span>
             </div>
@@ -212,7 +212,7 @@ const NavGroup = ({ item, idx, pathname, onNavigate }) => {
         }`}
       >
         <Icon className="w-5 h-5" />
-        <span className="text-md">{item.name}</span>
+        <span className="text-base">{item.name}</span>
         <ChevronDown
           className={`ml-auto w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
@@ -457,7 +457,7 @@ const Sidebar = ({
                   }`}
                 >
                   <Icon className="w-5 h-5" />
-                  <span className="text-md">{item.name}</span>
+                  <span className="text-base">{item.name}</span>
                 </motion.button>
               );
             })}
