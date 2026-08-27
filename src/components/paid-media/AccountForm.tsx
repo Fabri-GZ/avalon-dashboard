@@ -451,7 +451,15 @@ export function AccountForm({
             type="button"
             variant="outline"
             size="sm"
-            className="h-9 gap-1.5 border-destructive/30 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+            // Los `dark:hover:*` NO son decorativos ni redundantes. `cn` es
+            // `twMerge`, que agrupa los conflictos por cadena de modificadores:
+            // `hover:bg-destructive/10` pisa al `hover:bg-primary/5` de la
+            // variante `outline`, pero su `dark:hover:bg-primary/15` es otra
+            // clave y sobrevive intacto. En oscuro matchean los dos y gana el
+            // `dark:` por orden en el CSS, así que sin estas dos clases el
+            // hover se ve violeta en oscuro y rojo en claro. Lo mismo con el
+            // borde. Si algún día se tocan los hovers de `outline`, revisar acá.
+            className="h-9 gap-1.5 border-destructive/30 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive dark:hover:border-destructive/50 dark:hover:bg-destructive/15"
             onClick={() => setShowConfirmDelete(true)}
           >
             <Trash2 className="size-3.5" /> Eliminar cuenta
