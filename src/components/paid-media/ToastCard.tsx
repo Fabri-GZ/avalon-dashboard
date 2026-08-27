@@ -3,6 +3,33 @@
 import { LuX as X } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 
+/**
+ * Opciones que van SIEMPRE con `ToastCard`, porque la card ya es el visual
+ * completo: borde, fondo, radio, sombra y padding propios.
+ *
+ * Sin esto, la card se dibuja adentro del contenedor de react-toastify, que
+ * trae lo suyo — `ClientToast.tsx` lo monta con `theme="colored"` (fondo
+ * blanco) y `globals.css` le fija `--toastify-toast-padding`, radio y sombra.
+ * El resultado es un marco blanco alrededor de la card: bien visible en
+ * oscuro, invisible en claro (blanco sobre blanco) pero igual sumando padding
+ * y una segunda sombra. Las neutralizaciones van con `!` porque compiten con
+ * el CSS propio de la librería, no con otra utilidad de Tailwind.
+ *
+ * `pauseOnHover` se re-activa acá a propósito: el contenedor global lo tiene
+ * en `false`, que está bien para un aviso de una línea, pero estos toasts
+ * llevan un botón de acción y 8 segundos. Sin pausa, el toast puede irse
+ * justo mientras el usuario mueve el mouse para tocarlo.
+ */
+export const TOAST_CARD_OPTIONS = {
+  autoClose: 8000,
+  closeButton: false,
+  icon: false,
+  hideProgressBar: true,
+  pauseOnHover: true,
+  className: '!bg-transparent !p-0 !min-h-0 !shadow-none',
+  bodyClassName: '!m-0 !p-0',
+} as const
+
 interface Props {
   tone: 'neutral' | 'danger'
   icon: React.ReactNode

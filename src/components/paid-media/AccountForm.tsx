@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ClientNameCombobox } from './ClientNameCombobox'
 import { NameCombobox } from './NameCombobox'
 import { ConfirmDeleteModal } from './ConfirmDeleteModal'
-import { ToastCard } from './ToastCard'
+import { ToastCard, TOAST_CARD_OPTIONS } from './ToastCard'
 import {
   createAccountAction,
   deleteAccountAction,
@@ -156,8 +156,8 @@ export function AccountForm({
         // Reemplaza `toast.info`/`toast.error` (forma de string plano, usada
         // en el resto de la app): la acción "Deshacer" necesita `closeToast`
         // para cerrarse a sí misma, así que esto pasa a la forma render-prop.
-        // 8s en vez de los 3s por defecto: no alcanza para leer y decidir.
-        { autoClose: 8000, closeButton: false, icon: false },
+        // Las opciones (8s, sin chrome de la librería) viven en `ToastCard`.
+        TOAST_CARD_OPTIONS,
       )
       onDeleted?.()
     })
@@ -244,7 +244,7 @@ export function AccountForm({
           onClose={closeToast}
         />
       ),
-      { autoClose: 8000, closeButton: false, icon: false },
+      TOAST_CARD_OPTIONS,
     )
   }
 
@@ -459,7 +459,7 @@ export function AccountForm({
             // `dark:` por orden en el CSS, así que sin estas dos clases el
             // hover se ve violeta en oscuro y rojo en claro. Lo mismo con el
             // borde. Si algún día se tocan los hovers de `outline`, revisar acá.
-            className="h-9 gap-1.5 border-destructive/30 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive dark:hover:border-destructive/50 dark:hover:bg-destructive/15"
+            className="h-9 gap-1.5 border-destructive/30 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive dark:hover:border-destructive/50 dark:hover:bg-destructive/10"
             onClick={() => setShowConfirmDelete(true)}
           >
             <Trash2 className="size-3.5" /> Eliminar cuenta
