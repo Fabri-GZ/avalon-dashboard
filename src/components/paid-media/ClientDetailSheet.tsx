@@ -285,8 +285,10 @@ export function ClientDetailSheet({
               existingClientNames={existingClientNames}
               pmNames={pmNames}
               operators={operators}
+              accountsWithReports={accountsWithReports}
               onSaved={() => handleSaved(requestClose)}
               onCancel={() => (group ? setPanel({ mode: 'view' }) : requestClose())}
+              onDeleted={() => handleSaved(requestClose)}
             />
           )}
         </>
