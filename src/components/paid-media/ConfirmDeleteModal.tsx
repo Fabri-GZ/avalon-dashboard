@@ -88,7 +88,7 @@ export function ConfirmDeleteModal({ accountName, hasReports, pending, onConfirm
       >
         <div className="flex items-start gap-3 border-b border-border px-5 pt-4 pb-3">
           <span
-            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive"
+            className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive"
             aria-hidden
           >
             <Trash2 className="h-4 w-4" />
