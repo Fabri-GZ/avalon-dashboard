@@ -258,7 +258,7 @@ export function AccountForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            ID de cuenta
+            ID de cuenta <span aria-hidden="true" className="text-destructive text-xs font-bold">*</span>
           </label>
           <input
             data-autofocus={mode === 'create' ? true : undefined}
@@ -293,7 +293,7 @@ export function AccountForm({
 
       <div>
         <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Nombre de la cuenta
+          Nombre de la cuenta <span aria-hidden="true" className="text-destructive text-xs font-bold">*</span>
         </label>
         <input value={name} onChange={(e) => setName(e.target.value)} required className={INPUT_CLASS} />
       </div>
