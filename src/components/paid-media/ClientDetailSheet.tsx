@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { SheetShell } from '@/components/ui/sheet-shell'
 import { AccountForm } from './AccountForm'
 import { formatBudget } from '@/lib/paid-media/format'
+import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
 import { PLATFORM_LABEL, type AdAccountRow, type ClientGroup, type FundingMethodOption, type ManagementStatus } from '@/lib/paid-media/types'
 
 type Panel = { mode: 'view' } | { mode: 'create' } | { mode: 'edit'; account: AdAccountRow }
@@ -20,6 +21,11 @@ interface Props {
   /** Valores distintos del dataset completo (sin filtrar), para `AccountForm`. */
   pmNames: string[]
   operators: string[]
+  /**
+   * Optional, removable layer — see `reports-presence.ts`. Pass-through only:
+   * `AccountForm` does not consume this yet (wired in a later slice).
+   */
+  accountsWithReports?: AccountsWithReports
   onClose: () => void
   /**
    * "Asignar cliente" (unassigned-accounts table) reuses this sheet in edit
@@ -42,6 +48,7 @@ export function ClientDetailSheet({
   existingClientNames,
   pmNames,
   operators,
+  accountsWithReports,
   onClose,
   editAccount,
 }: Props) {
@@ -278,8 +285,10 @@ export function ClientDetailSheet({
               existingClientNames={existingClientNames}
               pmNames={pmNames}
               operators={operators}
+              accountsWithReports={accountsWithReports}
               onSaved={() => handleSaved(requestClose)}
               onCancel={() => (group ? setPanel({ mode: 'view' }) : requestClose())}
+              onDeleted={() => handleSaved(requestClose)}
             />
           )}
         </>

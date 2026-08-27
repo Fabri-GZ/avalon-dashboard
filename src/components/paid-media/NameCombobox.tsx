@@ -34,7 +34,7 @@ interface Props {
   /** Valores ya existentes, para autocompletar. */
   options: string[]
   placeholder: string
-  /** Sustantivo del ítem "crear": «Crear {createLabel} «X»». */
+  /** Sustantivo del ítem "crear": "Crear {createLabel} X". */
   createLabel: string
   /** Pregunta del aviso de casi-coincidencia. */
   nearMatchQuestion: string
@@ -52,7 +52,12 @@ export function NameCombobox({
 }: Props) {
   const [query, setQuery] = useState(value)
   const [open, setOpen] = useState(false)
+  // -1 = nada resaltado: el input se comporta como un campo de texto común y
+  // Enter hace lo que siempre hizo (enviar el formulario). Solo cuando hay
+  // algo resaltado el combobox se queda con las teclas.
+  const [activeIndex, setActiveIndex] = useState(-1)
   const rootRef = useRef<HTMLDivElement>(null)
+  const listId = `${id ?? 'combobox'}-listbox`
 
   // Sync local `query` when the controlling `value` prop changes (e.g. the
   // form resets between "editar cuenta" targets), without the cascading
@@ -91,10 +96,32 @@ export function NameCombobox({
       : undefined
   const canCreate = normalizedTyped.length > 0 && !exactExisting && !nearMatch
 
+  // Lista navegable = sugerencias + (si aplica) el ítem de crear al final,
+  // en el mismo orden en que se pintan. Un solo índice recorre las dos cosas.
+  const navigableCount = suggestions.length + (canCreate ? 1 : 0)
+  const listOpen = open && navigableCount > 0
+
+  // El resaltado se descarta cuando cambia lo que hay debajo: si el usuario
+  // sigue escribiendo, el ítem 2 de la lista anterior no es el ítem 2 de esta.
+  const [prevSuggestionKey, setPrevSuggestionKey] = useState('')
+  const suggestionKey = `${suggestions.join(' ')}|${canCreate}`
+  if (suggestionKey !== prevSuggestionKey) {
+    setPrevSuggestionKey(suggestionKey)
+    setActiveIndex(-1)
+  }
+
+  // El ítem resaltado se mantiene a la vista: la lista scrollea a los 56 de
+  // alto y con el teclado no hay puntero que arrastre el scroll.
+  useEffect(() => {
+    if (activeIndex < 0) return
+    document.getElementById(`${listId}-${activeIndex}`)?.scrollIntoView({ block: 'nearest' })
+  }, [activeIndex, listId])
+
   function selectExisting(name: string) {
     setQuery(name)
     onChange(name)
     setOpen(false)
+    setActiveIndex(-1)
   }
 
   function createNew() {
@@ -102,6 +129,49 @@ export function NameCombobox({
     setQuery(normalizedTyped)
     onChange(normalizedTyped)
     setOpen(false)
+    setActiveIndex(-1)
+  }
+
+  function commitIndex(i: number) {
+    if (i < suggestions.length) selectExisting(suggestions[i])
+    else createNew()
+  }
+
+  /**
+   * Solo se interceptan las teclas de navegación. Cualquier otra —letras,
+   * números, borrar, pegar— cae al comportamiento normal del input, así que
+   * escribir nunca deja de funcionar por tener la lista abierta.
+   *
+   * `preventDefault` en las flechas es lo que separa las dos intenciones:
+   * sin él, la flecha además manda el cursor al principio o al final del
+   * texto, y se ven las dos cosas moverse a la vez.
+   */
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Escape') {
+      setOpen(false)
+      setActiveIndex(-1)
+      return
+    }
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!open) {
+        setOpen(true)
+        return
+      }
+      if (navigableCount === 0) return
+      e.preventDefault()
+      const step = e.key === 'ArrowDown' ? 1 : -1
+      // Arranca en el primero al bajar y en el último al subir; después da la
+      // vuelta, que es lo que hacen los Select de Radix del mismo formulario.
+      setActiveIndex((i) => (i === -1 ? (step === 1 ? 0 : navigableCount - 1) : (i + step + navigableCount) % navigableCount))
+      return
+    }
+
+    if (e.key === 'Enter' && activeIndex >= 0) {
+      // Sin esto, Enter envía el formulario en vez de elegir la opción.
+      e.preventDefault()
+      commitIndex(activeIndex)
+    }
   }
 
   return (
@@ -114,8 +184,14 @@ export function NameCombobox({
           setOpen(true)
         }}
         onFocus={() => setOpen(true)}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         autoComplete="off"
+        role="combobox"
+        aria-expanded={listOpen}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined}
         className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition-colors focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/15"
       />
 
@@ -123,28 +199,43 @@ export function NameCombobox({
         <p className="mt-1.5 flex items-start gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-2 text-xs text-amber-700 dark:text-amber-400">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            Existe "{nearMatch}", {nearMatchQuestion}{' '}
+            {/* Las comillas van DENTRO de la expresión, no como texto JSX:
+                `react/no-unescaped-entities` solo mira los nodos de texto, así
+                que esto renderiza las mismas comillas rectas sin obligar a
+                escribir `&quot;` en el fuente. */}
+            Existe {`"${nearMatch}"`}, {nearMatchQuestion}{' '}
             <button
               type="button"
               onClick={() => selectExisting(nearMatch)}
               className="font-semibold underline underline-offset-2"
             >
-              Usar "{nearMatch}"
+              Usar {`"${nearMatch}"`}
             </button>
           </span>
         </p>
       )}
 
-      {open && (suggestions.length > 0 || canCreate) && (
-        <div className="absolute z-70 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-card p-1.5 shadow-lg">
-          {suggestions.map((name) => (
+      {listOpen && (
+        <div
+          id={listId}
+          role="listbox"
+          className="absolute z-70 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-card p-1.5 shadow-lg"
+        >
+          {suggestions.map((name, i) => (
             <button
               key={name}
+              id={`${listId}-${i}`}
+              role="option"
+              aria-selected={name === value}
               type="button"
               onClick={() => selectExisting(name)}
+              // El resaltado del teclado usa el mismo `bg-secondary` que el
+              // hover del mouse, así que los dos modos de recorrer la lista se
+              // ven igual y no hay que aprender dos lenguajes visuales.
+              onMouseEnter={() => setActiveIndex(i)}
               className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-secondary ${
-                name === value ? 'bg-primary/5 font-medium' : ''
-              }`}
+                i === activeIndex ? 'bg-secondary' : ''
+              } ${name === value ? 'font-medium' : ''}`}
             >
               {name}
               {name === value && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
@@ -153,12 +244,18 @@ export function NameCombobox({
 
           {canCreate && (
             <button
+              id={`${listId}-${suggestions.length}`}
+              role="option"
+              aria-selected={false}
               type="button"
               onClick={createNew}
-              className="mt-0.5 flex w-full items-center gap-2 rounded-md border-t border-border px-3 py-2 text-left text-sm font-medium text-primary hover:bg-primary/5"
+              onMouseEnter={() => setActiveIndex(suggestions.length)}
+              className={`mt-0.5 flex w-full items-center gap-2 rounded-md border-t border-border px-3 py-2 text-left text-sm font-medium text-primary hover:bg-primary/5 ${
+                suggestions.length === activeIndex ? 'bg-primary/5' : ''
+              }`}
             >
               <Plus className="h-3.5 w-3.5 shrink-0" />
-              Crear {createLabel} «{normalizedTyped}»
+              Crear {createLabel} {`"${normalizedTyped}"`}
             </button>
           )}
         </div>

@@ -13,7 +13,7 @@ const ReportsCard = ({ reports }) => {
       whileHover={{ scale: 1.01 }}
       className="bg-background rounded-xl p-4 border border-secondary min-h-[180px] flex flex-col"
     >
-      <h3 className="text-md font-semibold text-foreground mb-3 flex items-center gap-2">
+      <h3 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
         <FiFileText className="w-5 h-5 text-primary" />
         Reportes
       </h3>

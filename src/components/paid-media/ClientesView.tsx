@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
+import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, useReducedMotion, type Variants } from 'framer-motion'
-import { LuUserPlus as UserPlus } from 'react-icons/lu'
+import { LuTrash2 as Trash2, LuUserPlus as UserPlus } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ClientesTopbar } from './ClientesTopbar'
@@ -15,6 +16,7 @@ import { ClientDetailSheet } from './ClientDetailSheet'
 import { groupByClient } from '@/lib/paid-media/group'
 import { formatBudget } from '@/lib/paid-media/format'
 import { buildHref, type ClientesFilters } from '@/lib/paid-media/filters'
+import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
 import {
   PLATFORM_BADGE_CLASS,
   PLATFORM_LABEL,
@@ -42,6 +44,10 @@ interface Props {
   pmNames: string[]
   /** The filters `page.tsx` already applied server-side. */
   filters: ClientesFilters
+  /** Live count of deleted accounts, for the entry-point badge. */
+  trashCount: number
+  /** Optional, removable layer — see `reports-presence.ts`. */
+  accountsWithReports?: AccountsWithReports
 }
 
 /**
@@ -59,6 +65,8 @@ export function ClientesView({
   operators,
   pmNames,
   filters,
+  trashCount,
+  accountsWithReports,
 }: Props) {
   const reducedMotion = useReducedMotion()
   const router = useRouter()
@@ -120,9 +128,17 @@ export function ClientesView({
               patrón que `ReportHistory`. gap-y-3 porque en mobile envuelve. */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-3 border-b border-border px-5 py-4">
             <h2 className="text-[15px] font-semibold tracking-tight">Clientes</h2>
-            <Button size="sm" className="ml-auto" onClick={() => setDetailTarget('new')}>
-              <UserPlus className="size-3.5" /> Nuevo cliente
-            </Button>
+            <div className="ml-auto flex items-center gap-2">
+              <Button asChild size="sm" variant="ghost">
+                <Link href="/dashboard/paid-media/clientes/papelera">
+                  <Trash2 className="size-3.5" /> Papelera
+                  <span className="ml-1 rounded bg-secondary px-2 text-xs tabular-nums">{trashCount}</span>
+                </Link>
+              </Button>
+              <Button size="sm" onClick={() => setDetailTarget('new')}>
+                <UserPlus className="size-3.5" /> Nuevo cliente
+              </Button>
+            </div>
           </div>
 
           {groups.length === 0 ? (
@@ -250,6 +266,7 @@ export function ClientesView({
           existingClientNames={existingClientNames}
           pmNames={pmNames}
           operators={operators}
+          accountsWithReports={accountsWithReports}
           onClose={() => setDetailTarget(null)}
         />
       )}
@@ -264,6 +281,7 @@ export function ClientesView({
           existingClientNames={existingClientNames}
           pmNames={pmNames}
           operators={operators}
+          accountsWithReports={accountsWithReports}
           onClose={() => setAssignTarget(null)}
         />
       )}
