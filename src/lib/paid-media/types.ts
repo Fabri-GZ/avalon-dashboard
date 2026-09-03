@@ -43,6 +43,41 @@ export interface FundingMethodOption {
   is_active: boolean
 }
 
+// Objetivo principal de la cuenta, elegido a mano por el equipo.
+//
+// A DIFERENCIA de `management_status` y `funding_method`, esto NO es una tabla
+// de lookup en la base, y la diferencia es deliberada: aquellos dos son datos
+// de display y nadie más los consume, mientras que este valor viaja en el
+// payload del webhook y lo lee el nodo `compute` del workflow
+// REPORTES-PAID-MEDIA, que sólo conoce las claves de su `ACTION_TYPE_META`.
+// Un valor fuera de ese catálogo no rompe fuerte: compute lo marca como
+// `configError: unknown_action_type` y vuelve a la detección automática, o
+// sea, el reporte sale mal en silencio. Una tabla abierta donde cualquiera
+// puede insertar una opción nueva es exactamente la forma de provocar eso.
+//
+// ⚠️ FUENTE DE VERDAD: `ACTION_TYPE_META` en el nodo `compute`. Si agregás una
+// opción acá, tiene que existir allá primero.
+//
+// El catálogo de compute tiene claves duplicadas por significado (WhatsApp 7d
+// y 1d, cuatro variantes de compra); acá se expone una sola por objetivo real
+// de negocio, la más abarcativa.
+export const PRIMARY_OBJECTIVE_OPTIONS: { key: string; label: string }[] = [
+  // Centinela, NO un action_type de Meta: `reach` es un campo escalar de la
+  // fila de insights, no una entrada del array `actions[]`, así que alcance no
+  // se puede expresar como conversión. `compute` lo reconoce por esta clave
+  // exacta y arma un reporte con hero [Inversión, Alcance, Impresiones,
+  // Frecuencia, CPM] en vez de [.., conversiones, CPA]. Ver
+  // Testeo/n8n/avalon/reportes-paid-media/fixes/2026-09-03/modo-awareness/.
+  { key: '__awareness__', label: 'Alcance / Awareness' },
+  { key: 'onsite_conversion.messaging_conversation_started_7d', label: 'Conversaciones de WhatsApp' },
+  { key: 'lead', label: 'Leads' },
+  { key: 'onsite_conversion.lead', label: 'Leads (formulario de Meta)' },
+  { key: 'omni_purchase', label: 'Compras' },
+  { key: 'link_click', label: 'Clics al sitio web' },
+  { key: 'landing_page_view', label: 'Visitas a la página' },
+  { key: 'mobile_app_install', label: 'Instalaciones de la app' },
+]
+
 // Subset of `ad_accounts` selected by the Clientes list — active
 // (`deleted_at IS NULL`) rows only. `management_status` and `funding_method`
 // are FK keys, not labels; resolve the label via the loaded
@@ -68,6 +103,9 @@ export interface AdAccountRow {
   monthly_budget: number | null
   monthly_budget_note: string | null
   currency: Currency
+  // `null` = detección automática en el nodo `compute`. Ver
+  // `PRIMARY_OBJECTIVE_OPTIONS` arriba para el vocabulario cerrado.
+  primary_action_type: string | null
 }
 
 // One row per distinct `client_name` in the Clientes list — accounts under

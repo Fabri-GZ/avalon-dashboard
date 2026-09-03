@@ -48,6 +48,10 @@ export interface AccountInput {
   monthly_budget: number | null
   monthly_budget_note: string | null
   currency: Currency
+  // Objetivo principal elegido a mano. `null` deja que el nodo `compute` del
+  // workflow lo detecte solo. Vocabulario cerrado: ver
+  // `PRIMARY_OBJECTIVE_OPTIONS` en `@/lib/paid-media/types`.
+  primary_action_type: string | null
 }
 
 function mapPostgresError(code: string | undefined): ActionError {

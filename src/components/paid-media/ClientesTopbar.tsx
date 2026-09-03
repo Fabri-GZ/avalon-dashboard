@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { LuSearch as Search, LuSlidersHorizontal as SlidersHorizontal } from 'react-icons/lu'
 import { ClientesFilterSheet } from './ClientesFilterSheet'
+import { SHORTCUT_HINT_CLASS, useSearchShortcut } from '@/hooks/useSearchShortcut'
 import type { ClientesFilters } from '@/lib/paid-media/filters'
 import type { ManagementStatus } from '@/lib/paid-media/types'
 
@@ -24,6 +25,7 @@ interface Props {
 function Controls({ draft, onApply, statuses, operators, total }: Props) {
   const [localSearch, setLocalSearch] = useState(draft.q)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const { inputRef, shortcutHint } = useSearchShortcut()
 
   // Search stays debounced + push-on-type (D-D): it is a continuous
   // control, unlike the discrete selects "Aplicar" is meant to collapse.
@@ -46,13 +48,19 @@ function Controls({ draft, onApply, statuses, operators, total }: Props) {
       <div className="relative w-40 sm:w-44 lg:w-56">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
+          ref={inputRef}
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
           placeholder="Buscar cliente…"
           // Placeholder at full muted opacity, not /70: the extra transparency
           // drops it under 4.5:1 in dark. Same call as ReportesTopbar.
-          className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none transition-all text-accent-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+          //
+          // `text-foreground` no es decorativo: `body` no declara `color`, así
+          // que sin esto el input se cae al negro por defecto del navegador y
+          // en dark se tipea oscuro sobre oscuro.
+          className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/15 lg:pr-12"
         />
+        <kbd className={SHORTCUT_HINT_CLASS}>{shortcutHint}</kbd>
       </div>
 
       {/* Un solo punto de entrada a los filtros, igual en desktop y en mobile.

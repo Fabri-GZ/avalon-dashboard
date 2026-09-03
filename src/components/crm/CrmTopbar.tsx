@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { LuSearch as Search, LuSlidersHorizontal as SlidersHorizontal } from 'react-icons/lu'
 import { CrmFilterSheet } from './CrmFilterSheet'
 import { useDateRangeParam } from '@/hooks/useDateRangeParam'
+import { SHORTCUT_HINT_CLASS, useSearchShortcut } from '@/hooks/useSearchShortcut'
 import type { CrmDateRange } from '@/lib/crm/types'
 
 const HEADER_SLOT_ID = 'dashboard-header-slot'
@@ -30,6 +31,7 @@ function Controls({ search, onSearchChange, initialDateRange, total }: CrmTopbar
   const [localSearch, setLocalSearch] = useState(search)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [dateRange, setDateRange] = useDateRangeParam<CrmDateRange>(CRM_RANGES, initialDateRange)
+  const { inputRef, shortcutHint } = useSearchShortcut()
 
   const hasFilter = dateRange !== 'todo'
 
@@ -47,11 +49,18 @@ function Controls({ search, onSearchChange, initialDateRange, total }: CrmTopbar
         <div className="relative w-40 sm:w-44 lg:w-64">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
+            ref={inputRef}
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
             placeholder="Buscar…"
-            className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+            // `text-foreground`: `body` no declara `color` y el navegador le da
+            // a los form controls su propio negro — sin esto se tipea oscuro
+            // sobre oscuro en dark. El placeholder pasa de `/70` a opacidad
+            // plena por el mismo motivo que en los otros dos buscadores: con la
+            // transparencia extra queda por debajo de 4.5:1.
+            className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/15 lg:pr-12"
           />
+          <kbd className={SHORTCUT_HINT_CLASS}>{shortcutHint}</kbd>
         </div>
 
         {/* Filter icon — solo visible en mobile */}

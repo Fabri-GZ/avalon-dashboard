@@ -30,11 +30,26 @@ export const TOAST_CARD_OPTIONS = {
   bodyClassName: '!m-0 !p-0',
 } as const
 
+// `success` usa el verde de los badges de estado en vez del violeta de marca:
+// el violeta es el color de las acciones primarias de la app, no el de "salió
+// bien", y con `tone="neutral"` ya usándolo la diferencia no se leería.
+const TONE_CLASS: Record<'neutral' | 'danger' | 'success', string> = {
+  neutral: 'text-primary',
+  danger: 'text-destructive',
+  success: 'text-emerald-600 dark:text-emerald-400',
+}
+
 interface Props {
-  tone: 'neutral' | 'danger'
+  tone: 'neutral' | 'danger' | 'success'
   icon: React.ReactNode
   title: string
-  body: string
+  /**
+   * Opcional a propósito: una confirmación como "Cambios guardados en CEMED"
+   * ya se explica sola, y un segundo renglón inventado para llenar el hueco
+   * sería ruido. Cuando falta, no se renderiza el `<p>` — no se deja vacío,
+   * que dejaría un margen colgando.
+   */
+  body?: string
   actionLabel?: string
   onAction?: () => void
   onClose: () => void
@@ -54,12 +69,12 @@ export function ToastCard({ tone, icon, title, body, actionLabel, onAction, onCl
     // `<output>` carries an implicit role="status" and a polite live region,
     // so the toast announces itself without stealing focus.
     <output className="flex w-full max-w-md items-start gap-3 rounded-lg border border-border bg-card p-4 shadow-lg">
-      <span className={tone === 'danger' ? 'text-destructive' : 'text-primary'} aria-hidden>
+      <span className={TONE_CLASS[tone]} aria-hidden>
         {icon}
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">{title}</p>
-        <p className="mt-0.5 text-sm text-muted-foreground">{body}</p>
+        {body && <p className="mt-0.5 text-sm text-muted-foreground">{body}</p>}
         {actionLabel && onAction && (
           <Button size="sm" variant="outline" className="mt-2.5" onClick={onAction}>
             {actionLabel}

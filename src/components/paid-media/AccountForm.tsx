@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-toastify'
-import { LuCircleAlert as CircleAlert, LuTrash2 as Trash2 } from 'react-icons/lu'
+import { LuCircleAlert as CircleAlert, LuCircleCheck as CircleCheck, LuTrash2 as Trash2 } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
@@ -21,7 +21,7 @@ import {
 } from '@/app/actions/paid-media-actions'
 import { parseBudgetInput } from '@/lib/paid-media/format'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
-import { PLATFORM_LABEL, type AdAccountRow, type Currency, type FundingMethodOption, type ManagementStatus, type Platform } from '@/lib/paid-media/types'
+import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type Currency, type FundingMethodOption, type ManagementStatus, type Platform } from '@/lib/paid-media/types'
 
 const UNSET = '__sin_definir__'
 
@@ -109,6 +109,7 @@ export function AccountForm({
   const [instagramUrl, setInstagramUrl] = useState(account?.instagram_url ?? '')
   const [budgetInput, setBudgetInput] = useState(initialBudgetInput(account))
   const [currency, setCurrency] = useState<Currency>(account?.currency ?? 'ARS')
+  const [primaryActionType, setPrimaryActionType] = useState(account?.primary_action_type ?? '')
 
   const [error, setError] = useState<ActionError | null>(null)
   const [pending, startTransition] = useTransition()
@@ -187,6 +188,7 @@ export function AccountForm({
       monthly_budget,
       monthly_budget_note,
       currency,
+      primary_action_type: primaryActionType || null,
     }
 
     startTransition(async () => {
@@ -203,6 +205,29 @@ export function AccountForm({
         setError(result.error ?? 'db_error')
         return
       }
+
+      // El sheet se cierra al guardar, así que sin esto el único acuse de
+      // recibo es que la fila cambia — y si el campo editado no se muestra en
+      // la tabla (el objetivo principal, por ejemplo) no cambia nada visible y
+      // parece que no guardó. El nombre va en el título porque desde el detalle
+      // de un cliente con varias cuentas hay que saber CUÁL se guardó.
+      toast(
+        ({ closeToast }) => (
+          <ToastCard
+            tone="success"
+            icon={<CircleCheck className="size-5" />}
+            title={
+              mode === 'create'
+                ? `${input.name} se agregó a la lista`
+                : `Cambios guardados en ${input.name}`
+            }
+            onClose={closeToast}
+          />
+        ),
+        // Sin acción ni nada que leer con calma: 4s alcanzan y no tapan la
+        // pantalla. `TOAST_CARD_OPTIONS` da 8s porque su toast lleva "Deshacer".
+        { ...TOAST_CARD_OPTIONS, autoClose: 4000 },
+      )
       onSaved()
     })
   }
@@ -404,16 +429,48 @@ export function AccountForm({
         </div>
       </div>
 
-      <div>
-        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Presupuesto mensual
-        </label>
-        <input
-          value={budgetInput}
-          onChange={(e) => setBudgetInput(e.target.value)}
-          placeholder="1200 o una nota libre (ej. Sin definir)"
-          className={INPUT_CLASS}
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Presupuesto mensual
+          </label>
+          <input
+            value={budgetInput}
+            onChange={(e) => setBudgetInput(e.target.value)}
+            // El placeholder largo ya no entra a media fila; el detalle de que
+            // acepta texto libre sigue estando en el `title`.
+            placeholder="1200 o texto libre"
+            title="Un número escribe el presupuesto; cualquier otro texto se guarda como nota (ej. Sin definir)."
+            className={INPUT_CLASS}
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Objetivo principal
+          </label>
+          <Select
+            value={primaryActionType || UNSET}
+            onValueChange={(v) => setPrimaryActionType(v === UNSET ? '' : v)}
+          >
+            <SelectTrigger className="h-10 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className={SELECT_CONTENT_CLASS}>
+              <SelectItem value={UNSET} className="focus:bg-secondary transition-colors ease-in duration-75">
+                Detectar automáticamente
+              </SelectItem>
+              {PRIMARY_OBJECTIVE_OPTIONS.map((o) => (
+                <SelectItem key={o.key} value={o.key} className="focus:bg-secondary transition-colors ease-in duration-75">
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Fija la conversión que mide el reporte. Sin elegir, se deduce de las campañas.
+          </p>
+        </div>
       </div>
 
       <div>

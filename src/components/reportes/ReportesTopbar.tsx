@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { LuSearch as Search } from 'react-icons/lu'
+import { SHORTCUT_HINT_CLASS, useSearchShortcut } from '@/hooks/useSearchShortcut'
 import type { ReportFilter } from '@/lib/reportes/types'
 
 const HEADER_SLOT_ID = 'dashboard-header-slot'
@@ -25,6 +26,7 @@ interface Props {
 
 function Controls({ search, onSearchChange, filter, onFilterChange, total }: Props) {
   const [local, setLocal] = useState(search)
+  const { inputRef, shortcutHint } = useSearchShortcut()
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -39,14 +41,23 @@ function Controls({ search, onSearchChange, filter, onFilterChange, total }: Pro
       <div className="relative w-40 sm:w-44 lg:w-60">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
+          ref={inputRef}
           value={local}
           onChange={(e) => setLocal(e.target.value)}
           placeholder="Buscar cuenta…"
           // El /70 sobre un color ya muted dejaba el placeholder por debajo de
           // 4.5:1 en dark. A opacidad plena sigue leyéndose como placeholder
           // (es más claro que --foreground) pero es legible.
-          className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+          //
+          // `text-foreground` es obligatorio, no decorativo: `body` no declara
+          // `color` y la hoja del navegador le da a los form controls su propio
+          // negro, así que sin esto lo tipeado sale oscuro sobre fondo oscuro
+          // en dark. Mismo remedio que ya lleva `ClientesTopbar`.
+          className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm text-foreground lg:pr-12 outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
         />
+        <kbd className={SHORTCUT_HINT_CLASS}>
+          {shortcutHint}
+        </kbd>
       </div>
 
       {/* Status filter pills — desktop */}

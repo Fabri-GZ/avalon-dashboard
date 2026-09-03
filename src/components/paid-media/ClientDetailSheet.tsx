@@ -8,9 +8,16 @@ import { SheetShell } from '@/components/ui/sheet-shell'
 import { AccountForm } from './AccountForm'
 import { formatBudget } from '@/lib/paid-media/format'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
-import { PLATFORM_LABEL, type AdAccountRow, type ClientGroup, type FundingMethodOption, type ManagementStatus } from '@/lib/paid-media/types'
+import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type ClientGroup, type FundingMethodOption, type ManagementStatus } from '@/lib/paid-media/types'
 
 type Panel = { mode: 'view' } | { mode: 'create' } | { mode: 'edit'; account: AdAccountRow }
+
+// Cae a la clave cruda si el valor guardado no está en el catálogo: es
+// exactamente el caso que el nodo `compute` marca como `unknown_action_type`,
+// y verlo tal cual en pantalla es la única pista de que hay que corregirlo.
+function objectiveLabel(key: string): string {
+  return PRIMARY_OBJECTIVE_OPTIONS.find((o) => o.key === key)?.label ?? key
+}
 
 interface Props {
   /** `null` means "create a brand-new client" — there is nothing to view yet. */
@@ -196,6 +203,15 @@ export function ClientDetailSheet({
                         <div className="col-span-2">
                           <dt className="inline font-medium text-foreground">Nota de presupuesto: </dt>
                           <dd className="inline">{account.monthly_budget_note}</dd>
+                        </div>
+                      )}
+                      {/* Sólo cuando está fijado a mano: `null` significa que
+                          lo deduce el reporte, y "Objetivo: automático" en cada
+                          cuenta sería ruido en la mayoría de las filas. */}
+                      {account.primary_action_type && (
+                        <div className="col-span-2">
+                          <dt className="inline font-medium text-foreground">Objetivo principal: </dt>
+                          <dd className="inline">{objectiveLabel(account.primary_action_type)}</dd>
                         </div>
                       )}
                       {account.geo && (

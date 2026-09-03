@@ -61,7 +61,7 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
   let query = supabase
     .from('ad_accounts')
     .select(
-      'id, name, business_name, platform, client_name, management_status, funding_method, pm_name, operator_name, geo, strategy_url, notes, website_url, instagram_url, monthly_budget, monthly_budget_note, currency',
+      'id, name, business_name, platform, client_name, management_status, funding_method, pm_name, operator_name, geo, strategy_url, notes, website_url, instagram_url, monthly_budget, monthly_budget_note, currency, primary_action_type',
     )
     .is('deleted_at', null)
 
