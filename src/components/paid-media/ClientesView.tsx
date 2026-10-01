@@ -13,7 +13,6 @@ import {
   cardVariants as _card,
 } from '@/app/components/Dashboard/data/dataProcessors'
 import { ClientDetailSheet } from './ClientDetailSheet'
-import { groupByClient } from '@/lib/paid-media/group'
 import { formatBudget } from '@/lib/paid-media/format'
 import { buildHref, type ClientesFilters } from '@/lib/paid-media/filters'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
@@ -22,6 +21,7 @@ import {
   PLATFORM_LABEL,
   type AdAccountRow,
   type ClientGroup,
+  type ClientStatus,
   type FundingMethodOption,
   type ManagementStatus,
 } from '@/lib/paid-media/types'
@@ -30,15 +30,21 @@ const containerVariants = _container as Variants
 const cardVariants = _card as Variants
 
 interface Props {
-  accounts: AdAccountRow[]
+  /** Clients already grouped and filtered by `page.tsx` (zero-account clients included). */
+  groups: ClientGroup[]
+  /** Accounts with `client_id = null` ("Cuentas sin asignar"), already filtered. */
+  unassignedAccounts: AdAccountRow[]
+  /** Account-level states (`ad_account_management_status`). */
   statuses: ManagementStatus[]
+  /** Client-level states (`paid_media_client_status`): column, filter and detail. */
+  clientStatuses: ClientStatus[]
   fundingMethods: FundingMethodOption[]
   /**
    * Valores distintos de `operator_name` / `pm_name` sobre el dataset COMPLETO
-   * (query aparte en `page.tsx`, sin filtros). No se derivan de `accounts`:
-   * `accounts` ya viene filtrado, así que al filtrar por un operador el
-   * desplegable solo ofrecía ese mismo operador y no había forma de cambiar a
-   * otro sin volver a "Todos" primero.
+   * de clientes (sin filtros). No se derivan de `groups`: `groups` ya viene
+   * filtrado, así que al filtrar por un operador el desplegable solo ofrecía
+   * ese mismo operador y no había forma de cambiar a otro sin volver a
+   * "Todos" primero.
    */
   operators: string[]
   pmNames: string[]
@@ -51,16 +57,18 @@ interface Props {
 }
 
 /**
- * Lista de clientes (agrupados por `client_name`), con búsqueda y filtros
- * por estado/plataforma/operador aplicados server-side (`page.tsx`). Los
+ * Lista de clientes (una fila por cliente), con búsqueda y filtros por
+ * estado/plataforma/operador aplicados server-side (`page.tsx`). Los
  * filtros se aplican en diferido: `ClientesTopbar`/`ClientesFilterSheet`
  * escriben en un `draft` local y una única navegación (`router.push`) los
  * confirma. Seleccionar una fila abre el detalle en un side sheet
  * (`ClientDetailSheet`), desde donde se crean/editan cuentas.
  */
 export function ClientesView({
-  accounts,
+  groups,
+  unassignedAccounts,
   statuses,
+  clientStatuses,
   fundingMethods,
   operators,
   pmNames,
@@ -83,20 +91,17 @@ export function ClientesView({
     setDraft(filters)
   }, [filters])
 
-  const existingClientNames = useMemo(
-    () => Array.from(new Set(accounts.map((a) => a.client_name).filter((n): n is string => Boolean(n)))),
-    [accounts],
-  )
+  const existingClientNames = useMemo(() => groups.map((g) => g.clientName), [groups])
 
   const statusLabel = useMemo(() => {
     const map = new Map(statuses.map((s) => [s.key, s.label]))
     return (key: string | null) => (key ? (map.get(key) ?? key) : null)
   }, [statuses])
 
-  const assignedAccounts = useMemo(() => accounts.filter((a) => a.client_name), [accounts])
-  const unassignedAccounts = useMemo(() => accounts.filter((a) => !a.client_name), [accounts])
-
-  const groups = useMemo(() => groupByClient(assignedAccounts), [assignedAccounts])
+  const clientStatusLabel = useMemo(() => {
+    const map = new Map(clientStatuses.map((s) => [s.key, s.label]))
+    return (key: string | null) => (key ? (map.get(key) ?? key) : null)
+  }, [clientStatuses])
 
   function applyDraft(next: ClientesFilters) {
     setDraft(next)
@@ -115,7 +120,7 @@ export function ClientesView({
       <ClientesTopbar
         draft={draft}
         onApply={applyDraft}
-        statuses={statuses}
+        statuses={clientStatuses}
         operators={operators}
         total={groups.length}
       />
@@ -150,6 +155,7 @@ export function ClientesView({
                   <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="w-[22%] px-5 py-2.5 font-semibold">Cliente</th>
                     <th className="px-5 py-2.5 font-semibold">Cuentas</th>
+                    <th className="px-5 py-2.5 font-semibold">Estado</th>
                     <th className="px-5 py-2.5 font-semibold">PM</th>
                     <th className="px-5 py-2.5 font-semibold">Operador</th>
                     <th className="px-5 py-2.5 font-semibold">Presupuesto mensual</th>
@@ -158,7 +164,7 @@ export function ClientesView({
                 <tbody>
                   {groups.map((group) => (
                     <tr
-                      key={group.clientName}
+                      key={group.clientId}
                       onClick={() => setDetailTarget(group)}
                       className="cursor-pointer border-t border-border/60 transition-colors hover:bg-secondary/50"
                     >
@@ -167,6 +173,7 @@ export function ClientesView({
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex flex-wrap gap-1.5">
+                          {group.accounts.length === 0 && <span className="text-muted-foreground">—</span>}
                           {group.accounts.map((account) => (
                             <span
                               key={account.id}
@@ -178,6 +185,7 @@ export function ClientesView({
                           ))}
                         </div>
                       </td>
+                      <td className="px-5 py-3.5 text-muted-foreground">{clientStatusLabel(group.status) ?? '—'}</td>
                       <td className="px-5 py-3.5 text-muted-foreground">{group.pmName ?? '—'}</td>
                       <td className="px-5 py-3.5 text-muted-foreground">{group.operatorName ?? '—'}</td>
                       <td className="px-5 py-3.5 text-muted-foreground tabular-nums">
@@ -259,9 +267,10 @@ export function ClientesView({
           no hacía nada. Con key, cada destino monta una instancia limpia. */}
       {detailTarget && (
         <ClientDetailSheet
-          key={detailTarget === 'new' ? 'nuevo-cliente' : `cliente:${detailTarget.clientName}`}
+          key={detailTarget === 'new' ? 'nuevo-cliente' : `cliente:${detailTarget.clientId}`}
           group={detailTarget === 'new' ? null : detailTarget}
           statuses={statuses}
+          clientStatuses={clientStatuses}
           fundingMethods={fundingMethods}
           existingClientNames={existingClientNames}
           pmNames={pmNames}
@@ -277,6 +286,7 @@ export function ClientesView({
           group={null}
           editAccount={assignTarget}
           statuses={statuses}
+          clientStatuses={clientStatuses}
           fundingMethods={fundingMethods}
           existingClientNames={existingClientNames}
           pmNames={pmNames}

@@ -8,7 +8,7 @@ import { SheetShell } from '@/components/ui/sheet-shell'
 import { AccountForm } from './AccountForm'
 import { formatBudget } from '@/lib/paid-media/format'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
-import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type ClientGroup, type FundingMethodOption, type ManagementStatus } from '@/lib/paid-media/types'
+import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type ClientGroup, type ClientStatus, type FundingMethodOption, type ManagementStatus } from '@/lib/paid-media/types'
 
 type Panel = { mode: 'view' } | { mode: 'create' } | { mode: 'edit'; account: AdAccountRow }
 
@@ -22,7 +22,10 @@ function objectiveLabel(key: string): string {
 interface Props {
   /** `null` means "create a brand-new client" — there is nothing to view yet. */
   group: ClientGroup | null
+  /** Account-level states: each account card shows its own. */
   statuses: ManagementStatus[]
+  /** Client-level states: PM, operator and status belong to the client. */
+  clientStatuses: ClientStatus[]
   fundingMethods: FundingMethodOption[]
   existingClientNames: string[]
   /** Valores distintos del dataset completo (sin filtrar), para `AccountForm`. */
@@ -51,6 +54,7 @@ interface Props {
 export function ClientDetailSheet({
   group,
   statuses,
+  clientStatuses,
   fundingMethods,
   existingClientNames,
   pmNames,
@@ -68,6 +72,11 @@ export function ClientDetailSheet({
     const map = new Map(statuses.map((s) => [s.key, s.label]))
     return (key: string | null) => (key ? (map.get(key) ?? key) : null)
   }, [statuses])
+
+  const clientStatusLabel = useMemo(() => {
+    const map = new Map(clientStatuses.map((s) => [s.key, s.label]))
+    return (key: string | null) => (key ? (map.get(key) ?? key) : null)
+  }, [clientStatuses])
 
   const fundingLabel = useMemo(() => {
     const map = new Map(fundingMethods.map((f) => [f.key, f.label]))
@@ -126,6 +135,31 @@ export function ClientDetailSheet({
                   </p>
                   <p className="text-foreground">{group.operatorName ?? '—'}</p>
                 </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</p>
+                  <p className="text-foreground">{clientStatusLabel(group.status) ?? '—'}</p>
+                </div>
+                {group.websiteUrl && (
+                  <div className="truncate">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sitio</p>
+                    <a
+                      href={group.websiteUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline underline-offset-2"
+                    >
+                      {group.websiteUrl}
+                    </a>
+                  </div>
+                )}
+                {group.instagramUrl && (
+                  <div className="truncate">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Instagram
+                    </p>
+                    <p className="truncate text-foreground">{group.instagramUrl}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Presupuesto mensual total
