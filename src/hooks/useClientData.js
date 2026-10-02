@@ -56,6 +56,7 @@ export function useClientData(options = {}) {
         const { data: clientsData, error: clientsError } = await supabase
           .from('clients')
           .select('*')
+          .eq('portal_enabled', true)
           .order('company_name');
 
         if (clientsError) throw clientsError;
@@ -137,6 +138,7 @@ export function useClientData(options = {}) {
         const { data: clientsData, error: clientsError } = await supabase
           .from('clients')
           .select('*')
+          .eq('portal_enabled', true)
           .order('company_name');
 
         if (clientsError) throw clientsError;

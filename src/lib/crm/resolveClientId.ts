@@ -69,6 +69,7 @@ export async function resolveClientId(
       .from('clients')
       .select('id')
       .eq('id', requestedClientId)
+      .eq('portal_enabled', true)
       .maybeSingle()
 
     if (!requested) {
