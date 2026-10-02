@@ -12,6 +12,7 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal'
 import { ToastCard, TOAST_CARD_OPTIONS } from './ToastCard'
 import { trashClientAction } from '@/app/actions/paid-media-actions'
 import { formatBudget } from '@/lib/paid-media/format'
+import { normalizePersonName } from '@/lib/paid-media/names'
 import { isHttpUrl } from '@/lib/paid-media/url'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
 import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type ClientGroup, type ClientOption, type ClientStatus, type FundingMethodOption, type ManagementStatus } from '@/lib/paid-media/types'
@@ -217,7 +218,15 @@ export function ClientDetailSheet({
     // tarjeta por cuenta con hasta ocho campos, y a 560px las URLs y las notas
     // se truncaban casi siempre. Debajo de `sm` no cambia nada: sigue siendo
     // un bottom sheet a ancho completo.
-    <SheetShell ariaLabel={ariaLabel} onClose={onClose} maxWidthClassName="sm:max-w-[820px]">
+    <SheetShell
+      ariaLabel={ariaLabel}
+      onClose={onClose}
+      maxWidthClassName="sm:max-w-[820px]"
+      // The dialog div is the scroll container (`overflow-y-auto`). A taller
+      // desktop minimum leaves room for the absolutely positioned combobox
+      // list; `min()` keeps it within the 85vh cap on short screens.
+      extraClassName="sm:min-h-[min(780px,85vh)]"
+    >
       {(requestClose) => (
         <>
           <div className="sticky top-0 flex justify-center bg-card pt-3 pb-1 sm:hidden">
@@ -286,13 +295,13 @@ export function ClientDetailSheet({
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">PM</p>
-                  <p className="text-foreground">{view.pmName ?? '—'}</p>
+                  <p className="text-foreground">{normalizePersonName(view.pmName) ?? '—'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Operador
                   </p>
-                  <p className="text-foreground">{view.operatorName ?? '—'}</p>
+                  <p className="text-foreground">{normalizePersonName(view.operatorName) ?? '—'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</p>

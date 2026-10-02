@@ -25,6 +25,8 @@ interface SheetShellProps {
   children: (requestClose: () => void) => React.ReactNode
   /** Ancho máximo en desktop. Default: igual a `ReportSheet` (460px). */
   maxWidthClassName?: string
+  /** Extra desktop classes, e.g. a min-height so absolutely positioned lists fit without scrolling. */
+  extraClassName?: string
 }
 
 export function SheetShell({
@@ -32,6 +34,7 @@ export function SheetShell({
   onClose,
   children,
   maxWidthClassName = 'sm:max-w-[460px]',
+  extraClassName = '',
 }: SheetShellProps) {
   const [isClosing, setIsClosing] = useState(false)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -94,7 +97,7 @@ export function SheetShell({
         aria-modal="true"
         aria-label={ariaLabel}
         className={`fixed inset-x-0 bottom-0 max-h-[92vh] overflow-y-auto overflow-x-hidden rounded-t-2xl bg-card text-card-foreground
-          sm:relative sm:inset-x-auto sm:bottom-auto sm:max-h-[85vh] sm:w-full ${maxWidthClassName} sm:rounded-xl
+          sm:relative sm:inset-x-auto sm:bottom-auto sm:max-h-[85vh] sm:w-full ${maxWidthClassName} ${extraClassName} sm:rounded-xl
           ${isClosing ? 'animate-sheet-down sm:animate-sheet-fade-out' : 'animate-sheet-up sm:animate-sheet-fade'}`}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={trapTab}

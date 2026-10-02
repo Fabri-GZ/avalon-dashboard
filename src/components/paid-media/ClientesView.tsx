@@ -13,6 +13,7 @@ import {
   cardVariants as _card,
 } from '@/app/components/Dashboard/data/dataProcessors'
 import { ClientDetailSheet } from './ClientDetailSheet'
+import { normalizePersonName } from '@/lib/paid-media/names'
 import { formatBudget } from '@/lib/paid-media/format'
 import { buildHref, type ClientesFilters } from '@/lib/paid-media/filters'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
@@ -211,8 +212,8 @@ export function ClientesView({
                         </div>
                       </td>
                       <td className="px-5 py-3.5 text-muted-foreground">{clientStatusLabel(group.status) ?? '—'}</td>
-                      <td className="px-5 py-3.5 text-muted-foreground">{group.pmName ?? '—'}</td>
-                      <td className="px-5 py-3.5 text-muted-foreground">{group.operatorName ?? '—'}</td>
+                      <td className="px-5 py-3.5 text-muted-foreground">{normalizePersonName(group.pmName) ?? '—'}</td>
+                      <td className="px-5 py-3.5 text-muted-foreground">{normalizePersonName(group.operatorName) ?? '—'}</td>
                       <td className="px-5 py-3.5 text-muted-foreground tabular-nums">
                         {group.budgetByCurrency.length > 0 ? (
                           <div className="flex flex-wrap gap-x-2">

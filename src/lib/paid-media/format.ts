@@ -12,6 +12,16 @@ export function formatBudget(amount: number, currency: Currency): string {
   return amount.toLocaleString('es-AR', { style: 'currency', currency, maximumFractionDigits: 0 })
 }
 
+/**
+ * es-AR thousands separator for a digits-only string: "1500000" -> "1.500.000".
+ * Anything that is not purely digits (free-text note) is returned untouched.
+ */
+export function formatThousandsInput(raw: string): string {
+  const digits = raw.replace(/\./g, '')
+  if (!/^\d+$/.test(digits)) return raw
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+
 export interface ParsedBudget {
   monthly_budget: number | null
   monthly_budget_note: string | null
@@ -29,7 +39,9 @@ export function parseBudgetInput(raw: string): ParsedBudget {
     return { monthly_budget: null, monthly_budget_note: null }
   }
 
-  const asNumber = Number(trimmed)
+  // Dots typed by `formatThousandsInput` are thousands separators, not decimals.
+  const normalized = /^\d{1,3}(\.\d{3})+$/.test(trimmed) ? trimmed.replace(/\./g, '') : trimmed
+  const asNumber = Number(normalized)
   if (Number.isFinite(asNumber)) {
     return { monthly_budget: asNumber, monthly_budget_note: null }
   }
