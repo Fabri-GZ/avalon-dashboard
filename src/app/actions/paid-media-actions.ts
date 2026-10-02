@@ -284,6 +284,41 @@ export async function updateClientAction(id: string, input: ClientUpdateInput): 
   return { success: true, clientId: id }
 }
 
+interface ClientTrashResult {
+  success: boolean
+  error?: ActionError
+  /** Restore only: how many cascade-trashed accounts came back with the client. */
+  restoredAccounts?: number
+}
+
+// The RPC trashes the client and its still-active accounts in one transaction
+// under one timestamp (restore uses it to tell cascade from individual trash).
+// SECURITY INVOKER: RLS decides who may; P0002 (missing / already trashed) maps
+// to `not_found`, 42501 to `unauthorized`.
+export async function trashClientAction(clientId: string): Promise<ClientTrashResult> {
+  const supabase = await createClient()
+
+  const { error } = await supabase.rpc('trash_paid_media_client', { p_client_id: clientId })
+  if (error) return { success: false, error: mapPostgresError(error.code) }
+
+  revalidatePath('/dashboard/paid-media/clientes')
+  revalidatePath('/dashboard/paid-media/clientes/papelera')
+  return { success: true }
+}
+
+// Restores the client plus only the accounts that went to the papelera with it;
+// accounts trashed on their own earlier stay trashed (decided inside the RPC).
+export async function restoreClientAction(clientId: string): Promise<ClientTrashResult> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.rpc('restore_paid_media_client', { p_client_id: clientId })
+  if (error) return { success: false, error: mapPostgresError(error.code) }
+
+  revalidatePath('/dashboard/paid-media/clientes')
+  revalidatePath('/dashboard/paid-media/clientes/papelera')
+  return { success: true, restoredAccounts: typeof data === 'number' ? data : 0 }
+}
+
 // Soft delete only — no code path ever issues DELETE FROM ad_accounts. The
 // `.is('deleted_at', null)` state guard + `.select('id')` detect a zero-row
 // outcome (RLS denial or stale state both return no Postgres error) and map

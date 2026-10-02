@@ -1,12 +1,16 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { LuX as X, LuPencil as Pencil, LuPlus as Plus } from 'react-icons/lu'
+import { toast } from 'react-toastify'
+import { LuX as X, LuPencil as Pencil, LuPlus as Plus, LuTrash2 as Trash2 } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { SheetShell } from '@/components/ui/sheet-shell'
 import { AccountForm } from './AccountForm'
 import { ClientForm, type SavedClient } from './ClientForm'
+import { ConfirmDeleteModal } from './ConfirmDeleteModal'
+import { ToastCard, TOAST_CARD_OPTIONS } from './ToastCard'
+import { trashClientAction } from '@/app/actions/paid-media-actions'
 import { formatBudget } from '@/lib/paid-media/format'
 import { isHttpUrl } from '@/lib/paid-media/url'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
@@ -83,6 +87,9 @@ export function ClientDetailSheet({
   editAccount,
 }: Props) {
   const router = useRouter()
+  const [showConfirmTrash, setShowConfirmTrash] = useState(false)
+  const [trashError, setTrashError] = useState<string | null>(null)
+  const [trashing, startTrash] = useTransition()
   const [panel, setPanel] = useState<Panel>(
     editAccount
       ? { mode: 'edit', account: editAccount }
@@ -164,6 +171,38 @@ export function ClientDetailSheet({
     setPanel({ mode: 'view' })
   }
 
+  function handleTrashClient(clientId: string, clientName: string, requestClose: () => void) {
+    setTrashError(null)
+    startTrash(async () => {
+      const result = await trashClientAction(clientId)
+      setShowConfirmTrash(false)
+      if (!result.success) {
+        setTrashError(
+          result.error === 'not_found'
+            ? 'El cliente ya no existe o ya estaba en la papelera.'
+            : result.error === 'unauthorized'
+              ? 'No tenés permisos para hacer esta acción.'
+              : 'Ocurrió un error inesperado. Probá de nuevo.',
+        )
+        return
+      }
+      toast(
+        ({ closeToast }) => (
+          <ToastCard
+            tone="neutral"
+            icon={<Trash2 className="size-5" />}
+            title={`${clientName} se movió a la papelera`}
+            body="Sus cuentas se movieron con él. Podés restaurarlo desde la papelera."
+            onClose={closeToast}
+          />
+        ),
+        TOAST_CARD_OPTIONS,
+      )
+      router.refresh()
+      requestClose()
+    })
+  }
+
   function handleSaved(requestClose: () => void) {
     router.refresh()
     // Data comes from server props; the simplest correct behavior after a
@@ -203,11 +242,46 @@ export function ClientDetailSheet({
 
           {panel.mode === 'view' && view && (
             <div className="space-y-4 px-5 py-4">
-              <div className="flex justify-end">
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-destructive/30 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive dark:hover:border-destructive/50 dark:hover:bg-destructive/10"
+                  onClick={() => {
+                    setTrashError(null)
+                    setShowConfirmTrash(true)
+                  }}
+                >
+                  <Trash2 className="size-3.5" /> Eliminar cliente
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => setPanel({ mode: 'client-edit' })}>
                   <Pencil className="size-3.5" /> Editar cliente
                 </Button>
               </div>
+
+              {trashError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {trashError}
+                </p>
+              )}
+
+              {showConfirmTrash && (
+                <ConfirmDeleteModal
+                  accountName={view.clientName}
+                  hasReports={false}
+                  title={`¿Eliminar ${view.clientName}?`}
+                  description={`El cliente y ${
+                    view.accounts.length === 0
+                      ? 'sus cuentas'
+                      : view.accounts.length === 1
+                        ? 'su cuenta publicitaria'
+                        : `sus ${view.accounts.length} cuentas publicitarias`
+                  } se van a mover a la papelera juntos. Vas a poder restaurarlos desde ahí, o se eliminarán definitivamente a los 45 días.`}
+                  pending={trashing}
+                  onConfirm={() => handleTrashClient(view.clientId, view.clientName, requestClose)}
+                  onCancel={() => setShowConfirmTrash(false)}
+                />
+              )}
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>

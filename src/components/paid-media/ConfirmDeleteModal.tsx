@@ -14,6 +14,10 @@ interface Props {
    * or any query.
    */
   hasReports: boolean
+  /** Overrides the account-specific title (e.g. when deleting a client). */
+  title?: string
+  /** Overrides the account-specific body copy; takes precedence over `hasReports`. */
+  description?: string
   pending: boolean
   onConfirm: () => void
   onCancel: () => void
@@ -36,7 +40,7 @@ function prefersReducedMotion() {
  * `Select` del propio formulario) son `z-[70]`. Comparte `z-[90]` con
  * `GenerationResultModal`, que vive en una ruta disjunta.
  */
-export function ConfirmDeleteModal({ accountName, hasReports, pending, onConfirm, onCancel }: Props) {
+export function ConfirmDeleteModal({ accountName, hasReports, title, description, pending, onConfirm, onCancel }: Props) {
   const [isClosing, setIsClosing] = useState(false)
   // Se calcula una sola vez al montar, igual que `GenerationResultModal`:
   // este componente sólo existe del lado del cliente.
@@ -95,16 +99,17 @@ export function ConfirmDeleteModal({ accountName, hasReports, pending, onConfirm
           </span>
           <div>
             <h2 id={TITLE_ID} className="text-base font-semibold leading-snug">
-              ¿Eliminar {accountName}?
+              {title ?? `¿Eliminar ${accountName}?`}
             </h2>
           </div>
         </div>
 
         <div className="space-y-4 px-5 py-4">
           <p className="text-[12px] text-muted-foreground">
-            {hasReports
+            {description ??
+              (hasReports
               ? `Esta cuenta tiene reportes generados: se va a conservar en la papelera en vez de eliminarse definitivamente a los ${PURGE_WINDOW_DAYS} días.`
-              : `Se va a mover a la papelera. Vas a poder restaurarla mientras esté ahí, o se eliminará definitivamente a los ${PURGE_WINDOW_DAYS} días.`}
+              : `Se va a mover a la papelera. Vas a poder restaurarla mientras esté ahí, o se eliminará definitivamente a los ${PURGE_WINDOW_DAYS} días.`)}
           </p>
 
           <div className="flex gap-2.5">
