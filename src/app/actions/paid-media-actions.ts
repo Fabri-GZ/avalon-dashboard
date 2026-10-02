@@ -14,7 +14,8 @@ export type ActionError =
   | 'duplicate_account' // 23505
   | 'invalid_status' // 23503
   | 'invalid_value' // 23514
-  | 'not_found' // zero-row write: RLS denial or stale state, no Postgres error either way
+  | 'not_found' // zero-row write (RLS denial or stale state, no Postgres error) or P0002 from an RPC
+  | 'client_trashed' // restoring an account whose client is in the papelera
   | 'db_error'
 
 export interface ExistingAccountInfo {
@@ -64,6 +65,8 @@ function mapPostgresError(code: string | undefined): ActionError {
       return 'invalid_status'
     case '23514':
       return 'invalid_value'
+    case 'P0002':
+      return 'not_found'
     default:
       return 'db_error'
   }
@@ -155,8 +158,24 @@ export async function deleteAccountAction(id: string): Promise<ActionResult> {
   return { success: true }
 }
 
+// An account of a trashed client cannot be restored on its own: the client
+// must come back first (restore_paid_media_client), otherwise the account would
+// be active under a hidden client. App-level check (design D10), not a trigger.
+// Accounts with no client (`client_id` null) skip it.
 export async function restoreAccountAction(id: string): Promise<ActionResult> {
   const supabase = await createClient()
+
+  const { data: account } = await supabase.from('ad_accounts').select('client_id').eq('id', id).maybeSingle()
+
+  if (account?.client_id) {
+    const { data: ext } = await supabase
+      .from('client_paid_media')
+      .select('deleted_at')
+      .eq('client_id', account.client_id)
+      .maybeSingle()
+
+    if (ext?.deleted_at) return { success: false, error: 'client_trashed' }
+  }
 
   const { data, error } = await supabase
     .from('ad_accounts')

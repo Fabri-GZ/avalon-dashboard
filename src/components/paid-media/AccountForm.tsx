@@ -47,6 +47,7 @@ const ERROR_MESSAGES: Record<ActionError, { field?: 'id' | 'management_status'; 
     message: 'Alguno de los valores ingresados no es válido (revisá plataforma, financiamiento o presupuesto).',
   },
   not_found: { message: 'La cuenta ya no existe o fue movida a la papelera.' },
+  client_trashed: { message: 'El cliente de esta cuenta está en la papelera. Restaurá el cliente primero.' },
   db_error: { message: 'Ocurrió un error inesperado. Probá de nuevo.' },
 }
 
