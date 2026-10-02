@@ -120,8 +120,11 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
       statuses={statuses}
       clientStatuses={clientStatuses}
       fundingMethods={(fundingMethodsRes.data ?? []) as FundingMethodOption[]}
-      operators={distinctSorted(clientRows.map((c) => c.operator_name))}
-      pmNames={distinctSorted(clientRows.map((c) => c.pm_name))}
+      // Union with the legacy per-account columns: client rows only exist after
+      // the 003 backfill, and until `ad_accounts.pm_name`/`operator_name` are
+      // dropped they still hold the names the team already uses.
+      operators={distinctSorted([...clientRows, ...accounts].map((r) => r.operator_name))}
+      pmNames={distinctSorted([...clientRows, ...accounts].map((r) => r.pm_name))}
       clientOptions={clientRows
         .map((c) => ({ id: c.id, name: c.company_name }))
         .sort((a, b) => a.name.localeCompare(b.name))}
