@@ -61,18 +61,16 @@ export interface AccountInput {
   id: string
   name: string
   platform: Platform
-  client_name: string | null
+  // PM, operator, web and Instagram are client-level now (ClientInput); the
+  // `client_name` mirror on the row is maintained by a DB trigger from this id.
+  client_id: string | null
   management_status: string | null
   // Free FK key into `ad_account_funding_method` (T1) — an open, seeded
   // lookup, not a closed union.
   funding_method: string | null
-  pm_name: string | null
-  operator_name: string | null
   geo: string | null
   strategy_url: string | null
   notes: string | null
-  website_url: string | null
-  instagram_url: string | null
   monthly_budget: number | null
   monthly_budget_note: string | null
   currency: Currency
@@ -113,10 +111,15 @@ function normalizeAccountId(platform: Platform, raw: string): string | null {
   return match ? `act_${match[1]}` : null
 }
 
-// Case-insensitive exact-name lookup of a client plus its papelera state. The
-// DB index also folds accents (`pm_unaccent`), which `ilike` cannot, so an
-// accent-only collision returns nothing.
-async function lookupClientByName(supabase: Supabase, name: string): Promise<ExistingClientInfo | undefined> {
+async function isClientTrashed(supabase: Supabase, clientId: string): Promise<boolean> {
+  const { data } = await supabase.from('client_paid_media').select('deleted_at').eq('client_id', clientId).maybeSingle()
+  return Boolean(data?.deleted_at)
+}
+
+// Case-insensitive exact-name lookup, run only on the 23505 branch. The DB
+// index also folds accents (`pm_unaccent`), which `ilike` cannot, so an
+// accent-only collision returns nothing and the UI shows the generic message.
+async function findClientByName(supabase: Supabase, name: string): Promise<ExistingClientInfo | undefined> {
   const { data } = await supabase
     .from('clients')
     .select('company_name, client_paid_media(deleted_at)')
@@ -132,22 +135,12 @@ async function lookupClientByName(supabase: Supabase, name: string): Promise<Exi
   return { name: row.company_name, deletedAt: ext?.deleted_at ?? null }
 }
 
-// TRANSITIONAL (S3a-1): the account form still sends `client_name`, so the
-// trashed check resolves the client by name. S3a-2 switches AccountInput to
-// `client_id` and this becomes a lookup by id.
-async function isClientNameTrashed(supabase: Supabase, clientName: string | null): Promise<boolean> {
-  const name = clientName?.trim()
-  if (!name) return false
-  const info = await lookupClientByName(supabase, name)
-  return Boolean(info?.deletedAt)
-}
-
 export async function createAccountAction(input: AccountInput): Promise<ActionResult> {
   const supabase = await createClient()
 
   const id = normalizeAccountId(input.platform, input.id)
   if (!id) return { success: false, error: 'invalid_account_id' }
-  if (await isClientNameTrashed(supabase, input.client_name)) {
+  if (input.client_id && (await isClientTrashed(supabase, input.client_id))) {
     return { success: false, error: 'client_trashed' }
   }
 
@@ -191,7 +184,7 @@ export async function updateAccountAction(
 ): Promise<ActionResult> {
   const supabase = await createClient()
 
-  if (await isClientNameTrashed(supabase, input.client_name)) {
+  if (input.client_id && (await isClientTrashed(supabase, input.client_id))) {
     return { success: false, error: 'client_trashed' }
   }
 
@@ -224,7 +217,7 @@ export async function createClientAction(input: ClientInput): Promise<ClientActi
 
   if (error) {
     if (error.code === '23505') {
-      return { success: false, error: 'duplicate_client', existingClient: await lookupClientByName(supabase, companyName) }
+      return { success: false, error: 'duplicate_client', existingClient: await findClientByName(supabase, companyName) }
     }
     return { success: false, error: mapPostgresError(error.code) }
   }
@@ -254,7 +247,7 @@ export async function updateClientAction(id: string, input: ClientInput): Promis
 
   if (clientError) {
     if (clientError.code === '23505') {
-      return { success: false, error: 'duplicate_client', existingClient: await lookupClientByName(supabase, companyName) }
+      return { success: false, error: 'duplicate_client', existingClient: await findClientByName(supabase, companyName) }
     }
     return { success: false, error: mapPostgresError(clientError.code) }
   }

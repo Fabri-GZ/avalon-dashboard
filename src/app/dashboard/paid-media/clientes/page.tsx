@@ -121,6 +121,9 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
       fundingMethods={(fundingMethodsRes.data ?? []) as FundingMethodOption[]}
       operators={distinctSorted(clientRows.map((c) => c.operator_name))}
       pmNames={distinctSorted(clientRows.map((c) => c.pm_name))}
+      clientOptions={clientRows
+        .map((c) => ({ id: c.id, name: c.company_name }))
+        .sort((a, b) => a.name.localeCompare(b.name))}
       filters={safeFilters}
       trashCount={trashCountRes.count ?? 0}
       accountsWithReports={accountsWithReports}
