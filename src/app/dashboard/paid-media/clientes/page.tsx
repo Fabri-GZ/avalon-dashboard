@@ -56,7 +56,7 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
       // come from the full set so choosing one never locks the dropdown.
       supabase
         .from('client_paid_media')
-        .select('client_id, pm_name, operator_name, status, clients!inner(company_name, website_url, instagram_url)')
+        .select('client_id, pm_name, operator_name, status, clients!inner(company_name, website_url, instagram_url, portal_enabled)')
         .is('deleted_at', null),
       supabase
         .from('ad_accounts')
@@ -88,7 +88,7 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
 
   // PostgREST returns the to-one embed as an object; the array branch only
   // guards a changed relationship shape.
-  type ClientEmbed = { company_name: string; website_url: string | null; instagram_url: string | null }
+  type ClientEmbed = { company_name: string; website_url: string | null; instagram_url: string | null; portal_enabled: boolean }
   const clientRows: PaidMediaClientRow[] = (clientsRes.data ?? []).flatMap((row) => {
     const embed = (Array.isArray(row.clients) ? row.clients[0] : row.clients) as ClientEmbed | undefined
     if (!embed) return []
@@ -98,6 +98,7 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
         company_name: embed.company_name,
         website_url: embed.website_url,
         instagram_url: embed.instagram_url,
+        portal_enabled: embed.portal_enabled,
         pm_name: row.pm_name as string | null,
         operator_name: row.operator_name as string | null,
         status: row.status as string | null,

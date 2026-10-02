@@ -42,6 +42,7 @@ export function groupByClient(clients: PaidMediaClientRow[], accounts: AdAccount
       return {
         clientId: client.id,
         clientName: client.company_name,
+        portalEnabled: client.portal_enabled,
         status: client.status,
         websiteUrl: client.website_url,
         instagramUrl: client.instagram_url,

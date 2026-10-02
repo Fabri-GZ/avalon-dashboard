@@ -6,11 +6,20 @@ import { LuX as X, LuPencil as Pencil, LuPlus as Plus } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { SheetShell } from '@/components/ui/sheet-shell'
 import { AccountForm } from './AccountForm'
+import { ClientForm, type SavedClient } from './ClientForm'
 import { formatBudget } from '@/lib/paid-media/format'
+import { isHttpUrl } from '@/lib/paid-media/url'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
 import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type ClientGroup, type ClientOption, type ClientStatus, type FundingMethodOption, type ManagementStatus } from '@/lib/paid-media/types'
 
-type Panel = { mode: 'view' } | { mode: 'create' } | { mode: 'edit'; account: AdAccountRow }
+// `client-*` panels edit the client itself (`ClientForm`); `create`/`edit` are
+// the account form.
+type Panel =
+  | { mode: 'view' }
+  | { mode: 'client-create' }
+  | { mode: 'client-edit' }
+  | { mode: 'create' }
+  | { mode: 'edit'; account: AdAccountRow }
 
 // Cae a la clave cruda si el valor guardado no está en el catálogo: es
 // exactamente el caso que el nodo `compute` marca como `unknown_action_type`,
@@ -20,8 +29,15 @@ function objectiveLabel(key: string): string {
 }
 
 interface Props {
-  /** `null` means "create a brand-new client" — there is nothing to view yet. */
+  /**
+   * `null` means there is no client to view yet: "Nuevo cliente" (client form)
+   * or, with `newAccount`, "Nueva cuenta" (account form, client optional).
+   */
   group: ClientGroup | null
+  /** Open straight on the account form with no client preselected. */
+  newAccount?: boolean
+  /** Called with the new client's id so the parent can start deriving `group` from fresh props. */
+  onClientCreated?: (clientId: string) => void
   /** Account-level states: each account card shows its own. */
   statuses: ManagementStatus[]
   /** Client-level states: PM, operator and status belong to the client. */
@@ -54,6 +70,8 @@ interface Props {
  */
 export function ClientDetailSheet({
   group,
+  newAccount,
+  onClientCreated,
   statuses,
   clientStatuses,
   fundingMethods,
@@ -66,8 +84,35 @@ export function ClientDetailSheet({
 }: Props) {
   const router = useRouter()
   const [panel, setPanel] = useState<Panel>(
-    editAccount ? { mode: 'edit', account: editAccount } : group ? { mode: 'view' } : { mode: 'create' },
+    editAccount
+      ? { mode: 'edit', account: editAccount }
+      : newAccount
+        ? { mode: 'create' }
+        : group
+          ? { mode: 'view' }
+          : { mode: 'client-create' },
   )
+  // A client created in this session: the sheet stays open on it, but the
+  // parent's `group` only arrives after `router.refresh()`. Until then this
+  // stands in (name + empty state); once `group` exists it always wins.
+  const [created, setCreated] = useState<SavedClient | null>(null)
+  const view: ClientGroup | null =
+    group ??
+    (created
+      ? {
+          clientId: created.clientId,
+          clientName: created.clientName,
+          portalEnabled: false,
+          status: created.status,
+          websiteUrl: created.websiteUrl,
+          instagramUrl: created.instagramUrl,
+          accounts: [],
+          platforms: [],
+          pmName: created.pmName,
+          operatorName: created.operatorName,
+          budgetByCurrency: [],
+        }
+      : null)
 
   const statusLabel = useMemo(() => {
     const map = new Map(statuses.map((s) => [s.key, s.label]))
@@ -84,7 +129,40 @@ export function ClientDetailSheet({
     return (key: string | null) => (key ? (map.get(key) ?? key) : null)
   }, [fundingMethods])
 
-  const ariaLabel = editAccount ? `Asignar cliente — ${editAccount.name}` : group ? group.clientName : 'Nuevo cliente'
+  const ariaLabel = editAccount
+    ? `Asignar cliente — ${editAccount.name}`
+    : view && panel.mode !== 'client-create'
+      ? view.clientName
+      : panel.mode === 'client-create'
+        ? 'Nuevo cliente'
+        : 'Nueva cuenta'
+
+  const eyebrow = editAccount
+    ? 'Asignar cliente'
+    : panel.mode === 'client-create'
+      ? 'Nuevo cliente'
+      : panel.mode === 'client-edit'
+        ? 'Editar cliente'
+        : panel.mode === 'create'
+          ? 'Nueva cuenta'
+          : panel.mode === 'edit'
+            ? 'Editar cuenta'
+            : 'Cliente'
+
+  function handleClientSaved(saved: SavedClient) {
+    router.refresh()
+    // Unlike an account save, the sheet stays open on the client so accounts
+    // can be added right away.
+    if (panel.mode === 'client-create') {
+      setCreated(saved)
+      onClientCreated?.(saved.clientId)
+    } else if (!group && created?.clientId === saved.clientId) {
+      // Editing the stand-in itself (no `group` yet, or hidden by a filter):
+      // keep it in sync so the view does not show the pre-edit values.
+      setCreated(saved)
+    }
+    setPanel({ mode: 'view' })
+  }
 
   function handleSaved(requestClose: () => void) {
     router.refresh()
@@ -110,7 +188,7 @@ export function ClientDetailSheet({
           <div className="flex items-start justify-between border-b border-border px-5 pt-4 pb-3">
             <div>
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {editAccount ? 'Asignar cliente' : group ? 'Cliente' : 'Nuevo cliente'}
+                {eyebrow}
               </p>
               <h2 className="text-base font-semibold leading-snug">{ariaLabel}</h2>
             </div>
@@ -123,51 +201,61 @@ export function ClientDetailSheet({
             </button>
           </div>
 
-          {panel.mode === 'view' && group && (
+          {panel.mode === 'view' && view && (
             <div className="space-y-4 px-5 py-4">
+              <div className="flex justify-end">
+                <Button size="sm" variant="outline" onClick={() => setPanel({ mode: 'client-edit' })}>
+                  <Pencil className="size-3.5" /> Editar cliente
+                </Button>
+              </div>
+
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">PM</p>
-                  <p className="text-foreground">{group.pmName ?? '—'}</p>
+                  <p className="text-foreground">{view.pmName ?? '—'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Operador
                   </p>
-                  <p className="text-foreground">{group.operatorName ?? '—'}</p>
+                  <p className="text-foreground">{view.operatorName ?? '—'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</p>
-                  <p className="text-foreground">{clientStatusLabel(group.status) ?? '—'}</p>
+                  <p className="text-foreground">{clientStatusLabel(view.status) ?? '—'}</p>
                 </div>
-                {group.websiteUrl && (
+                {view.websiteUrl && (
                   <div className="truncate">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sitio</p>
-                    <a
-                      href={group.websiteUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary underline underline-offset-2"
-                    >
-                      {group.websiteUrl}
-                    </a>
+                    {isHttpUrl(view.websiteUrl) ? (
+                      <a
+                        href={view.websiteUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary underline underline-offset-2"
+                      >
+                        {view.websiteUrl}
+                      </a>
+                    ) : (
+                      <p className="truncate text-foreground">{view.websiteUrl}</p>
+                    )}
                   </div>
                 )}
-                {group.instagramUrl && (
+                {view.instagramUrl && (
                   <div className="truncate">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Instagram
                     </p>
-                    <p className="truncate text-foreground">{group.instagramUrl}</p>
+                    <p className="truncate text-foreground">{view.instagramUrl}</p>
                   </div>
                 )}
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Presupuesto mensual total
                   </p>
-                  {group.budgetByCurrency.length > 0 ? (
+                  {view.budgetByCurrency.length > 0 ? (
                     <p className="flex flex-wrap gap-x-2 tabular-nums text-foreground">
-                      {group.budgetByCurrency.map(({ currency, total }) => (
+                      {view.budgetByCurrency.map(({ currency, total }) => (
                         <span key={currency}>{formatBudget(total, currency)}</span>
                       ))}
                     </p>
@@ -179,10 +267,21 @@ export function ClientDetailSheet({
 
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Cuentas</p>
-                <Button size="sm" variant="outline" onClick={() => setPanel({ mode: 'create' })}>
-                  <Plus className="size-3.5" /> Agregar cuenta
-                </Button>
+                {view.accounts.length > 0 && (
+                  <Button size="sm" variant="outline" onClick={() => setPanel({ mode: 'create' })}>
+                    <Plus className="size-3.5" /> Agregar cuenta
+                  </Button>
+                )}
               </div>
+
+              {view.accounts.length === 0 && (
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-4 py-8 text-center">
+                  <p className="text-sm text-muted-foreground">Este cliente todavía no tiene cuentas publicitarias.</p>
+                  <Button size="sm" onClick={() => setPanel({ mode: 'create' })}>
+                    <Plus className="size-3.5" /> Agregar cuenta
+                  </Button>
+                </div>
+              )}
 
               {/* Toda la tarjeta edita, no solo el lápiz. El control es un
                   botón que cubre la tarjeta (`absolute inset-0`) en vez de un
@@ -193,7 +292,7 @@ export function ClientDetailSheet({
                   dentro de un botón. El lápiz queda como indicación visual, ya
                   no como el único blanco. */}
               <div className="space-y-2.5">
-                {group.accounts.map((account) => (
+                {view.accounts.map((account) => (
                   <div
                     key={account.id}
                     className="group relative rounded-lg border border-border p-3.5 transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 hover:border-primary/40 hover:bg-secondary/40"
@@ -313,6 +412,18 @@ export function ClientDetailSheet({
             </div>
           )}
 
+          {(panel.mode === 'client-create' || panel.mode === 'client-edit') && (
+            <ClientForm
+              mode={panel.mode === 'client-create' ? 'create' : 'edit'}
+              client={panel.mode === 'client-edit' ? (view ?? undefined) : undefined}
+              clientStatuses={clientStatuses}
+              pmNames={pmNames}
+              operators={operators}
+              onSaved={handleClientSaved}
+              onCancel={() => (view && panel.mode === 'client-edit' ? setPanel({ mode: 'view' }) : requestClose())}
+            />
+          )}
+
           {panel.mode === 'create' && (
             <AccountForm
               mode="create"
@@ -321,9 +432,9 @@ export function ClientDetailSheet({
               clients={clients}
               pmNames={pmNames}
               operators={operators}
-              defaultClientId={group?.clientId}
+              defaultClientId={view?.clientId}
               onSaved={() => handleSaved(requestClose)}
-              onCancel={() => (group ? setPanel({ mode: 'view' }) : requestClose())}
+              onCancel={() => (view ? setPanel({ mode: 'view' }) : requestClose())}
             />
           )}
 
@@ -338,7 +449,7 @@ export function ClientDetailSheet({
               operators={operators}
               accountsWithReports={accountsWithReports}
               onSaved={() => handleSaved(requestClose)}
-              onCancel={() => (group ? setPanel({ mode: 'view' }) : requestClose())}
+              onCancel={() => (view ? setPanel({ mode: 'view' }) : requestClose())}
               onDeleted={() => handleSaved(requestClose)}
             />
           )}

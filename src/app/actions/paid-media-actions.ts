@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/app/utils/supabase/server'
 import type { Currency, Platform } from '@/lib/paid-media/types'
+import { normalizeWebsiteUrl } from '@/lib/paid-media/url'
 
 // Server Actions + RLS (D3), following `crm-actions.ts` exactly. Never the
 // `src/app/admin/create-client/` pattern (fetch → API route →
@@ -46,6 +47,8 @@ interface ClientActionResult {
   error?: ActionError
   clientId?: string
   existingClient?: ExistingClientInfo
+  // Set with `invalid_value` when one specific input is to blame.
+  field?: 'website_url'
 }
 
 export interface ClientInput {
@@ -56,6 +59,10 @@ export interface ClientInput {
   operator_name: string | null
   status: string | null
 }
+
+// `company_name` is optional on update: omit it (unchanged name) so a web/IG edit
+// on a portal client never trips the admin-only name guard trigger.
+export type ClientUpdateInput = Omit<ClientInput, 'company_name'> & { company_name?: string }
 
 export interface AccountInput {
   id: string
@@ -206,9 +213,12 @@ export async function createClientAction(input: ClientInput): Promise<ClientActi
   const companyName = input.company_name.trim()
   if (!companyName) return { success: false, error: 'invalid_value' }
 
+  const websiteUrl = normalizeWebsiteUrl(input.website_url)
+  if (websiteUrl === undefined) return { success: false, error: 'invalid_value', field: 'website_url' }
+
   const { data, error } = await supabase.rpc('create_paid_media_client', {
     p_company_name: companyName,
-    p_website_url: input.website_url,
+    p_website_url: websiteUrl,
     p_instagram_url: input.instagram_url,
     p_pm_name: input.pm_name,
     p_operator_name: input.operator_name,
@@ -229,17 +239,21 @@ export async function createClientAction(input: ClientInput): Promise<ClientActi
 // Two RLS updates (clients, then the extension), each with a zero-row check:
 // accepted as non-atomic (design D9) because both are idempotent on retry. A
 // portal client's name is admin-only; the guard trigger raises 42501 on rename.
-export async function updateClientAction(id: string, input: ClientInput): Promise<ClientActionResult> {
+export async function updateClientAction(id: string, input: ClientUpdateInput): Promise<ClientActionResult> {
   const supabase = await createClient()
 
-  const companyName = input.company_name.trim()
-  if (!companyName) return { success: false, error: 'invalid_value' }
+  // Undefined = name unchanged: it is left out of the UPDATE entirely.
+  const companyName = input.company_name?.trim()
+  if (companyName === '') return { success: false, error: 'invalid_value' }
+
+  const websiteUrl = normalizeWebsiteUrl(input.website_url)
+  if (websiteUrl === undefined) return { success: false, error: 'invalid_value', field: 'website_url' }
 
   const { data: client, error: clientError } = await supabase
     .from('clients')
     .update({
-      company_name: companyName,
-      website_url: input.website_url,
+      ...(companyName !== undefined && { company_name: companyName }),
+      website_url: websiteUrl,
       instagram_url: input.instagram_url,
     })
     .eq('id', id)
@@ -247,7 +261,11 @@ export async function updateClientAction(id: string, input: ClientInput): Promis
 
   if (clientError) {
     if (clientError.code === '23505') {
-      return { success: false, error: 'duplicate_client', existingClient: await findClientByName(supabase, companyName) }
+      return {
+        success: false,
+        error: 'duplicate_client',
+        existingClient: companyName ? await findClientByName(supabase, companyName) : undefined,
+      }
     }
     return { success: false, error: mapPostgresError(clientError.code) }
   }
