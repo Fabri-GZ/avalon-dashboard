@@ -8,6 +8,7 @@ import { SheetShell } from '@/components/ui/sheet-shell'
 import { AccountForm } from './AccountForm'
 import { ClientForm, type SavedClient } from './ClientForm'
 import { formatBudget } from '@/lib/paid-media/format'
+import { isHttpUrl } from '@/lib/paid-media/url'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
 import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type ClientGroup, type ClientOption, type ClientStatus, type FundingMethodOption, type ManagementStatus } from '@/lib/paid-media/types'
 
@@ -155,6 +156,10 @@ export function ClientDetailSheet({
     if (panel.mode === 'client-create') {
       setCreated(saved)
       onClientCreated?.(saved.clientId)
+    } else if (!group && created?.clientId === saved.clientId) {
+      // Editing the stand-in itself (no `group` yet, or hidden by a filter):
+      // keep it in sync so the view does not show the pre-edit values.
+      setCreated(saved)
     }
     setPanel({ mode: 'view' })
   }
@@ -222,14 +227,18 @@ export function ClientDetailSheet({
                 {view.websiteUrl && (
                   <div className="truncate">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sitio</p>
-                    <a
-                      href={view.websiteUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary underline underline-offset-2"
-                    >
-                      {view.websiteUrl}
-                    </a>
+                    {isHttpUrl(view.websiteUrl) ? (
+                      <a
+                        href={view.websiteUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary underline underline-offset-2"
+                      >
+                        {view.websiteUrl}
+                      </a>
+                    ) : (
+                      <p className="truncate text-foreground">{view.websiteUrl}</p>
+                    )}
                   </div>
                 )}
                 {view.instagramUrl && (

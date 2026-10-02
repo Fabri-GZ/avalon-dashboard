@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/app/utils/supabase/server'
 import type { Currency, Platform } from '@/lib/paid-media/types'
+import { normalizeWebsiteUrl } from '@/lib/paid-media/url'
 
 // Server Actions + RLS (D3), following `crm-actions.ts` exactly. Never the
 // `src/app/admin/create-client/` pattern (fetch → API route →
@@ -46,6 +47,8 @@ interface ClientActionResult {
   error?: ActionError
   clientId?: string
   existingClient?: ExistingClientInfo
+  // Set with `invalid_value` when one specific input is to blame.
+  field?: 'website_url'
 }
 
 export interface ClientInput {
@@ -210,9 +213,12 @@ export async function createClientAction(input: ClientInput): Promise<ClientActi
   const companyName = input.company_name.trim()
   if (!companyName) return { success: false, error: 'invalid_value' }
 
+  const websiteUrl = normalizeWebsiteUrl(input.website_url)
+  if (websiteUrl === undefined) return { success: false, error: 'invalid_value', field: 'website_url' }
+
   const { data, error } = await supabase.rpc('create_paid_media_client', {
     p_company_name: companyName,
-    p_website_url: input.website_url,
+    p_website_url: websiteUrl,
     p_instagram_url: input.instagram_url,
     p_pm_name: input.pm_name,
     p_operator_name: input.operator_name,
@@ -240,11 +246,14 @@ export async function updateClientAction(id: string, input: ClientUpdateInput): 
   const companyName = input.company_name?.trim()
   if (companyName === '') return { success: false, error: 'invalid_value' }
 
+  const websiteUrl = normalizeWebsiteUrl(input.website_url)
+  if (websiteUrl === undefined) return { success: false, error: 'invalid_value', field: 'website_url' }
+
   const { data: client, error: clientError } = await supabase
     .from('clients')
     .update({
       ...(companyName !== undefined && { company_name: companyName }),
-      website_url: input.website_url,
+      website_url: websiteUrl,
       instagram_url: input.instagram_url,
     })
     .eq('id', id)

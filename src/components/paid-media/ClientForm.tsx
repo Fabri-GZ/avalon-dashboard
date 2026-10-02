@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createClientAction, updateClientAction, type ActionError, type ExistingClientInfo } from '@/app/actions/paid-media-actions'
 import type { ClientGroup, ClientStatus } from '@/lib/paid-media/types'
+import { normalizeWebsiteUrl } from '@/lib/paid-media/url'
 import { createErrorMessage } from './ClientPicker'
 import { NameCombobox } from './NameCombobox'
 import { ToastCard, TOAST_CARD_OPTIONS } from './ToastCard'
@@ -59,7 +60,11 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
   const [operatorName, setOperatorName] = useState(client?.operatorName ?? '')
   const [status, setStatus] = useState(client?.status ?? '')
 
-  const [error, setError] = useState<{ code: ActionError; existing?: ExistingClientInfo } | null>(null)
+  const [error, setError] = useState<{
+    code: ActionError
+    existing?: ExistingClientInfo
+    field?: 'website_url'
+  } | null>(null)
   const [pending, startTransition] = useTransition()
 
   const nameLocked = mode === 'edit' && Boolean(client?.portalEnabled)
@@ -91,7 +96,7 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
 
       const clientId = mode === 'create' ? result.clientId : client!.clientId
       if (!result.success || !clientId) {
-        setError({ code: result.error ?? 'db_error', existing: result.existingClient })
+        setError({ code: result.error ?? 'db_error', existing: result.existingClient, field: result.field })
         return
       }
 
@@ -110,7 +115,8 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
       onSaved({
         clientId,
         clientName: savedName,
-        websiteUrl: fields.website_url,
+        // Mirror the server-side normalization (it already accepted this value).
+        websiteUrl: normalizeWebsiteUrl(fields.website_url) ?? null,
         instagramUrl: fields.instagram_url,
         pmName: fields.pm_name,
         operatorName: fields.operator_name,
@@ -122,7 +128,11 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
   // Name collisions get the rich message (papelera link); everything else is a
   // banner, with the portal-name guard (`unauthorized`) spelled out for edits.
   const nameError = error?.code === 'duplicate_client' ? createErrorMessage(error.code, error.existing) : null
-  const bannerError = !error || nameError
+  const websiteError =
+    error?.code === 'invalid_value' && error.field === 'website_url'
+      ? 'Ingresá una URL válida (http o https), por ejemplo www.ejemplo.com.'
+      : null
+  const bannerError = !error || nameError || websiteError
     ? null
     : error.code === 'unauthorized'
       ? mode === 'edit'
@@ -174,8 +184,10 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
             autoComplete="off"
+            aria-invalid={websiteError ? true : undefined}
             className={INPUT_CLASS}
           />
+          {websiteError && <p className="mt-1 text-[11px] text-destructive">{websiteError}</p>}
         </div>
         <div>
           <label htmlFor="client-instagram" className={LABEL_CLASS}>Instagram</label>
