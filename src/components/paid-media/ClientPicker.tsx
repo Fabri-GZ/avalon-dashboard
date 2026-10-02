@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { LuCheck as Check, LuPlus as Plus } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { createClientAction, type ExistingClientInfo } from '@/app/actions/paid-media-actions'
+import { normalizePersonName } from '@/lib/paid-media/names'
 import type { ClientOption } from '@/lib/paid-media/types'
 import { NameCombobox } from './NameCombobox'
 
@@ -47,7 +48,7 @@ export function createErrorMessage(error: string | undefined, existing: Existing
     if (existing?.deletedAt) {
       return (
         <>
-          Ya existe «{existing.name}» pero está en la papelera. Restauralo desde la{' '}
+          Ya existe {`"${existing.name}"`} pero está en la papelera. Restauralo desde la{' '}
           <Link href="/dashboard/paid-media/clientes/papelera" className="font-semibold underline underline-offset-2">
             papelera
           </Link>{' '}
@@ -55,7 +56,7 @@ export function createErrorMessage(error: string | undefined, existing: Existing
         </>
       )
     }
-    if (existing) return `Ya existe un cliente llamado «${existing.name}». Elegilo de la lista.`
+    if (existing) return `Ya existe un cliente llamado "${existing.name}". Elegilo de la lista.`
     return 'Ya existe un cliente con ese nombre y no podés verlo. Pedile a un admin que lo revise.'
   }
   if (error === 'unauthorized') return 'No tenés permisos para crear clientes.'
@@ -192,8 +193,8 @@ export function ClientPicker({ clients, value, onChange, onUncommittedChange, pm
         company_name: name,
         website_url: null,
         instagram_url: null,
-        pm_name: collapse(createPm) || null,
-        operator_name: collapse(createOperator) || null,
+        pm_name: normalizePersonName(createPm),
+        operator_name: normalizePersonName(createOperator),
         status: null,
       })
 
@@ -278,7 +279,7 @@ export function ClientPicker({ clients, value, onChange, onUncommittedChange, pm
               }`}
             >
               <Plus className="h-3.5 w-3.5 shrink-0" />
-              Crear cliente {`«${typed}»`}
+              Crear cliente {`"${typed}"`}
             </button>
           )}
         </div>

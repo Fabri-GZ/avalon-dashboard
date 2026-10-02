@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createClientAction, updateClientAction, type ActionError, type ExistingClientInfo } from '@/app/actions/paid-media-actions'
 import type { ClientGroup, ClientStatus } from '@/lib/paid-media/types'
+import { normalizePersonName } from '@/lib/paid-media/names'
 import { normalizeWebsiteUrl } from '@/lib/paid-media/url'
 import { createErrorMessage } from './ClientPicker'
 import { NameCombobox } from './NameCombobox'
@@ -118,8 +119,8 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
         // Mirror the server-side normalization (it already accepted this value).
         websiteUrl: normalizeWebsiteUrl(fields.website_url) ?? null,
         instagramUrl: fields.instagram_url,
-        pmName: fields.pm_name,
-        operatorName: fields.operator_name,
+        pmName: normalizePersonName(fields.pm_name),
+        operatorName: normalizePersonName(fields.operator_name),
         status: fields.status,
       })
     })

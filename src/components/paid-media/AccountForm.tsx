@@ -18,7 +18,7 @@ import {
   type ActionError,
   type ExistingAccountInfo,
 } from '@/app/actions/paid-media-actions'
-import { parseBudgetInput } from '@/lib/paid-media/format'
+import { formatThousandsInput, parseBudgetInput } from '@/lib/paid-media/format'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
 import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type ClientOption, type Currency, type FundingMethodOption, type ManagementStatus, type Platform } from '@/lib/paid-media/types'
 
@@ -94,7 +94,7 @@ interface Props {
 // initial value is whichever of the two the account already has.
 function initialBudgetInput(account: AdAccountRow | undefined): string {
   if (!account) return ''
-  if (account.monthly_budget !== null) return account.monthly_budget.toString()
+  if (account.monthly_budget !== null) return formatThousandsInput(account.monthly_budget.toString())
   return account.monthly_budget_note ?? ''
 }
 
@@ -485,10 +485,10 @@ export function AccountForm({
           </label>
           <input
             value={budgetInput}
-            onChange={(e) => setBudgetInput(e.target.value)}
+            onChange={(e) => setBudgetInput(formatThousandsInput(e.target.value))}
             // El placeholder largo ya no entra a media fila; el detalle de que
             // acepta texto libre sigue estando en el `title`.
-            placeholder="1200 o texto libre"
+            placeholder="1.200 o texto libre"
             title="Un número escribe el presupuesto; cualquier otro texto se guarda como nota (ej. Sin definir)."
             className={INPUT_CLASS}
           />

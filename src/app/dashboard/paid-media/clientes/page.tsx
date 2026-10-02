@@ -2,6 +2,7 @@ import { createClient } from '@/app/utils/supabase/server'
 import { ClientesView } from '@/components/paid-media/ClientesView'
 import { filterClientGroups, filterUnassignedAccounts, parseFilters } from '@/lib/paid-media/filters'
 import { groupByClient } from '@/lib/paid-media/group'
+import { distinctPersonNames, normalizePersonName } from '@/lib/paid-media/names'
 import { fetchAccountsWithReports } from '@/lib/paid-media/reports-presence'
 import type {
   AdAccountRow,
@@ -23,12 +24,6 @@ const PLATFORM_VALUES: Platform[] = ['meta', 'google', 'tiktok', 'linkedin']
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}
-
-/** Distinct, non-empty, alphabetically ordered — for the option lists. */
-function distinctSorted(values: (string | null)[]): string[] {
-  const distinct = new Set(values.map((v) => v?.trim()).filter((v): v is string => Boolean(v)))
-  return Array.from(distinct).sort((a, b) => a.localeCompare(b))
 }
 
 export default async function PaidMediaClientesPage({ searchParams }: PageProps) {
@@ -99,8 +94,8 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
         website_url: embed.website_url,
         instagram_url: embed.instagram_url,
         portal_enabled: embed.portal_enabled,
-        pm_name: row.pm_name as string | null,
-        operator_name: row.operator_name as string | null,
+        pm_name: normalizePersonName(row.pm_name as string | null),
+        operator_name: normalizePersonName(row.operator_name as string | null),
         status: row.status as string | null,
       },
     ]
@@ -120,8 +115,11 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
       statuses={statuses}
       clientStatuses={clientStatuses}
       fundingMethods={(fundingMethodsRes.data ?? []) as FundingMethodOption[]}
-      operators={distinctSorted(clientRows.map((c) => c.operator_name))}
-      pmNames={distinctSorted(clientRows.map((c) => c.pm_name))}
+      // Union with the legacy per-account columns: client rows only exist after
+      // the 003 backfill, and until `ad_accounts.pm_name`/`operator_name` are
+      // dropped they still hold the names the team already uses.
+      operators={distinctPersonNames([...clientRows, ...accounts].map((r) => r.operator_name))}
+      pmNames={distinctPersonNames([...clientRows, ...accounts].map((r) => r.pm_name))}
       clientOptions={clientRows
         .map((c) => ({ id: c.id, name: c.company_name }))
         .sort((a, b) => a.name.localeCompare(b.name))}

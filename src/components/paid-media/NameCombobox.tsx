@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { normalizePersonName } from '@/lib/paid-media/names'
 import { LuCheck as Check, LuPlus as Plus, LuTriangleAlert as AlertTriangle } from 'react-icons/lu'
 
 // Combobox de texto libre con autocompletado sobre los valores que la página
@@ -26,7 +27,7 @@ const norm = (s: string) =>
 // La única normalización que se aplica al guardar: trim + colapso de espacios
 // internos. Nunca case-folding ni quitar acentos — eso queda visible para la
 // persona a través del aviso de casi-coincidencia.
-const normalizeForSave = (s: string) => s.trim().replace(/\s+/g, ' ')
+const normalizeForSave = (s: string) => normalizePersonName(s) ?? ''
 
 interface Props {
   value: string
