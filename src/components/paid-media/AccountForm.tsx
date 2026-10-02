@@ -35,6 +35,17 @@ const INPUT_CLASS =
 // Mismo remedio que ya usa `ReportSheet` para sus Select/DropdownMenu.
 const SELECT_CONTENT_CLASS = 'z-[70] border-accent'
 
+// Meta ad account ids are `act_` + digits. The `act_` part is a fixed addon in
+// the UI, so the field state holds digits only. A pasted `act_123` or Meta URL
+// (`...?act=123&business_id=999`) keeps just the account digits: the `act`
+// marker wins over any other number in the URL.
+const META_PREFIX = 'act_'
+
+function extractMetaDigits(raw: string): string {
+  const marked = /act[=_](\d+)/i.exec(raw)
+  return marked ? marked[1] : raw.replace(/\D/g, '')
+}
+
 // Coarse ActionError → field-level message. `management_status`/`id` map to
 // the field whose constraint is realistically the cause (FK / PK); the rest
 // stay a top-level banner since the DB error code alone cannot pin down a
@@ -48,6 +59,12 @@ const ERROR_MESSAGES: Record<ActionError, { field?: 'id' | 'management_status'; 
   },
   not_found: { message: 'La cuenta ya no existe o fue movida a la papelera.' },
   client_trashed: { message: 'El cliente de esta cuenta está en la papelera. Restaurá el cliente primero.' },
+  // `duplicate_client` is only raised by the client actions; mapped for exhaustiveness.
+  duplicate_client: { message: 'Ya existe un cliente con ese nombre.' },
+  invalid_account_id: {
+    field: 'id',
+    message: 'El ID de una cuenta de Meta son solo números (se guarda con el prefijo act_).',
+  },
   db_error: { message: 'Ocurrió un error inesperado. Probá de nuevo.' },
 }
 
@@ -95,7 +112,9 @@ export function AccountForm({
   onCancel,
   onDeleted,
 }: Props) {
-  const [id, setId] = useState(account?.id ?? '')
+  // Meta: digits only (the `act_` addon is rendered, not typed). Other
+  // platforms: free text. Edit mode: the account's own id, never recomposed.
+  const [id, setId] = useState(account?.platform === 'meta' ? extractMetaDigits(account.id) : (account?.id ?? ''))
   const [name, setName] = useState(account?.name ?? '')
   const [platform, setPlatform] = useState<Platform>(account?.platform ?? 'meta')
   const [clientName, setClientName] = useState(account?.client_name ?? defaultClientName ?? '')
@@ -116,6 +135,10 @@ export function AccountForm({
   const [pending, startTransition] = useTransition()
   const router = useRouter()
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
+
+  const isMetaId = (mode === 'edit' && account ? account.platform : platform) === 'meta'
+  // What is saved: edit never changes the PK; create composes the prefix.
+  const accountId = mode === 'edit' && account ? account.id : isMetaId ? `${META_PREFIX}${id}` : id.trim()
 
   const errorInfo = error ? ERROR_MESSAGES[error] : null
   const idError = errorInfo?.field === 'id' ? errorInfo.message : null
@@ -173,7 +196,7 @@ export function AccountForm({
     const { monthly_budget, monthly_budget_note } = parseBudgetInput(budgetInput)
 
     const input = {
-      id: id.trim(),
+      id: accountId,
       name: name.trim(),
       platform,
       client_name: clientName.trim() || null,
@@ -255,8 +278,8 @@ export function AccountForm({
           title="Esa cuenta ya existe"
           body={
             inTrash
-              ? `${id.trim()} pertenece a ${existing.name}, que está en la papelera. Si es la cuenta que querías cargar, podés restaurarla desde ahí.`
-              : `${id.trim()} ya está cargada como ${existing.name}.`
+              ? `${accountId} pertenece a ${existing.name}, que está en la papelera. Si es la cuenta que querías cargar, podés restaurarla desde ahí.`
+              : `${accountId} ya está cargada como ${existing.name}.`
           }
           actionLabel={inTrash ? 'Ir a la papelera' : undefined}
           onAction={
@@ -282,27 +305,19 @@ export function AccountForm({
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            ID de cuenta <span aria-hidden="true" className="text-destructive text-xs font-bold">*</span>
-          </label>
-          <input
-            data-autofocus={mode === 'create' ? true : undefined}
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-            disabled={mode === 'edit'}
-            required
-            placeholder="act_123456789"
-            className={INPUT_CLASS}
-          />
-          {idError && <p className="mt-1 text-[11px] text-destructive">{idError}</p>}
-        </div>
-
+        {/* Plataforma va antes del ID: el prefijo `act_` depende de ella. */}
         <div>
           <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Plataforma
           </label>
-          <Select value={platform} onValueChange={(v) => setPlatform(v as Platform)}>
+          <Select
+            value={platform}
+            onValueChange={(v) => {
+              setPlatform(v as Platform)
+              // Entering Meta: keep only the digits of whatever was typed.
+              if (v === 'meta') setId(extractMetaDigits(id))
+            }}
+          >
             <SelectTrigger data-autofocus={mode === 'edit' ? true : undefined} className="h-10 w-full">
               <SelectValue />
             </SelectTrigger>
@@ -314,6 +329,50 @@ export function AccountForm({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="account-id"
+            className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+          >
+            ID de cuenta <span aria-hidden="true" className="text-destructive text-xs font-bold">*</span>
+          </label>
+          {/* Input-group: el addon fijo y el input comparten borde, altura y
+              anillo de foco (`focus-within`), así que se lee como un solo control. */}
+          <div
+            className={
+              isMetaId
+                ? 'flex h-10 w-full items-stretch overflow-hidden rounded-lg border border-border bg-background transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 has-disabled:opacity-50'
+                : undefined
+            }
+          >
+            {isMetaId && (
+              <span
+                aria-hidden="true"
+                className="flex select-none items-center border-r border-border bg-muted/50 px-3 text-sm text-muted-foreground"
+              >
+                {META_PREFIX}
+              </span>
+            )}
+            <input
+              id="account-id"
+              data-autofocus={mode === 'create' ? true : undefined}
+              value={id}
+              onChange={(e) => setId(isMetaId ? extractMetaDigits(e.target.value) : e.target.value)}
+              disabled={mode === 'edit'}
+              required
+              inputMode={isMetaId ? 'numeric' : undefined}
+              autoComplete="off"
+              placeholder={isMetaId ? '123456789' : 'ID de la cuenta'}
+              className={
+                isMetaId
+                  ? 'min-w-0 flex-1 bg-transparent px-3 text-sm outline-none disabled:cursor-not-allowed'
+                  : INPUT_CLASS
+              }
+            />
+          </div>
+          {idError && <p className="mt-1 text-[11px] text-destructive">{idError}</p>}
         </div>
       </div>
 
