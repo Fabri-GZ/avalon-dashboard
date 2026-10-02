@@ -15,7 +15,9 @@ export type ActionError =
   | 'invalid_status' // 23503
   | 'invalid_value' // 23514
   | 'not_found' // zero-row write (RLS denial or stale state, no Postgres error) or P0002 from an RPC
-  | 'client_trashed' // restoring an account whose client is in the papelera
+  | 'client_trashed' // linking/restoring an account whose client is in the papelera
+  | 'duplicate_client' // 23505 on create/update client (global unique name, trashed clients keep theirs)
+  | 'invalid_account_id' // Meta ids must be `act_` + digits (defense in depth with the DB CHECK)
   | 'db_error'
 
 export interface ExistingAccountInfo {
@@ -24,10 +26,35 @@ export interface ExistingAccountInfo {
   deletedAt: string | null
 }
 
+// Result of the name lookup after a `duplicate_client`. `deletedAt` set means
+// the colliding client is in the papelera. The lookup is RLS-scoped: a portal
+// client the caller cannot see yields no info (the UI falls back to a generic
+// "already exists, ask an admin").
+export interface ExistingClientInfo {
+  name: string
+  deletedAt: string | null
+}
+
 interface ActionResult {
   success: boolean
   error?: ActionError
   existingAccount?: ExistingAccountInfo
+}
+
+interface ClientActionResult {
+  success: boolean
+  error?: ActionError
+  clientId?: string
+  existingClient?: ExistingClientInfo
+}
+
+export interface ClientInput {
+  company_name: string
+  website_url: string | null
+  instagram_url: string | null
+  pm_name: string | null
+  operator_name: string | null
+  status: string | null
 }
 
 export interface AccountInput {
@@ -64,6 +91,7 @@ function mapPostgresError(code: string | undefined): ActionError {
     case '23503':
       return 'invalid_status'
     case '23514':
+    case '22023': // create_paid_media_client: blank name
       return 'invalid_value'
     case 'P0002':
       return 'not_found'
@@ -72,10 +100,58 @@ function mapPostgresError(code: string | undefined): ActionError {
   }
 }
 
+type Supabase = Awaited<ReturnType<typeof createClient>>
+
+// Meta ids are `act_` + digits (DB CHECK `ad_accounts_meta_id_format`). The form
+// already composes it, but the action re-validates so a hand-built call cannot
+// reach the CHECK. Accepts a bare digit string or `act_<digits>`; anything else
+// is rejected, never "fixed". Other platforms keep the trimmed text.
+function normalizeAccountId(platform: Platform, raw: string): string | null {
+  const id = raw.trim()
+  if (platform !== 'meta') return id || null
+  const match = /^(?:act_)?([0-9]+)$/i.exec(id)
+  return match ? `act_${match[1]}` : null
+}
+
+// Case-insensitive exact-name lookup of a client plus its papelera state. The
+// DB index also folds accents (`pm_unaccent`), which `ilike` cannot, so an
+// accent-only collision returns nothing.
+async function lookupClientByName(supabase: Supabase, name: string): Promise<ExistingClientInfo | undefined> {
+  const { data } = await supabase
+    .from('clients')
+    .select('company_name, client_paid_media(deleted_at)')
+    // Escape the LIKE wildcards so the name is matched literally.
+    .ilike('company_name', name.replace(/[\\%_]/g, '\\$&'))
+    .limit(1)
+
+  const row = data?.[0]
+  if (!row) return undefined
+  const ext = (Array.isArray(row.client_paid_media) ? row.client_paid_media[0] : row.client_paid_media) as
+    | { deleted_at: string | null }
+    | undefined
+  return { name: row.company_name, deletedAt: ext?.deleted_at ?? null }
+}
+
+// TRANSITIONAL (S3a-1): the account form still sends `client_name`, so the
+// trashed check resolves the client by name. S3a-2 switches AccountInput to
+// `client_id` and this becomes a lookup by id.
+async function isClientNameTrashed(supabase: Supabase, clientName: string | null): Promise<boolean> {
+  const name = clientName?.trim()
+  if (!name) return false
+  const info = await lookupClientByName(supabase, name)
+  return Boolean(info?.deletedAt)
+}
+
 export async function createAccountAction(input: AccountInput): Promise<ActionResult> {
   const supabase = await createClient()
 
-  const { error } = await supabase.from('ad_accounts').insert(input)
+  const id = normalizeAccountId(input.platform, input.id)
+  if (!id) return { success: false, error: 'invalid_account_id' }
+  if (await isClientNameTrashed(supabase, input.client_name)) {
+    return { success: false, error: 'client_trashed' }
+  }
+
+  const { error } = await supabase.from('ad_accounts').insert({ ...input, id })
 
   if (error) {
     const mappedError = mapPostgresError(error.code)
@@ -86,7 +162,7 @@ export async function createAccountAction(input: AccountInput): Promise<ActionRe
       const { data: existing } = await supabase
         .from('ad_accounts')
         .select('name, client_name, deleted_at')
-        .eq('id', input.id)
+        .eq('id', id)
         .maybeSingle()
 
       if (existing) {
@@ -115,12 +191,86 @@ export async function updateAccountAction(
 ): Promise<ActionResult> {
   const supabase = await createClient()
 
+  if (await isClientNameTrashed(supabase, input.client_name)) {
+    return { success: false, error: 'client_trashed' }
+  }
+
   const { error } = await supabase.from('ad_accounts').update(input).eq('id', id)
 
   if (error) return { success: false, error: mapPostgresError(error.code) }
 
   revalidatePath('/dashboard/paid-media/clientes')
   return { success: true }
+}
+
+// Creates `clients` (portal_enabled=false) + `client_paid_media` in one
+// transaction through the SECURITY INVOKER RPC, so RLS still decides who may.
+// The RPC trims and turns blanks into null; the blank-name check here only
+// saves a round trip.
+export async function createClientAction(input: ClientInput): Promise<ClientActionResult> {
+  const supabase = await createClient()
+
+  const companyName = input.company_name.trim()
+  if (!companyName) return { success: false, error: 'invalid_value' }
+
+  const { data, error } = await supabase.rpc('create_paid_media_client', {
+    p_company_name: companyName,
+    p_website_url: input.website_url,
+    p_instagram_url: input.instagram_url,
+    p_pm_name: input.pm_name,
+    p_operator_name: input.operator_name,
+    p_status: input.status,
+  })
+
+  if (error) {
+    if (error.code === '23505') {
+      return { success: false, error: 'duplicate_client', existingClient: await lookupClientByName(supabase, companyName) }
+    }
+    return { success: false, error: mapPostgresError(error.code) }
+  }
+
+  revalidatePath('/dashboard/paid-media/clientes')
+  return { success: true, clientId: data as string }
+}
+
+// Two RLS updates (clients, then the extension), each with a zero-row check:
+// accepted as non-atomic (design D9) because both are idempotent on retry. A
+// portal client's name is admin-only; the guard trigger raises 42501 on rename.
+export async function updateClientAction(id: string, input: ClientInput): Promise<ClientActionResult> {
+  const supabase = await createClient()
+
+  const companyName = input.company_name.trim()
+  if (!companyName) return { success: false, error: 'invalid_value' }
+
+  const { data: client, error: clientError } = await supabase
+    .from('clients')
+    .update({
+      company_name: companyName,
+      website_url: input.website_url,
+      instagram_url: input.instagram_url,
+    })
+    .eq('id', id)
+    .select('id')
+
+  if (clientError) {
+    if (clientError.code === '23505') {
+      return { success: false, error: 'duplicate_client', existingClient: await lookupClientByName(supabase, companyName) }
+    }
+    return { success: false, error: mapPostgresError(clientError.code) }
+  }
+  if (!client || client.length === 0) return { success: false, error: 'not_found' }
+
+  const { data: ext, error: extError } = await supabase
+    .from('client_paid_media')
+    .update({ pm_name: input.pm_name, operator_name: input.operator_name, status: input.status })
+    .eq('client_id', id)
+    .select('client_id')
+
+  if (extError) return { success: false, error: mapPostgresError(extError.code) }
+  if (!ext || ext.length === 0) return { success: false, error: 'not_found' }
+
+  revalidatePath('/dashboard/paid-media/clientes')
+  return { success: true, clientId: id }
 }
 
 // Soft delete only — no code path ever issues DELETE FROM ad_accounts. The
