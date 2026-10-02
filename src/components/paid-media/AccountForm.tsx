@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-toastify'
 import { LuCircleAlert as CircleAlert, LuCircleCheck as CircleCheck, LuTrash2 as Trash2 } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { ClientNameCombobox } from './ClientNameCombobox'
-import { NameCombobox } from './NameCombobox'
+import { ClientPicker } from './ClientPicker'
 import { ConfirmDeleteModal } from './ConfirmDeleteModal'
 import { ToastCard, TOAST_CARD_OPTIONS } from './ToastCard'
 import {
@@ -21,7 +20,7 @@ import {
 } from '@/app/actions/paid-media-actions'
 import { parseBudgetInput } from '@/lib/paid-media/format'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
-import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type Currency, type FundingMethodOption, type ManagementStatus, type Platform } from '@/lib/paid-media/types'
+import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type ClientOption, type Currency, type FundingMethodOption, type ManagementStatus, type Platform } from '@/lib/paid-media/types'
 
 const UNSET = '__sin_definir__'
 
@@ -46,11 +45,11 @@ function extractMetaDigits(raw: string): string {
   return marked ? marked[1] : raw.replace(/\D/g, '')
 }
 
-// Coarse ActionError → field-level message. `management_status`/`id` map to
-// the field whose constraint is realistically the cause (FK / PK); the rest
-// stay a top-level banner since the DB error code alone cannot pin down a
-// single free-text field.
-const ERROR_MESSAGES: Record<ActionError, { field?: 'id' | 'management_status'; message: string }> = {
+// Coarse ActionError → field-level message. `management_status`/`id`/`client`
+// map to the field whose constraint is realistically the cause (FK / PK / link);
+// the rest stay a top-level banner since the DB error code alone cannot pin
+// down a single free-text field.
+const ERROR_MESSAGES: Record<ActionError, { field?: 'id' | 'management_status' | 'client'; message: string }> = {
   unauthorized: { message: 'No tenés permisos para hacer esta acción.' },
   duplicate_account: { field: 'id', message: 'Ya existe una cuenta con este ID.' },
   invalid_status: { field: 'management_status', message: 'El estado seleccionado no es válido.' },
@@ -58,9 +57,8 @@ const ERROR_MESSAGES: Record<ActionError, { field?: 'id' | 'management_status'; 
     message: 'Alguno de los valores ingresados no es válido (revisá plataforma, financiamiento o presupuesto).',
   },
   not_found: { message: 'La cuenta ya no existe o fue movida a la papelera.' },
-  client_trashed: { message: 'El cliente de esta cuenta está en la papelera. Restaurá el cliente primero.' },
-  // `duplicate_client` is only raised by the client actions; mapped for exhaustiveness.
-  duplicate_client: { message: 'Ya existe un cliente con ese nombre.' },
+  client_trashed: { field: 'client', message: 'Ese cliente está en la papelera. Restauralo primero o elegí otro.' },
+  duplicate_client: { field: 'client', message: 'Ya existe un cliente con ese nombre.' },
   invalid_account_id: {
     field: 'id',
     message: 'El ID de una cuenta de Meta son solo números (se guarda con el prefijo act_).',
@@ -73,11 +71,13 @@ interface Props {
   account?: AdAccountRow
   statuses: ManagementStatus[]
   fundingMethods: FundingMethodOption[]
-  existingClientNames: string[]
+  /** Active clients to pick from (full set, not the filtered list). */
+  clients: ClientOption[]
   /** Valores distintos del dataset completo (sin filtrar), para autocompletar. */
   pmNames: string[]
   operators: string[]
-  defaultClientName?: string
+  /** Create mode: preselect this client (opened from a client's detail). */
+  defaultClientId?: string | null
   /**
    * Optional, removable layer — see `reports-presence.ts`. Only consulted in
    * edit mode, to select the confirm modal's copy branch.
@@ -103,10 +103,10 @@ export function AccountForm({
   account,
   statuses,
   fundingMethods,
-  existingClientNames,
+  clients,
   pmNames,
   operators,
-  defaultClientName,
+  defaultClientId,
   accountsWithReports,
   onSaved,
   onCancel,
@@ -117,16 +117,14 @@ export function AccountForm({
   const [id, setId] = useState(account?.platform === 'meta' ? extractMetaDigits(account.id) : (account?.id ?? ''))
   const [name, setName] = useState(account?.name ?? '')
   const [platform, setPlatform] = useState<Platform>(account?.platform ?? 'meta')
-  const [clientName, setClientName] = useState(account?.client_name ?? defaultClientName ?? '')
+  const [clientId, setClientId] = useState<string | null>(account ? account.client_id : (defaultClientId ?? null))
+  const [clientUncommitted, setClientUncommitted] = useState(false)
+  const [clientBlocked, setClientBlocked] = useState(false)
   const [managementStatus, setManagementStatus] = useState(account?.management_status ?? '')
   const [fundingMethod, setFundingMethod] = useState(account?.funding_method ?? '')
-  const [pmName, setPmName] = useState(account?.pm_name ?? '')
-  const [operatorName, setOperatorName] = useState(account?.operator_name ?? '')
   const [geo, setGeo] = useState(account?.geo ?? '')
   const [strategyUrl, setStrategyUrl] = useState(account?.strategy_url ?? '')
   const [notes, setNotes] = useState(account?.notes ?? '')
-  const [websiteUrl, setWebsiteUrl] = useState(account?.website_url ?? '')
-  const [instagramUrl, setInstagramUrl] = useState(account?.instagram_url ?? '')
   const [budgetInput, setBudgetInput] = useState(initialBudgetInput(account))
   const [currency, setCurrency] = useState<Currency>(account?.currency ?? 'ARS')
   const [primaryActionType, setPrimaryActionType] = useState(account?.primary_action_type ?? '')
@@ -136,12 +134,23 @@ export function AccountForm({
   const router = useRouter()
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
 
+  // Stable identity: the picker calls this from an effect keyed on it.
+  const handleUncommittedChange = useCallback((uncommitted: boolean) => {
+    setClientUncommitted(uncommitted)
+    if (!uncommitted) setClientBlocked(false)
+  }, [])
+
   const isMetaId = (mode === 'edit' && account ? account.platform : platform) === 'meta'
   // What is saved: edit never changes the PK; create composes the prefix.
   const accountId = mode === 'edit' && account ? account.id : isMetaId ? `${META_PREFIX}${id}` : id.trim()
 
   const errorInfo = error ? ERROR_MESSAGES[error] : null
   const idError = errorInfo?.field === 'id' ? errorInfo.message : null
+  const clientError = clientBlocked
+    ? 'Elegí un cliente de la lista o creá uno nuevo: el texto escrito todavía no es un cliente.'
+    : errorInfo?.field === 'client'
+      ? errorInfo.message
+      : null
   const statusError = errorInfo?.field === 'management_status' ? errorInfo.message : null
   const bannerError = errorInfo && !errorInfo.field ? errorInfo.message : null
 
@@ -191,6 +200,11 @@ export function AccountForm({
   function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!id.trim() || !name.trim()) return
+    // Typed-but-uncommitted client text would otherwise be saved as "no client".
+    if (clientUncommitted) {
+      setClientBlocked(true)
+      return
+    }
     setError(null)
 
     const { monthly_budget, monthly_budget_note } = parseBudgetInput(budgetInput)
@@ -199,16 +213,12 @@ export function AccountForm({
       id: accountId,
       name: name.trim(),
       platform,
-      client_name: clientName.trim() || null,
+      client_id: clientId,
       management_status: managementStatus || null,
       funding_method: fundingMethod || null,
-      pm_name: pmName.trim() || null,
-      operator_name: operatorName.trim() || null,
       geo: geo.trim() || null,
       strategy_url: strategyUrl.trim() || null,
       notes: notes.trim() || null,
-      website_url: websiteUrl.trim() || null,
-      instagram_url: instagramUrl.trim() || null,
       monthly_budget,
       monthly_budget_note,
       currency,
@@ -387,7 +397,15 @@ export function AccountForm({
         <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Cliente
         </label>
-        <ClientNameCombobox value={clientName} onChange={setClientName} existingNames={existingClientNames} />
+        <ClientPicker
+          clients={clients}
+          value={clientId}
+          onChange={setClientId}
+          onUncommittedChange={handleUncommittedChange}
+          pmNames={pmNames}
+          operators={operators}
+        />
+        {clientError && <p className="mt-1 text-[11px] text-destructive">{clientError}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -434,35 +452,6 @@ export function AccountForm({
               ))}
             </SelectContent>
           </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            PM
-          </label>
-          <NameCombobox
-            value={pmName}
-            onChange={setPmName}
-            options={pmNames}
-            placeholder="Nombre del PM"
-            createLabel="PM"
-            nearMatchQuestion=" es la misma persona?"
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Operador
-          </label>
-          <NameCombobox
-            value={operatorName}
-            onChange={setOperatorName}
-            options={operators}
-            placeholder="Nombre del operador"
-            createLabel="operador"
-            nearMatchQuestion=" es la misma persona?"
-          />
         </div>
       </div>
 
@@ -538,21 +527,6 @@ export function AccountForm({
           URL de estrategia
         </label>
         <input value={strategyUrl} onChange={(e) => setStrategyUrl(e.target.value)} className={INPUT_CLASS} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Sitio web
-          </label>
-          <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className={INPUT_CLASS} />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Instagram
-          </label>
-          <input value={instagramUrl} onChange={(e) => setInstagramUrl(e.target.value)} className={INPUT_CLASS} />
-        </div>
       </div>
 
       <div>

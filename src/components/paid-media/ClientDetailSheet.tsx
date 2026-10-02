@@ -8,7 +8,7 @@ import { SheetShell } from '@/components/ui/sheet-shell'
 import { AccountForm } from './AccountForm'
 import { formatBudget } from '@/lib/paid-media/format'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
-import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type ClientGroup, type ClientStatus, type FundingMethodOption, type ManagementStatus } from '@/lib/paid-media/types'
+import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type ClientGroup, type ClientOption, type ClientStatus, type FundingMethodOption, type ManagementStatus } from '@/lib/paid-media/types'
 
 type Panel = { mode: 'view' } | { mode: 'create' } | { mode: 'edit'; account: AdAccountRow }
 
@@ -27,7 +27,8 @@ interface Props {
   /** Client-level states: PM, operator and status belong to the client. */
   clientStatuses: ClientStatus[]
   fundingMethods: FundingMethodOption[]
-  existingClientNames: string[]
+  /** Full active-client set for `ClientPicker` (not narrowed by the list filters). */
+  clients: ClientOption[]
   /** Valores distintos del dataset completo (sin filtrar), para `AccountForm`. */
   pmNames: string[]
   operators: string[]
@@ -39,8 +40,8 @@ interface Props {
   onClose: () => void
   /**
    * "Asignar cliente" (unassigned-accounts table) reuses this sheet in edit
-   * mode instead of view mode — jumping straight to the form that already
-   * writes `client_name` via `updateAccountAction`, no new Server Action.
+   * mode instead of view mode — jumping straight to the form, where the
+   * picker sets `client_id` via `updateAccountAction`, no new Server Action.
    */
   editAccount?: AdAccountRow
 }
@@ -56,7 +57,7 @@ export function ClientDetailSheet({
   statuses,
   clientStatuses,
   fundingMethods,
-  existingClientNames,
+  clients,
   pmNames,
   operators,
   accountsWithReports,
@@ -317,10 +318,10 @@ export function ClientDetailSheet({
               mode="create"
               statuses={statuses}
               fundingMethods={fundingMethods}
-              existingClientNames={existingClientNames}
+              clients={clients}
               pmNames={pmNames}
               operators={operators}
-              defaultClientName={group?.clientName}
+              defaultClientId={group?.clientId}
               onSaved={() => handleSaved(requestClose)}
               onCancel={() => (group ? setPanel({ mode: 'view' }) : requestClose())}
             />
@@ -332,7 +333,7 @@ export function ClientDetailSheet({
               account={panel.account}
               statuses={statuses}
               fundingMethods={fundingMethods}
-              existingClientNames={existingClientNames}
+              clients={clients}
               pmNames={pmNames}
               operators={operators}
               accountsWithReports={accountsWithReports}

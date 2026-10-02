@@ -21,6 +21,7 @@ import {
   PLATFORM_LABEL,
   type AdAccountRow,
   type ClientGroup,
+  type ClientOption,
   type ClientStatus,
   type FundingMethodOption,
   type ManagementStatus,
@@ -48,6 +49,8 @@ interface Props {
    */
   operators: string[]
   pmNames: string[]
+  /** Every active client (unfiltered), for the account form's `ClientPicker`. */
+  clientOptions: ClientOption[]
   /** The filters `page.tsx` already applied server-side. */
   filters: ClientesFilters
   /** Live count of deleted accounts, for the entry-point badge. */
@@ -72,6 +75,7 @@ export function ClientesView({
   fundingMethods,
   operators,
   pmNames,
+  clientOptions,
   filters,
   trashCount,
   accountsWithReports,
@@ -90,8 +94,6 @@ export function ClientesView({
   useEffect(() => {
     setDraft(filters)
   }, [filters])
-
-  const existingClientNames = useMemo(() => groups.map((g) => g.clientName), [groups])
 
   const statusLabel = useMemo(() => {
     const map = new Map(statuses.map((s) => [s.key, s.label]))
@@ -272,7 +274,7 @@ export function ClientesView({
           statuses={statuses}
           clientStatuses={clientStatuses}
           fundingMethods={fundingMethods}
-          existingClientNames={existingClientNames}
+          clients={clientOptions}
           pmNames={pmNames}
           operators={operators}
           accountsWithReports={accountsWithReports}
@@ -288,7 +290,7 @@ export function ClientesView({
           statuses={statuses}
           clientStatuses={clientStatuses}
           fundingMethods={fundingMethods}
-          existingClientNames={existingClientNames}
+          clients={clientOptions}
           pmNames={pmNames}
           operators={operators}
           accountsWithReports={accountsWithReports}

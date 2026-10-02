@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { LuCheck as Check, LuPlus as Plus, LuTriangleAlert as AlertTriangle } from 'react-icons/lu'
 
 // Combobox de texto libre con autocompletado sobre los valores que la página
-// ya cargó — sin query extra. Generalizado desde `ClientNameCombobox` (D10)
+// ya cargó — sin query extra. Nacido como `ClientNameCombobox` (D10, ya eliminado)
 // para que PM y Operador usen exactamente la misma interacción que Cliente:
 // escribir "G" ofrece "Gus", y un valor que no está en la lista se puede
 // crear igual, porque van a aparecer PMs/operadores nuevos.

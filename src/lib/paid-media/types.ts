@@ -132,6 +132,12 @@ export interface PaidMediaClientRow {
   status: string | null // key into `paid_media_client_status`
 }
 
+// Minimal client shape for `ClientPicker`: the picker commits ids, never names.
+export interface ClientOption {
+  id: string
+  name: string
+}
+
 // One row per client in the Clientes list. Clients drive the groups, so a
 // client with zero accounts still appears (see `src/lib/paid-media/group.ts`).
 export interface ClientGroup {
