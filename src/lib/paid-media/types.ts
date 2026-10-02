@@ -130,6 +130,8 @@ export interface PaidMediaClientRow {
   pm_name: string | null
   operator_name: string | null
   status: string | null // key into `paid_media_client_status`
+  // Portal clients (Grupo Norte, Viviera) keep an admin-only name (DB guard trigger).
+  portal_enabled: boolean
 }
 
 // Minimal client shape for `ClientPicker`: the picker commits ids, never names.
@@ -143,6 +145,7 @@ export interface ClientOption {
 export interface ClientGroup {
   clientId: string
   clientName: string
+  portalEnabled: boolean
   status: string | null
   websiteUrl: string | null
   instagramUrl: string | null

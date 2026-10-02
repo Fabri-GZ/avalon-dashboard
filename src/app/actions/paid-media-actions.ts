@@ -57,6 +57,10 @@ export interface ClientInput {
   status: string | null
 }
 
+// `company_name` is optional on update: omit it (unchanged name) so a web/IG edit
+// on a portal client never trips the admin-only name guard trigger.
+export type ClientUpdateInput = Omit<ClientInput, 'company_name'> & { company_name?: string }
+
 export interface AccountInput {
   id: string
   name: string
@@ -229,16 +233,17 @@ export async function createClientAction(input: ClientInput): Promise<ClientActi
 // Two RLS updates (clients, then the extension), each with a zero-row check:
 // accepted as non-atomic (design D9) because both are idempotent on retry. A
 // portal client's name is admin-only; the guard trigger raises 42501 on rename.
-export async function updateClientAction(id: string, input: ClientInput): Promise<ClientActionResult> {
+export async function updateClientAction(id: string, input: ClientUpdateInput): Promise<ClientActionResult> {
   const supabase = await createClient()
 
-  const companyName = input.company_name.trim()
-  if (!companyName) return { success: false, error: 'invalid_value' }
+  // Undefined = name unchanged: it is left out of the UPDATE entirely.
+  const companyName = input.company_name?.trim()
+  if (companyName === '') return { success: false, error: 'invalid_value' }
 
   const { data: client, error: clientError } = await supabase
     .from('clients')
     .update({
-      company_name: companyName,
+      ...(companyName !== undefined && { company_name: companyName }),
       website_url: input.website_url,
       instagram_url: input.instagram_url,
     })
@@ -247,7 +252,11 @@ export async function updateClientAction(id: string, input: ClientInput): Promis
 
   if (clientError) {
     if (clientError.code === '23505') {
-      return { success: false, error: 'duplicate_client', existingClient: await findClientByName(supabase, companyName) }
+      return {
+        success: false,
+        error: 'duplicate_client',
+        existingClient: companyName ? await findClientByName(supabase, companyName) : undefined,
+      }
     }
     return { success: false, error: mapPostgresError(clientError.code) }
   }

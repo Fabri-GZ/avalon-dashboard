@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, useReducedMotion, type Variants } from 'framer-motion'
-import { LuTrash2 as Trash2, LuUserPlus as UserPlus } from 'react-icons/lu'
+import { LuPlus as Plus, LuTrash2 as Trash2, LuUserPlus as UserPlus } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ClientesTopbar } from './ClientesTopbar'
@@ -29,6 +29,13 @@ import {
 
 const containerVariants = _container as Variants
 const cardVariants = _card as Variants
+
+// The sheet targets a client by id so it follows refreshed props; `fallback` is
+// the row it was opened from, kept for when a filter drops the client from `groups`.
+type DetailTarget =
+  | { kind: 'new-client' }
+  | { kind: 'new-account' }
+  | { kind: 'client'; clientId: string; fallback: ClientGroup | null }
 
 interface Props {
   /** Clients already grouped and filtered by `page.tsx` (zero-account clients included). */
@@ -85,7 +92,10 @@ export function ClientesView({
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
   const [draft, setDraft] = useState<ClientesFilters>(filters)
-  const [detailTarget, setDetailTarget] = useState<ClientGroup | 'new' | null>(null)
+  const [detailTarget, setDetailTarget] = useState<DetailTarget | null>(null)
+  // One sheet instance per open session (not per clientId): creating a client
+  // retargets the sheet without remounting it, so it stays open on the new client.
+  const [session, setSession] = useState(0)
   const [assignTarget, setAssignTarget] = useState<AdAccountRow | null>(null)
 
   // Resync the draft after a real navigation lands (new `filters` prop from
@@ -104,6 +114,16 @@ export function ClientesView({
     const map = new Map(clientStatuses.map((s) => [s.key, s.label]))
     return (key: string | null) => (key ? (map.get(key) ?? key) : null)
   }, [clientStatuses])
+
+  function openDetail(target: DetailTarget) {
+    setSession((n) => n + 1)
+    setDetailTarget(target)
+  }
+
+  const detailGroup =
+    detailTarget?.kind === 'client'
+      ? (groups.find((g) => g.clientId === detailTarget.clientId) ?? detailTarget.fallback)
+      : null
 
   function applyDraft(next: ClientesFilters) {
     setDraft(next)
@@ -142,7 +162,10 @@ export function ClientesView({
                   <span className="ml-1 rounded bg-secondary px-2 text-xs tabular-nums">{trashCount}</span>
                 </Link>
               </Button>
-              <Button size="sm" onClick={() => setDetailTarget('new')}>
+              <Button size="sm" variant="outline" onClick={() => openDetail({ kind: 'new-account' })}>
+                <Plus className="size-3.5" /> Nueva cuenta
+              </Button>
+              <Button size="sm" onClick={() => openDetail({ kind: 'new-client' })}>
                 <UserPlus className="size-3.5" /> Nuevo cliente
               </Button>
             </div>
@@ -167,7 +190,7 @@ export function ClientesView({
                   {groups.map((group) => (
                     <tr
                       key={group.clientId}
-                      onClick={() => setDetailTarget(group)}
+                      onClick={() => openDetail({ kind: 'client', clientId: group.clientId, fallback: group })}
                       className="cursor-pointer border-t border-border/60 transition-colors hover:bg-secondary/50"
                     >
                       <td className="px-5 py-3.5 font-semibold text-foreground">
@@ -257,7 +280,8 @@ export function ClientesView({
         </Card>
       </motion.div>
 
-      {/* `key` por destino, no decorativo: el cierre del sheet es diferido
+      {/* `key` por sesión de apertura (contador), no por cliente: crear un cliente
+          reapunta el sheet sin remontarlo. Tampoco es decorativo: el cierre del sheet es diferido
           (animación → `onAnimationEnd` → `onClose`), así que sin key React
           reutilizaba la MISMA instancia entre destinos y arrastraba su estado
           interno. Abrir un cliente, cerrarlo y tocar "Nuevo cliente" antes de
@@ -269,8 +293,10 @@ export function ClientesView({
           no hacía nada. Con key, cada destino monta una instancia limpia. */}
       {detailTarget && (
         <ClientDetailSheet
-          key={detailTarget === 'new' ? 'nuevo-cliente' : `cliente:${detailTarget.clientId}`}
-          group={detailTarget === 'new' ? null : detailTarget}
+          key={`detalle:${session}`}
+          group={detailGroup}
+          newAccount={detailTarget.kind === 'new-account'}
+          onClientCreated={(clientId) => setDetailTarget({ kind: 'client', clientId, fallback: null })}
           statuses={statuses}
           clientStatuses={clientStatuses}
           fundingMethods={fundingMethods}

@@ -42,7 +42,7 @@ interface Props {
   id?: string
 }
 
-function createErrorMessage(error: string | undefined, existing: ExistingClientInfo | undefined) {
+export function createErrorMessage(error: string | undefined, existing: ExistingClientInfo | undefined) {
   if (error === 'duplicate_client') {
     if (existing?.deletedAt) {
       return (
