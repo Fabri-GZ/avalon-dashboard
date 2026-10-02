@@ -3,9 +3,11 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { toast } from 'react-toastify'
 import {
   LuArchive as Archive,
   LuChevronLeft as ChevronLeft,
+  LuCircleCheck as CircleCheck,
   LuRotateCcw as RotateCcw,
   LuTrash2 as Trash2,
   LuTriangleAlert as TriangleAlert,
@@ -13,10 +15,11 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { restoreAccountAction } from '@/app/actions/paid-media-actions'
+import { restoreAccountAction, restoreClientAction, type ActionError } from '@/app/actions/paid-media-actions'
+import { ToastCard, TOAST_CARD_OPTIONS } from './ToastCard'
 import { PLATFORM_BADGE_CLASS, PLATFORM_LABEL } from '@/lib/paid-media/types'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
-import type { TrashRow } from '@/app/dashboard/paid-media/clientes/papelera/page'
+import type { TrashClientRow, TrashRow } from '@/app/dashboard/paid-media/clientes/papelera/page'
 
 // Ports the mockup at `src/app/mockups/papelera/page.tsx` into production
 // components. The mockup route stays untouched as a design sandbox — this
@@ -34,6 +37,8 @@ const ROW_ACTION_CLASS = 'h-8 w-34 justify-center [&:hover_svg]:rotate-180 [&_sv
 const CARD_ACTION_CLASS = 'h-11 w-full justify-center [&:hover_svg]:rotate-180 [&_svg]:transition-transform'
 
 interface Props {
+  clients: TrashClientRow[]
+  /** Accounts trashed on their own (not together with their client). */
   rows: TrashRow[]
   /** Optional, removable layer — see `reports-presence.ts`. */
   accountsWithReports?: AccountsWithReports
@@ -90,6 +95,21 @@ function DeletedCell({ row, hasReports }: { row: TrashRow; hasReports: boolean }
       )}
     </div>
   )
+}
+
+function restoreErrorMessage(error: ActionError | undefined, clientName: string | null): string {
+  switch (error) {
+    case 'client_trashed':
+      return clientName
+        ? `Esa cuenta pertenece a ${clientName}, que está en la papelera. Restaurá el cliente primero.`
+        : 'Esa cuenta pertenece a un cliente que está en la papelera. Restaurá el cliente primero.'
+    case 'not_found':
+      return 'Ya no está en la papelera (puede que otra persona lo haya restaurado). Se actualizó la lista.'
+    case 'unauthorized':
+      return 'No tenés permisos para hacer esta acción.'
+    default:
+      return 'Ocurrió un error inesperado. Probá de nuevo.'
+  }
 }
 
 function RestoreButton({
@@ -156,19 +176,53 @@ function TrashCard({
   )
 }
 
-export function PapeleraView({ rows, accountsWithReports }: Props) {
+export function PapeleraView({ clients, rows, accountsWithReports }: Props) {
   const { refresh } = useRouter()
   const [isPending, startTransition] = useTransition()
   const [restoringId, setRestoringId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   function handleRestore(id: string) {
     setRestoringId(id)
+    setError(null)
     startTransition(async () => {
-      await restoreAccountAction(id)
+      const result = await restoreAccountAction(id)
+      if (!result.success) {
+        setError(restoreErrorMessage(result.error, rows.find((r) => r.id === id)?.clientName ?? null))
+      }
       setRestoringId(null)
       refresh()
     })
   }
+
+  function handleRestoreClient(client: TrashClientRow) {
+    setRestoringId(client.id)
+    setError(null)
+    startTransition(async () => {
+      const result = await restoreClientAction(client.id)
+      if (!result.success) {
+        setError(restoreErrorMessage(result.error, client.name))
+      } else {
+        const n = result.restoredAccounts ?? 0
+        toast(
+          ({ closeToast }) => (
+            <ToastCard
+              tone="success"
+              icon={<CircleCheck className="size-5" />}
+              title={`${client.name} se restauró`}
+              body={`${n} ${n === 1 ? 'cuenta volvió' : 'cuentas volvieron'} con el cliente.`}
+              onClose={closeToast}
+            />
+          ),
+          { ...TOAST_CARD_OPTIONS, autoClose: 4000 },
+        )
+      }
+      setRestoringId(null)
+      refresh()
+    })
+  }
+
+  const isEmpty = clients.length === 0 && rows.length === 0
 
   return (
     <div className="flex flex-col gap-4">
@@ -180,6 +234,84 @@ export function PapeleraView({ rows, accountsWithReports }: Props) {
         </Button>
       </div>
 
+      {error && (
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {error}
+        </p>
+      )}
+
+      {clients.length > 0 && (
+        <Card className="gap-0 overflow-hidden py-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-3 border-b border-border px-5 py-4">
+            <h2 className="text-[15px] font-semibold tracking-tight">Clientes eliminados</h2>
+            <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground tabular-nums">
+              {clients.length}
+            </span>
+            <p className="ml-auto text-xs text-muted-foreground">
+              Restaurar un cliente trae de vuelta las cuentas que se eliminaron con él
+            </p>
+          </div>
+          <ul className="flex flex-col divide-y divide-border/60">
+            {clients.map((client) => {
+              const hasReports = client.accounts.some((a) => accountsWithReports?.has(a.id) ?? true)
+              return (
+                <li key={client.id} className="flex flex-col gap-3 px-5 py-4">
+                  <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                    <div className="flex min-w-0 flex-col gap-2">
+                      <span className="break-words font-semibold text-foreground">{client.name}</span>
+                      <div className="text-sm text-muted-foreground">
+                        <DeletedCell
+                          row={{
+                            id: client.id,
+                            name: client.name,
+                            clientName: null,
+                            platform: 'meta',
+                            deletedDaysAgo: client.deletedDaysAgo,
+                          }}
+                          hasReports={hasReports}
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-9 w-full justify-center sm:w-40 [&:hover_svg]:rotate-180 [&_svg]:transition-transform"
+                      disabled={isPending && restoringId === client.id}
+                      onClick={() => handleRestoreClient(client)}
+                    >
+                      <RotateCcw /> Restaurar cliente
+                    </Button>
+                  </div>
+                  {client.accounts.length > 0 ? (
+                    <ul className="flex flex-col gap-1.5 border-l-2 border-border pl-4">
+                      {client.accounts.map((account) => (
+                        <li key={account.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                          <span className="font-medium text-foreground">{account.name}</span>
+                          <span
+                            className={`rounded-md px-2 py-0.5 text-xs font-medium ${PLATFORM_BADGE_CLASS[account.platform]}`}
+                          >
+                            {PLATFORM_LABEL[account.platform]}
+                          </span>
+                          <span className="break-all text-xs text-muted-foreground">{account.id}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="border-l-2 border-border pl-4 text-xs text-muted-foreground">
+                      Sin cuentas eliminadas junto con el cliente.
+                    </p>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </Card>
+      )}
+
+      {(rows.length > 0 || isEmpty) && (
       <Card className="gap-0 overflow-hidden py-0">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-3 border-b border-border px-5 py-4">
           <h2 className="text-[15px] font-semibold tracking-tight">Cuentas eliminadas</h2>
@@ -266,6 +398,7 @@ export function PapeleraView({ rows, accountsWithReports }: Props) {
           </ul>
         )}
       </Card>
+      )}
     </div>
   )
 }

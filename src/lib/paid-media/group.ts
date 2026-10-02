@@ -1,34 +1,31 @@
-// Pure grouping of active `ad_accounts` rows by `client_name`, into one
-// `ClientGroup` per distinct name. Kept pure for readability, not
-// testability — there is no test runner in this repo.
+// Pure grouping for the Clientes list: clients drive the groups, accounts are
+// bucketed by `client_id`. Kept pure for readability, not testability — there
+// is no test runner in this repo.
 //
-// Unassigned rows (`client_name IS NULL`) are NOT grouped here anymore —
-// they have their own "Cuentas sin asignar" table (`ClientesView.tsx`).
-// Callers are expected to filter to `client_name !== null` rows before
-// calling this.
+// A client with zero accounts still yields a group. Accounts with
+// `client_id IS NULL` are NOT grouped here: they have their own "Cuentas sin
+// asignar" table (`ClientesView.tsx`). Accounts pointing at a client that is
+// not in `clients` (a trashed one) are ignored.
 
-import type { AdAccountRow, ClientGroup, Platform } from './types'
+import type { AdAccountRow, ClientGroup, PaidMediaClientRow, Platform } from './types'
 
-export function groupByClient(accounts: AdAccountRow[]): ClientGroup[] {
-  const groups = new Map<string, AdAccountRow[]>()
+export function groupByClient(clients: PaidMediaClientRow[], accounts: AdAccountRow[]): ClientGroup[] {
+  const byClient = new Map<string, AdAccountRow[]>()
 
   for (const account of accounts) {
-    const key = account.client_name?.trim()
-    if (!key) continue
-    const bucket = groups.get(key)
+    if (!account.client_id) continue
+    const bucket = byClient.get(account.client_id)
     if (bucket) {
       bucket.push(account)
     } else {
-      groups.set(key, [account])
+      byClient.set(account.client_id, [account])
     }
   }
 
-  return Array.from(groups.entries())
-    .map(([clientName, accts]) => {
-      const sorted = [...accts].sort((a, b) => a.name.localeCompare(b.name))
+  return clients
+    .map((client) => {
+      const sorted = [...(byClient.get(client.id) ?? [])].sort((a, b) => a.name.localeCompare(b.name))
       const platforms = Array.from(new Set(sorted.map((a) => a.platform))) as Platform[]
-      const pmName = sorted.find((a) => a.pm_name)?.pm_name ?? null
-      const operatorName = sorted.find((a) => a.operator_name)?.operator_name ?? null
 
       // Per-currency subtotals (spec: "client totals are per-currency
       // subtotals, not a single sum" — no cross-currency conversion). ARS
@@ -43,11 +40,16 @@ export function groupByClient(accounts: AdAccountRow[]): ClientGroup[] {
         .sort((a, b) => (a.currency === 'ARS' ? -1 : b.currency === 'ARS' ? 1 : 0))
 
       return {
-        clientName,
+        clientId: client.id,
+        clientName: client.company_name,
+        portalEnabled: client.portal_enabled,
+        status: client.status,
+        websiteUrl: client.website_url,
+        instagramUrl: client.instagram_url,
         accounts: sorted,
         platforms,
-        pmName,
-        operatorName,
+        pmName: client.pm_name,
+        operatorName: client.operator_name,
         budgetByCurrency,
       }
     })

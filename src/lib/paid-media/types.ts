@@ -33,6 +33,16 @@ export interface ManagementStatus {
   is_active: boolean
 }
 
+// Row of `paid_media_client_status`: the client-level status (nuevo_cliente,
+// activo, ...). Same shape as `ManagementStatus` but a separate lookup — the
+// account-level keys (saldo_agregado, ...) no longer share a table with it.
+export interface ClientStatus {
+  key: string
+  label: string
+  sort_order: number
+  is_active: boolean
+}
+
 // Row of `ad_account_funding_method` (T1) — replaces the closed
 // `FundingMethod` union: funding method is now an open, seeded lookup, so a
 // new value needs no code change (design D-A).
@@ -87,6 +97,8 @@ export const PRIMARY_OBJECTIVE_OPTIONS: { key: string; label: string }[] = [
 // it is never selected by the app, so it is intentionally absent here.
 export interface AdAccountRow {
   id: string
+  // Link to `clients.id`; `null` = unassigned ("Cuentas sin asignar").
+  client_id: string | null
   name: string
   business_name: string | null
   platform: Platform
@@ -108,14 +120,38 @@ export interface AdAccountRow {
   primary_action_type: string | null
 }
 
-// One row per distinct `client_name` in the Clientes list — accounts under
-// the same client are grouped, not listed individually (see
-// `src/lib/paid-media/group.ts`).
+// A `clients` row joined with its `client_paid_media` extension (active
+// clients only). PM, operator, status and web/IG are client-level fields now.
+export interface PaidMediaClientRow {
+  id: string
+  company_name: string
+  website_url: string | null
+  instagram_url: string | null
+  pm_name: string | null
+  operator_name: string | null
+  status: string | null // key into `paid_media_client_status`
+  // Portal clients (Grupo Norte, Viviera) keep an admin-only name (DB guard trigger).
+  portal_enabled: boolean
+}
+
+// Minimal client shape for `ClientPicker`: the picker commits ids, never names.
+export interface ClientOption {
+  id: string
+  name: string
+}
+
+// One row per client in the Clientes list. Clients drive the groups, so a
+// client with zero accounts still appears (see `src/lib/paid-media/group.ts`).
 export interface ClientGroup {
+  clientId: string
   clientName: string
+  portalEnabled: boolean
+  status: string | null
+  websiteUrl: string | null
+  instagramUrl: string | null
   accounts: AdAccountRow[] // ordered by name
   platforms: Platform[] // distinct, drives the platform chips
-  pmName: string | null // first non-null; divergence is visible in the (future) detail sheet
+  pmName: string | null
   operatorName: string | null
   // Per-currency subtotals, not a single summed total (spec: "client totals
   // are per-currency subtotals"). ARS first when both are present.

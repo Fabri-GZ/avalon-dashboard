@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-toastify'
 import { LuCircleAlert as CircleAlert, LuCircleCheck as CircleCheck, LuTrash2 as Trash2 } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { ClientNameCombobox } from './ClientNameCombobox'
-import { NameCombobox } from './NameCombobox'
+import { ClientPicker } from './ClientPicker'
 import { ConfirmDeleteModal } from './ConfirmDeleteModal'
 import { ToastCard, TOAST_CARD_OPTIONS } from './ToastCard'
 import {
@@ -19,9 +18,9 @@ import {
   type ActionError,
   type ExistingAccountInfo,
 } from '@/app/actions/paid-media-actions'
-import { parseBudgetInput } from '@/lib/paid-media/format'
+import { formatThousandsInput, parseBudgetInput } from '@/lib/paid-media/format'
 import type { AccountsWithReports } from '@/lib/paid-media/reports-presence'
-import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type Currency, type FundingMethodOption, type ManagementStatus, type Platform } from '@/lib/paid-media/types'
+import { PLATFORM_LABEL, PRIMARY_OBJECTIVE_OPTIONS, type AdAccountRow, type ClientOption, type Currency, type FundingMethodOption, type ManagementStatus, type Platform } from '@/lib/paid-media/types'
 
 const UNSET = '__sin_definir__'
 
@@ -35,11 +34,22 @@ const INPUT_CLASS =
 // Mismo remedio que ya usa `ReportSheet` para sus Select/DropdownMenu.
 const SELECT_CONTENT_CLASS = 'z-[70] border-accent'
 
-// Coarse ActionError → field-level message. `management_status`/`id` map to
-// the field whose constraint is realistically the cause (FK / PK); the rest
-// stay a top-level banner since the DB error code alone cannot pin down a
-// single free-text field.
-const ERROR_MESSAGES: Record<ActionError, { field?: 'id' | 'management_status'; message: string }> = {
+// Meta ad account ids are `act_` + digits. The `act_` part is a fixed addon in
+// the UI, so the field state holds digits only. A pasted `act_123` or Meta URL
+// (`...?act=123&business_id=999`) keeps just the account digits: the `act`
+// marker wins over any other number in the URL.
+const META_PREFIX = 'act_'
+
+function extractMetaDigits(raw: string): string {
+  const marked = /act[=_](\d+)/i.exec(raw)
+  return marked ? marked[1] : raw.replace(/\D/g, '')
+}
+
+// Coarse ActionError → field-level message. `management_status`/`id`/`client`
+// map to the field whose constraint is realistically the cause (FK / PK / link);
+// the rest stay a top-level banner since the DB error code alone cannot pin
+// down a single free-text field.
+const ERROR_MESSAGES: Record<ActionError, { field?: 'id' | 'management_status' | 'client'; message: string }> = {
   unauthorized: { message: 'No tenés permisos para hacer esta acción.' },
   duplicate_account: { field: 'id', message: 'Ya existe una cuenta con este ID.' },
   invalid_status: { field: 'management_status', message: 'El estado seleccionado no es válido.' },
@@ -47,6 +57,12 @@ const ERROR_MESSAGES: Record<ActionError, { field?: 'id' | 'management_status'; 
     message: 'Alguno de los valores ingresados no es válido (revisá plataforma, financiamiento o presupuesto).',
   },
   not_found: { message: 'La cuenta ya no existe o fue movida a la papelera.' },
+  client_trashed: { field: 'client', message: 'Ese cliente está en la papelera. Restauralo primero o elegí otro.' },
+  duplicate_client: { field: 'client', message: 'Ya existe un cliente con ese nombre.' },
+  invalid_account_id: {
+    field: 'id',
+    message: 'El ID de una cuenta de Meta son solo números (se guarda con el prefijo act_).',
+  },
   db_error: { message: 'Ocurrió un error inesperado. Probá de nuevo.' },
 }
 
@@ -55,11 +71,13 @@ interface Props {
   account?: AdAccountRow
   statuses: ManagementStatus[]
   fundingMethods: FundingMethodOption[]
-  existingClientNames: string[]
+  /** Active clients to pick from (full set, not the filtered list). */
+  clients: ClientOption[]
   /** Valores distintos del dataset completo (sin filtrar), para autocompletar. */
   pmNames: string[]
   operators: string[]
-  defaultClientName?: string
+  /** Create mode: preselect this client (opened from a client's detail). */
+  defaultClientId?: string | null
   /**
    * Optional, removable layer — see `reports-presence.ts`. Only consulted in
    * edit mode, to select the confirm modal's copy branch.
@@ -76,7 +94,7 @@ interface Props {
 // initial value is whichever of the two the account already has.
 function initialBudgetInput(account: AdAccountRow | undefined): string {
   if (!account) return ''
-  if (account.monthly_budget !== null) return account.monthly_budget.toString()
+  if (account.monthly_budget !== null) return formatThousandsInput(account.monthly_budget.toString())
   return account.monthly_budget_note ?? ''
 }
 
@@ -85,28 +103,28 @@ export function AccountForm({
   account,
   statuses,
   fundingMethods,
-  existingClientNames,
+  clients,
   pmNames,
   operators,
-  defaultClientName,
+  defaultClientId,
   accountsWithReports,
   onSaved,
   onCancel,
   onDeleted,
 }: Props) {
-  const [id, setId] = useState(account?.id ?? '')
+  // Meta: digits only (the `act_` addon is rendered, not typed). Other
+  // platforms: free text. Edit mode: the account's own id, never recomposed.
+  const [id, setId] = useState(account?.platform === 'meta' ? extractMetaDigits(account.id) : (account?.id ?? ''))
   const [name, setName] = useState(account?.name ?? '')
   const [platform, setPlatform] = useState<Platform>(account?.platform ?? 'meta')
-  const [clientName, setClientName] = useState(account?.client_name ?? defaultClientName ?? '')
+  const [clientId, setClientId] = useState<string | null>(account ? account.client_id : (defaultClientId ?? null))
+  const [clientUncommitted, setClientUncommitted] = useState(false)
+  const [clientBlocked, setClientBlocked] = useState(false)
   const [managementStatus, setManagementStatus] = useState(account?.management_status ?? '')
   const [fundingMethod, setFundingMethod] = useState(account?.funding_method ?? '')
-  const [pmName, setPmName] = useState(account?.pm_name ?? '')
-  const [operatorName, setOperatorName] = useState(account?.operator_name ?? '')
   const [geo, setGeo] = useState(account?.geo ?? '')
   const [strategyUrl, setStrategyUrl] = useState(account?.strategy_url ?? '')
   const [notes, setNotes] = useState(account?.notes ?? '')
-  const [websiteUrl, setWebsiteUrl] = useState(account?.website_url ?? '')
-  const [instagramUrl, setInstagramUrl] = useState(account?.instagram_url ?? '')
   const [budgetInput, setBudgetInput] = useState(initialBudgetInput(account))
   const [currency, setCurrency] = useState<Currency>(account?.currency ?? 'ARS')
   const [primaryActionType, setPrimaryActionType] = useState(account?.primary_action_type ?? '')
@@ -116,8 +134,23 @@ export function AccountForm({
   const router = useRouter()
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
 
+  // Stable identity: the picker calls this from an effect keyed on it.
+  const handleUncommittedChange = useCallback((uncommitted: boolean) => {
+    setClientUncommitted(uncommitted)
+    if (!uncommitted) setClientBlocked(false)
+  }, [])
+
+  const isMetaId = (mode === 'edit' && account ? account.platform : platform) === 'meta'
+  // What is saved: edit never changes the PK; create composes the prefix.
+  const accountId = mode === 'edit' && account ? account.id : isMetaId ? `${META_PREFIX}${id}` : id.trim()
+
   const errorInfo = error ? ERROR_MESSAGES[error] : null
   const idError = errorInfo?.field === 'id' ? errorInfo.message : null
+  const clientError = clientBlocked
+    ? 'Elegí un cliente de la lista o creá uno nuevo: el texto escrito todavía no es un cliente.'
+    : errorInfo?.field === 'client'
+      ? errorInfo.message
+      : null
   const statusError = errorInfo?.field === 'management_status' ? errorInfo.message : null
   const bannerError = errorInfo && !errorInfo.field ? errorInfo.message : null
 
@@ -167,24 +200,25 @@ export function AccountForm({
   function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!id.trim() || !name.trim()) return
+    // Typed-but-uncommitted client text would otherwise be saved as "no client".
+    if (clientUncommitted) {
+      setClientBlocked(true)
+      return
+    }
     setError(null)
 
     const { monthly_budget, monthly_budget_note } = parseBudgetInput(budgetInput)
 
     const input = {
-      id: id.trim(),
+      id: accountId,
       name: name.trim(),
       platform,
-      client_name: clientName.trim() || null,
+      client_id: clientId,
       management_status: managementStatus || null,
       funding_method: fundingMethod || null,
-      pm_name: pmName.trim() || null,
-      operator_name: operatorName.trim() || null,
       geo: geo.trim() || null,
       strategy_url: strategyUrl.trim() || null,
       notes: notes.trim() || null,
-      website_url: websiteUrl.trim() || null,
-      instagram_url: instagramUrl.trim() || null,
       monthly_budget,
       monthly_budget_note,
       currency,
@@ -254,8 +288,8 @@ export function AccountForm({
           title="Esa cuenta ya existe"
           body={
             inTrash
-              ? `${id.trim()} pertenece a ${existing.name}, que está en la papelera. Si es la cuenta que querías cargar, podés restaurarla desde ahí.`
-              : `${id.trim()} ya está cargada como ${existing.name}.`
+              ? `${accountId} pertenece a ${existing.name}, que está en la papelera. Si es la cuenta que querías cargar, podés restaurarla desde ahí.`
+              : `${accountId} ya está cargada como ${existing.name}.`
           }
           actionLabel={inTrash ? 'Ir a la papelera' : undefined}
           onAction={
@@ -281,27 +315,19 @@ export function AccountForm({
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            ID de cuenta <span aria-hidden="true" className="text-destructive text-xs font-bold">*</span>
-          </label>
-          <input
-            data-autofocus={mode === 'create' ? true : undefined}
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-            disabled={mode === 'edit'}
-            required
-            placeholder="act_123456789"
-            className={INPUT_CLASS}
-          />
-          {idError && <p className="mt-1 text-[11px] text-destructive">{idError}</p>}
-        </div>
-
+        {/* Plataforma va antes del ID: el prefijo `act_` depende de ella. */}
         <div>
           <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Plataforma
           </label>
-          <Select value={platform} onValueChange={(v) => setPlatform(v as Platform)}>
+          <Select
+            value={platform}
+            onValueChange={(v) => {
+              setPlatform(v as Platform)
+              // Entering Meta: keep only the digits of whatever was typed.
+              if (v === 'meta') setId(extractMetaDigits(id))
+            }}
+          >
             <SelectTrigger data-autofocus={mode === 'edit' ? true : undefined} className="h-10 w-full">
               <SelectValue />
             </SelectTrigger>
@@ -313,6 +339,50 @@ export function AccountForm({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="account-id"
+            className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+          >
+            ID de cuenta <span aria-hidden="true" className="text-destructive text-xs font-bold">*</span>
+          </label>
+          {/* Input-group: el addon fijo y el input comparten borde, altura y
+              anillo de foco (`focus-within`), así que se lee como un solo control. */}
+          <div
+            className={
+              isMetaId
+                ? 'flex h-10 w-full items-stretch overflow-hidden rounded-lg border border-border bg-background transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 has-disabled:opacity-50'
+                : undefined
+            }
+          >
+            {isMetaId && (
+              <span
+                aria-hidden="true"
+                className="flex select-none items-center border-r border-border bg-muted/50 px-3 text-sm text-muted-foreground"
+              >
+                {META_PREFIX}
+              </span>
+            )}
+            <input
+              id="account-id"
+              data-autofocus={mode === 'create' ? true : undefined}
+              value={id}
+              onChange={(e) => setId(isMetaId ? extractMetaDigits(e.target.value) : e.target.value)}
+              disabled={mode === 'edit'}
+              required
+              inputMode={isMetaId ? 'numeric' : undefined}
+              autoComplete="off"
+              placeholder={isMetaId ? '123456789' : 'ID de la cuenta'}
+              className={
+                isMetaId
+                  ? 'min-w-0 flex-1 bg-transparent px-3 text-sm outline-none disabled:cursor-not-allowed'
+                  : INPUT_CLASS
+              }
+            />
+          </div>
+          {idError && <p className="mt-1 text-[11px] text-destructive">{idError}</p>}
         </div>
       </div>
 
@@ -327,7 +397,15 @@ export function AccountForm({
         <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Cliente
         </label>
-        <ClientNameCombobox value={clientName} onChange={setClientName} existingNames={existingClientNames} />
+        <ClientPicker
+          clients={clients}
+          value={clientId}
+          onChange={setClientId}
+          onUncommittedChange={handleUncommittedChange}
+          pmNames={pmNames}
+          operators={operators}
+        />
+        {clientError && <p className="mt-1 text-[11px] text-destructive">{clientError}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -380,35 +458,6 @@ export function AccountForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            PM
-          </label>
-          <NameCombobox
-            value={pmName}
-            onChange={setPmName}
-            options={pmNames}
-            placeholder="Nombre del PM"
-            createLabel="PM"
-            nearMatchQuestion=" es la misma persona?"
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Operador
-          </label>
-          <NameCombobox
-            value={operatorName}
-            onChange={setOperatorName}
-            options={operators}
-            placeholder="Nombre del operador"
-            createLabel="operador"
-            nearMatchQuestion=" es la misma persona?"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Geo
           </label>
           <input value={geo} onChange={(e) => setGeo(e.target.value)} className={INPUT_CLASS} />
@@ -436,10 +485,10 @@ export function AccountForm({
           </label>
           <input
             value={budgetInput}
-            onChange={(e) => setBudgetInput(e.target.value)}
+            onChange={(e) => setBudgetInput(formatThousandsInput(e.target.value))}
             // El placeholder largo ya no entra a media fila; el detalle de que
             // acepta texto libre sigue estando en el `title`.
-            placeholder="1200 o texto libre"
+            placeholder="1.200 o texto libre"
             title="Un número escribe el presupuesto; cualquier otro texto se guarda como nota (ej. Sin definir)."
             className={INPUT_CLASS}
           />
@@ -478,21 +527,6 @@ export function AccountForm({
           URL de estrategia
         </label>
         <input value={strategyUrl} onChange={(e) => setStrategyUrl(e.target.value)} className={INPUT_CLASS} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Sitio web
-          </label>
-          <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className={INPUT_CLASS} />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Instagram
-          </label>
-          <input value={instagramUrl} onChange={(e) => setInstagramUrl(e.target.value)} className={INPUT_CLASS} />
-        </div>
       </div>
 
       <div>
