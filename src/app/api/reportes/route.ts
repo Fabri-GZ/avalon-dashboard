@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   // soft-deleted account would still validate through this route.
   const { data: account, error: accErr } = await supabaseAdmin
     .from('ad_accounts')
-    .select('id, name, currency, primary_action_type, platform')
+    .select('id, name, currency, primary_action_type, results_config, platform')
     .eq('id', accountId)
     .is('deleted_at', null)
     .single()
@@ -124,6 +124,7 @@ export async function POST(req: NextRequest) {
         name: account.name,
         currency: account.currency,
         primary_action_type: account.primary_action_type,
+        results_config: account.results_config,
       },
     }
 
