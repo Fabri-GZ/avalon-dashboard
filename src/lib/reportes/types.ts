@@ -51,6 +51,14 @@ export interface GenerateReportRequest {
   month: number; // 1-12
 }
 
+// Config opt-in del modo "resultados de campaña" (ad_accounts.results_config).
+// La DB valida solo la forma; el vocabulario de indicadores vive en compute.js.
+export interface ResultsConfig {
+  mode: 'campaign_results';
+  primaryIndicator: string;
+  secondaryIndicators?: string[];
+}
+
 // Fila de ad_accounts que viaja al webhook de n8n. snake_case a propósito:
 // misma clave en la DB, en el payload y en raw.account dentro de compute.js.
 export interface ReportWebhookAccount {
@@ -58,6 +66,7 @@ export interface ReportWebhookAccount {
   name: string;
   currency: string | null;
   primary_action_type: string | null;
+  results_config: ResultsConfig | null;
 }
 
 // Body real que route.ts postea al webhook de n8n (distinto de
