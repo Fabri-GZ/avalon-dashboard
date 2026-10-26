@@ -37,6 +37,9 @@ export interface JobPollHandlers<T> {
 export interface JobPollConfig<T> {
   table?: string // default 'agent_jobs'
   select?: string // default 'status, result, error'
+  // Terminal-success predicate. Default `status === 'done'`; complete reports
+  // also finish at `draft_ready` (terminal for polling, not a final state).
+  isDone?: (row: Record<string, unknown>) => boolean
   getDone?: (row: Record<string, unknown>) => T // cómo extraer el payload de done
   getError?: (row: Record<string, unknown>) => string | null
   pollIntervalMs?: number
@@ -78,6 +81,7 @@ export function useJobPolling<T = TrendResponse>(
     const getDone = cfg?.getDone ?? ((row: Record<string, unknown>) => row.result as T)
     const getError =
       cfg?.getError ?? ((row: Record<string, unknown>) => (row.error as string | null) ?? null)
+    const isDone = cfg?.isDone ?? ((row: Record<string, unknown>) => row.status === 'done')
     const pollInterval = cfg?.pollIntervalMs ?? POLL_INTERVAL_MS
     const ttl = cfg?.ttlMs ?? TTL_MS
 
@@ -114,7 +118,7 @@ export function useJobPolling<T = TrendResponse>(
 
       const row = data as unknown as Record<string, unknown>
 
-      if (row.status === 'done') {
+      if (isDone(row)) {
         handlersRef.current.onDone(getDone(row))
         return
       }

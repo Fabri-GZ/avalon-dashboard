@@ -18,11 +18,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { SheetShell } from '@/components/ui/sheet-shell'
 import { MONTHS } from '@/lib/reportes/format'
-import type { AccountOption } from '@/lib/reportes/types'
+import type { AccountOption, ReportType } from '@/lib/reportes/types'
 
 // Mismo mensaje que ReportRowActions: el pipeline de n8n solo sabe leer
 // insights de Meta hoy, así que no hay generación posible para google/tiktok.
 const NON_META_REASON = 'El pipeline de reportes solo soporta cuentas de Meta por ahora'
+// The complete report goes to the client's recipients, so it needs a client.
+const NO_CLIENT_REASON =
+  'Esta cuenta no tiene cliente asignado. Asignale un cliente en Paid Media para generar el reporte completo.'
 
 function defaultPeriod() {
   const now = new Date()
@@ -33,7 +36,7 @@ function defaultPeriod() {
 interface Props {
   accounts: AccountOption[]
   defaultAccountId?: string | null
-  onGenerate: (accountId: string, year: number, month: number) => void
+  onGenerate: (accountId: string, year: number, month: number, reportType: ReportType) => void
   onClose: () => void
 }
 
@@ -42,18 +45,23 @@ export function ReportSheet({ accounts, defaultAccountId, onGenerate, onClose }:
   const [accountId, setAccountId] = useState<string>(defaultAccountId ?? '')
   const [month, setMonth] = useState<number>(dft.month)
   const [year, setYear] = useState<number>(dft.year)
+  const [completeChecked, setCompleteChecked] = useState(false)
 
   const selected = accounts.find((a) => a.id === accountId) ?? null
   const currentYear = new Date().getFullYear()
   const years = [currentYear, currentYear - 1, currentYear - 2]
   const selectedIsNonMeta = selected !== null && selected.platform !== 'meta'
+  // Switching to an account without a client turns the box off (and disables it)
+  // without touching the user's choice, so switching back restores it.
+  const completeBlocked = selected !== null && !selected.client_id
+  const complete = completeChecked && !completeBlocked
 
   return (
     <SheetShell ariaLabel="Generar reporte" onClose={onClose}>
       {(requestClose) => {
         function submit() {
           if (!accountId || selectedIsNonMeta) return
-          onGenerate(accountId, year, month)
+          onGenerate(accountId, year, month, complete ? 'complete' : 'summary')
           requestClose()
         }
 
@@ -177,12 +185,41 @@ export function ReportSheet({ accounts, defaultAccountId, onGenerate, onClose }:
                 </div>
               </div>
 
+              {/* Reporte completo: borradores de texto con IA para editar antes de
+                  publicar. Sin cliente no hay destinatarios, así que se bloquea. */}
+              <div>
+                <label
+                  className={`flex items-start gap-2.5 text-sm ${
+                    completeBlocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 size-4 accent-primary"
+                    checked={complete}
+                    disabled={completeBlocked || selectedIsNonMeta}
+                    onChange={(e) => setCompleteChecked(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-medium">Reporte completo</span>
+                    <span className="block text-[11.5px] text-muted-foreground">
+                      Genera borradores de texto con IA para revisar y editar antes de publicar.
+                    </span>
+                  </span>
+                </label>
+                {completeBlocked && (
+                  <p role="alert" className="mt-1.5 text-[11.5px] text-destructive">
+                    {NO_CLIENT_REASON}
+                  </p>
+                )}
+              </div>
+
               <Button
                 className="h-11 w-full text-sm font-bold transition-all hover:shadow-md hover:shadow-primary/30 active:scale-[0.98]"
                 disabled={!accountId || selectedIsNonMeta}
                 onClick={submit}
               >
-                <LuFileChartColumn className="size-4" /> Generar reporte
+                <LuFileChartColumn className="size-4" /> {complete ? 'Generar reporte completo' : 'Generar reporte'}
               </Button>
 
               <p className="rounded-lg bg-secondary px-3 py-2.5 text-[11.5px] text-muted-foreground">
