@@ -21,7 +21,7 @@ const LINK = 'font-medium underline-offset-2 hover:underline'
 export function ReportRenderHistory({ renders }: { renders: RenderHistoryItem[] }) {
   return (
     <section aria-labelledby="render-history-title" className="space-y-2">
-      <h2 id="render-history-title" className="text-sm font-semibold">
+      <h2 id="render-history-title" className="text-sm font-semibold text-foreground">
         Reportes finales generados
       </h2>
 

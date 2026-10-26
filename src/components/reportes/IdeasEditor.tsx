@@ -8,10 +8,16 @@ import {
 } from '@/lib/reportes/ideas-format'
 
 const INPUT_CLASS =
-  'h-9 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition-colors focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50 read-only:opacity-70'
+  'h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50 read-only:opacity-70'
 
 const LABEL_CLASS =
   'mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground'
+
+// Hover pattern of the sidebar items (Sidebar.jsx): primary tint + primary text.
+// Removal buttons use the destructive tint, as in ClientDetailSheet.
+const HOVER_PRIMARY = 'hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/15'
+const HOVER_DESTRUCTIVE =
+  'text-muted-foreground hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/10'
 
 // Same colors as the final report design.
 const DOT_COLOR: Record<IdeaCategoryKey, string> = {
@@ -41,7 +47,7 @@ export function IdeasEditor({ value, onChange, readOnly }: Props) {
           <div key={key} className="space-y-3">
             <div className="flex items-center gap-2">
               <span aria-hidden="true" className={`size-2.5 rounded-full ${DOT_COLOR[key]}`} />
-              <h3 className="text-sm font-semibold">{label}</h3>
+              <h3 className="text-sm font-semibold text-foreground">{label}</h3>
               <span className="text-xs text-muted-foreground">
                 {ideas.length} {ideas.length === 1 ? 'idea' : 'ideas'}
               </span>
@@ -88,7 +94,7 @@ export function IdeasEditor({ value, onChange, readOnly }: Props) {
                         variant="ghost"
                         size="icon-sm"
                         aria-label={`Quitar idea ${index + 1} de ${label}`}
-                        className="mt-5"
+                        className={`mt-5 ${HOVER_DESTRUCTIVE}`}
                         onClick={() => setIdeas(key, ideas.filter((_, i) => i !== index))}
                       >
                         <LuTrash2 />
@@ -96,7 +102,8 @@ export function IdeasEditor({ value, onChange, readOnly }: Props) {
                     )}
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <span className={LABEL_CLASS}>Motivos</span>
                     {idea.reasons.map((reason, r) => (
                       <div key={`${id}-reason-${r}`} className="flex items-center gap-2">
                         <label htmlFor={`${id}-reason-${r}`} className="sr-only">
@@ -122,6 +129,7 @@ export function IdeasEditor({ value, onChange, readOnly }: Props) {
                             variant="ghost"
                             size="icon-sm"
                             aria-label={`Quitar motivo ${r + 1}`}
+                            className={HOVER_DESTRUCTIVE}
                             onClick={() =>
                               updateIdea(index, { reasons: idea.reasons.filter((_, i) => i !== r) })
                             }
@@ -136,6 +144,7 @@ export function IdeasEditor({ value, onChange, readOnly }: Props) {
                         type="button"
                         size="sm"
                         variant="ghost"
+                        className={`text-muted-foreground ${HOVER_PRIMARY}`}
                         onClick={() => updateIdea(index, { reasons: [...idea.reasons, ''] })}
                       >
                         <LuPlus /> Agregar motivo
@@ -151,6 +160,7 @@ export function IdeasEditor({ value, onChange, readOnly }: Props) {
                 type="button"
                 size="sm"
                 variant="outline"
+                className={`text-foreground hover:border-primary/40 ${HOVER_PRIMARY}`}
                 onClick={() => setIdeas(key, [...ideas, { title: '', chip: null, reasons: [] }])}
               >
                 <LuPlus /> Agregar idea
