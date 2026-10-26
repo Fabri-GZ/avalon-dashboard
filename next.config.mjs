@@ -10,6 +10,16 @@ const nextConfig = {
   // because timing differs. Re-enable when Next/React-Compiler interop is fixed.
   reactCompiler: false,
   productionBrowserSourceMaps: true,
+  // /api/reportes/pdf: @sparticuz/chromium decompresses its binary from its own
+  // bin/ folder at runtime. Bundled, that folder is left behind and the route
+  // fails with 'input directory ".../chromium/bin" does not exist'.
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+  outputFileTracingIncludes: {
+    "/api/reportes/pdf": [
+      "./node_modules/@sparticuz/chromium/bin/**",
+      "./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**",
+    ],
+  },
   turbopack: {
     root: __dirname,
   },
