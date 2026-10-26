@@ -24,7 +24,7 @@ import { ReportSheet } from './ReportSheet'
 import { GenerationBlocker } from './GenerationBlocker'
 import { GenerationResultModal } from './GenerationResultModal'
 import { RegenerateConfirmModal } from './RegenerateConfirmModal'
-import { SendReportModal } from './SendReportModal'
+import { SendReportDialog } from './SendReportDialog'
 
 const containerVariants = _container as Variants
 const cardVariants = _card as Variants
@@ -40,6 +40,8 @@ interface Props {
   initialHistory: Report[]
   /** Fixed report recipients by `client_id`. */
   recipients: Record<string, ClientRecipients>
+  /** The recipients query failed: sending is blocked instead of showing "sin mail". */
+  recipientsError?: boolean
 }
 
 /**
@@ -64,7 +66,7 @@ interface PendingRegenerate {
 // The drafts workflow (n8n + LLM) runs longer than the small report.
 const COMPLETE_TTL_MS = 300_000
 
-export function ReportesView({ accounts, initialHistory, recipients }: Props) {
+export function ReportesView({ accounts, initialHistory, recipients, recipientsError = false }: Props) {
   const reducedMotion = useReducedMotion()
   const [reports, setReports] = useState<Report[]>(initialHistory)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
@@ -81,7 +83,8 @@ export function ReportesView({ accounts, initialHistory, recipients }: Props) {
       const i = prev.findIndex((x) => x.id === r.id)
       if (i === -1) return [r, ...prev]
       const next = [...prev]
-      next[i] = r
+      // Polled rows come without the embedded renders: keep the ones we have.
+      next[i] = { ...r, report_renders: r.report_renders ?? prev[i].report_renders }
       return next
     })
 
@@ -294,6 +297,37 @@ export function ReportesView({ accounts, initialHistory, recipients }: Props) {
     }
   }, [sendAccountId, accounts, completeByAccount, recipients, reports])
 
+  function handleSend(accountId: string) {
+    // Without the recipients the modal would wrongly say the client has no mail.
+    if (recipientsError) {
+      toast.error('No se pudieron cargar los destinatarios. Recargá la página.')
+      return
+    }
+    setSendAccountId(accountId)
+  }
+
+  // Records a finished delivery on its render so the resend warning and file
+  // suffix are right without reloading.
+  function markSent(renderId: string, deliveryId: string) {
+    setReports((prev) =>
+      prev.map((r) =>
+        r.report_renders?.some((rn) => rn.id === renderId)
+          ? {
+              ...r,
+              report_renders: r.report_renders.map((rn) =>
+                rn.id === renderId
+                  ? {
+                      ...rn,
+                      report_deliveries: [...(rn.report_deliveries ?? []), { id: deliveryId, status: 'sent' as const }],
+                    }
+                  : rn,
+              ),
+            }
+          : r,
+      ),
+    )
+  }
+
   function openSheet(accountId: string | null) {
     setPreselect(accountId)
     setSheetOpen(true)
@@ -321,7 +355,7 @@ export function ReportesView({ accounts, initialHistory, recipients }: Props) {
           onNew={() => openSheet(null)}
           onGenerateFor={(id) => openSheet(id)}
           onRetry={(r) => handleGenerate(r.account_id, r.period_year, r.period_month, r.report_type)}
-          onSend={setSendAccountId}
+          onSend={handleSend}
         />
       </motion.div>
 
@@ -355,16 +389,10 @@ export function ReportesView({ accounts, initialHistory, recipients }: Props) {
       )}
 
       {sendTarget && (
-        <SendReportModal
-          clientName={sendTarget.clientName}
-          year={sendTarget.year}
-          month={sendTarget.month}
-          versions={sendTarget.versions}
-          to={sendTarget.to}
-          cc={sendTarget.cc}
-          priorSentCount={sendTarget.priorSentCount}
-          onConfirm={() => setSendAccountId(null)}
-          onCancel={() => setSendAccountId(null)}
+        <SendReportDialog
+          {...sendTarget}
+          onSent={markSent}
+          onClose={() => setSendAccountId(null)}
         />
       )}
 

@@ -29,6 +29,10 @@ export default async function ReportesPage() {
       .is('deleted_at', null),
   ])
 
+  if (recipientsRes.error) {
+    console.error('[reportes] recipients query error:', recipientsRes.error)
+  }
+
   const recipients: Record<string, ClientRecipients> = {}
   for (const row of (recipientsRes.data ?? []) as unknown as {
     client_id: string
@@ -48,6 +52,7 @@ export default async function ReportesPage() {
       accounts={accountsRes.data ?? []}
       initialHistory={(historyRes.data ?? []) as unknown as Report[]}
       recipients={recipients}
+      recipientsError={Boolean(recipientsRes.error)}
     />
   )
 }
