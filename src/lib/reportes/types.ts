@@ -55,6 +55,10 @@ export interface GenerateReportRequest {
   accountId: string;
   year: number;
   month: number; // 1-12
+  reportType?: ReportType; // default 'summary'
+  // Complete only: the user confirmed creating a new version although a draft
+  // already exists for the account+period (otherwise the route answers 409).
+  confirmRegenerate?: boolean;
 }
 
 // Config opt-in del modo "resultados de campaña" (ad_accounts.results_config).
@@ -191,6 +195,7 @@ export type EnqueueErrorCode =
 // resultado. El front pollea `reports` hasta done/error.
 export interface EnqueueResponse {
   jobId: string;
+  version: number; // version of the enqueued row (always 1 for summary)
 }
 
 // Plataforma de la cuenta. Solo 'meta' tiene pipeline de generación hoy —
@@ -203,6 +208,7 @@ export interface AccountOption {
   name: string;
   business_name?: string | null;
   platform: Platform;
+  client_id: string | null; // complete reports need a client (recipients live there)
 }
 
 // Filtro de estado del topbar.

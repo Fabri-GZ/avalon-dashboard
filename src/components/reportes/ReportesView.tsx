@@ -8,19 +8,26 @@ import {
   containerVariants as _container,
   cardVariants as _card,
 } from '@/app/components/Dashboard/data/dataProcessors'
-import type { AccountOption, AccountRow, Report, ReportFilter } from '@/lib/reportes/types'
+import type {
+  AccountOption,
+  AccountRow,
+  Report,
+  ReportFilter,
+  ReportType,
+} from '@/lib/reportes/types'
 import { periodLabel } from '@/lib/reportes/format'
 import { ReportesTopbar } from './ReportesTopbar'
 import { ReportHistory } from './ReportHistory'
 import { ReportSheet } from './ReportSheet'
 import { GenerationBlocker } from './GenerationBlocker'
 import { GenerationResultModal } from './GenerationResultModal'
+import { RegenerateConfirmModal } from './RegenerateConfirmModal'
 
 const containerVariants = _container as Variants
 const cardVariants = _card as Variants
 
 const POLL_SELECT =
-  'id, account_id, account_name, period_year, period_month, status, report_url, error, created_at, updated_at'
+  'id, account_id, account_name, period_year, period_month, report_type, version, status, report_url, error, created_at, updated_at'
 
 const norm = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
@@ -40,6 +47,18 @@ interface TerminalResult {
   report: Report
 }
 
+// A complete generation that hit an existing draft, waiting for the user to
+// confirm creating a new version (nothing has been created yet).
+interface PendingRegenerate {
+  accountId: string
+  year: number
+  month: number
+  latestVersion: number
+}
+
+// The drafts workflow (n8n + LLM) runs longer than the small report.
+const COMPLETE_TTL_MS = 300_000
+
 export function ReportesView({ accounts, initialHistory }: Props) {
   const reducedMotion = useReducedMotion()
   const [reports, setReports] = useState<Report[]>(initialHistory)
@@ -49,6 +68,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
   const [filter, setFilter] = useState<ReportFilter>('todas')
   const [sheetOpen, setSheetOpen] = useState(false)
   const [preselect, setPreselect] = useState<string | null>(null)
+  const [regenerate, setRegenerate] = useState<PendingRegenerate | null>(null)
 
   const upsertLocal = (r: Report) =>
     setReports((prev) => {
@@ -58,6 +78,15 @@ export function ReportesView({ accounts, initialHistory }: Props) {
       next[i] = r
       return next
     })
+
+  // La fila que se está generando, para que el blocker pueda nombrar cuenta y
+  // período. Sale de `reports` y no de un state aparte porque `handleGenerate`
+  // ya la inserta ahí antes de arrancar el polling: duplicarla en otro state
+  // sería una segunda fuente de verdad que hay que mantener sincronizada.
+  const activeReport = useMemo(
+    () => (activeJobId ? (reports.find((r) => r.id === activeJobId) ?? null) : null),
+    [activeJobId, reports],
+  )
 
   useJobPolling<Report>(
     activeJobId,
@@ -101,16 +130,23 @@ export function ReportesView({ accounts, initialHistory }: Props) {
     {
       table: 'reports',
       select: POLL_SELECT,
+      // `draft_ready` is terminal for polling: a complete report stops here
+      // until the user renders it (summary rows only ever reach `done`).
+      isDone: (row) => row.status === 'done' || row.status === 'draft_ready',
+      ttlMs: activeReport?.report_type === 'complete' ? COMPLETE_TTL_MS : undefined,
       getDone: (row) => row as unknown as Report,
       getError: (row) => (row.error as string | null) ?? null,
     },
   )
 
+  // By `updated_at`, not `created_at`: the small report is upserted in place
+  // (its `created_at` never moves), so with complete versions in the same list
+  // a regenerated small report would otherwise lose to an older-created row.
   const latestByAccount = useMemo(() => {
     const map = new Map<string, Report>()
     for (const r of reports) {
       const cur = map.get(r.account_id)
-      if (!cur || r.created_at > cur.created_at) map.set(r.account_id, r)
+      if (!cur || r.updated_at > cur.updated_at) map.set(r.account_id, r)
     }
     return map
   }, [reports])
@@ -144,21 +180,12 @@ export function ReportesView({ accounts, initialHistory }: Props) {
       .filter(({ account, latest }) => {
         if (q && !norm(account.name).includes(q)) return false
         if (filter === 'todas') return true
-        if (filter === 'done') return latest?.status === 'done'
+        if (filter === 'done') return latest?.status === 'done' || latest?.status === 'draft_ready'
         if (filter === 'error') return latest?.status === 'error'
         if (filter === 'proceso') return latest?.status === 'pending' || latest?.status === 'running'
         return true
       })
   }, [accounts, latestByAccount, lastDoneByAccount, search, filter])
-
-  // La fila que se está generando, para que el blocker pueda nombrar cuenta y
-  // período. Sale de `reports` y no de un state aparte porque `handleGenerate`
-  // ya la inserta ahí antes de arrancar el polling: duplicarla en otro state
-  // sería una segunda fuente de verdad que hay que mantener sincronizada.
-  const activeReport = useMemo(
-    () => (activeJobId ? (reports.find((r) => r.id === activeJobId) ?? null) : null),
-    [activeJobId, reports],
-  )
 
   // Un solo job a la vez en toda la sección: el bloqueo real vive en la DB, así
   // que mientras uno corre no hay ningún trigger de generar/reintentar que
@@ -166,7 +193,13 @@ export function ReportesView({ accounts, initialHistory }: Props) {
   // — `disabled` es lo que también detiene al teclado.
   const busy = activeJobId !== null
 
-  async function handleGenerate(accountId: string, year: number, month: number) {
+  async function handleGenerate(
+    accountId: string,
+    year: number,
+    month: number,
+    reportType: ReportType = 'summary',
+    confirmRegenerate = false,
+  ) {
     if (activeJobId) {
       toast.info('Esperá a que termine el reporte en curso')
       return
@@ -178,7 +211,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
       res = await fetch('/api/reportes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId, year, month }),
+        body: JSON.stringify({ accountId, year, month, reportType, confirmRegenerate }),
       })
     } catch {
       toast.error('No se pudo conectar con el servidor')
@@ -186,6 +219,11 @@ export function ReportesView({ accounts, initialHistory }: Props) {
     }
 
     const data = await res.json().catch(() => ({}))
+    if (res.status === 409 && data.code === 'complete_exists') {
+      // The server found a draft for this period: ask before creating a new version.
+      setRegenerate({ accountId, year, month, latestVersion: data.latestVersion })
+      return
+    }
     if (!res.ok) {
       toast.error(data.error ?? 'No se pudo generar el reporte')
       return
@@ -197,8 +235,8 @@ export function ReportesView({ accounts, initialHistory }: Props) {
       account_name: account?.name ?? accountId,
       period_year: year,
       period_month: month,
-      report_type: 'summary',
-      version: 1,
+      report_type: reportType,
+      version: data.version ?? 1,
       status: 'pending',
       report_url: null,
       error: null,
@@ -236,7 +274,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
           busy={busy}
           onNew={() => openSheet(null)}
           onGenerateFor={(id) => openSheet(id)}
-          onRetry={(r) => handleGenerate(r.account_id, r.period_year, r.period_month)}
+          onRetry={(r) => handleGenerate(r.account_id, r.period_year, r.period_month, r.report_type)}
         />
       </motion.div>
 
@@ -256,6 +294,19 @@ export function ReportesView({ accounts, initialHistory }: Props) {
         />
       )}
 
+      {regenerate && (
+        <RegenerateConfirmModal
+          accountName={accounts.find((a) => a.id === regenerate.accountId)?.name ?? regenerate.accountId}
+          periodLabel={periodLabel(regenerate.year, regenerate.month)}
+          latestVersion={regenerate.latestVersion}
+          onConfirm={() => {
+            setRegenerate(null)
+            handleGenerate(regenerate.accountId, regenerate.year, regenerate.month, 'complete', true)
+          }}
+          onCancel={() => setRegenerate(null)}
+        />
+      )}
+
       {result && (
         <GenerationResultModal
           kind={result.kind}
@@ -263,6 +314,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
           periodLabel={periodLabel(result.report.period_year, result.report.period_month)}
           reportUrl={result.report.report_url}
           message={result.report.error}
+          draft={result.report.status === 'draft_ready'}
           onRetry={() => {
             // El modal se cierra primero: si no, el blocker del job nuevo
             // aparecería debajo de un diálogo que habla del job anterior.
@@ -271,6 +323,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
               result.report.account_id,
               result.report.period_year,
               result.report.period_month,
+              result.report.report_type,
             )
           }}
           onClose={() => setResult(null)}

@@ -11,13 +11,13 @@ export default async function ReportesPage() {
   const [accountsRes, historyRes] = await Promise.all([
     supabase
       .from('ad_accounts')
-      .select('id, name, business_name, platform')
+      .select('id, name, business_name, platform, client_id')
       .is('deleted_at', null)
       .order('name'),
     supabase
       .from('reports')
       .select(
-        'id, account_id, account_name, period_year, period_month, status, report_url, error, created_at, updated_at',
+        'id, account_id, account_name, period_year, period_month, report_type, version, status, report_url, error, created_at, updated_at',
       )
       .order('created_at', { ascending: false })
       .limit(100),

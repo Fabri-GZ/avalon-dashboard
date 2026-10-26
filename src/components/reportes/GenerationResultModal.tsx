@@ -12,6 +12,10 @@ interface Props {
   periodLabel: string
   reportUrl?: string | null
   message?: string | null
+  /** Complete report whose drafts are ready: there is no published URL yet. */
+  draft?: boolean
+  /** Where the draft is edited; the primary action is omitted while unset. */
+  editHref?: string
   onRetry?: () => void
   onClose: () => void
 }
@@ -38,6 +42,8 @@ export function GenerationResultModal({
   periodLabel,
   reportUrl,
   message,
+  draft = false,
+  editHref,
   onRetry,
   onClose,
 }: Props) {
@@ -75,7 +81,7 @@ export function GenerationResultModal({
     return () => document.removeEventListener('keydown', onKey)
   }, [reducedMotion, onClose])
 
-  const title = kind === 'done' ? 'Reporte listo' : 'No se pudo generar'
+  const title = kind === 'error' ? 'No se pudo generar' : draft ? 'Borrador listo' : 'Reporte listo'
   const subtitle = `${accountName} · ${periodLabel}`
 
   return createPortal(
@@ -121,7 +127,13 @@ export function GenerationResultModal({
           )}
 
           <div className="flex gap-2.5">
-            {kind === 'done' ? (
+            {kind === 'done' && draft ? (
+              editHref && (
+                <Button asChild data-autofocus className="h-10 flex-1 text-sm font-bold">
+                  <a href={editHref}>Editar borrador</a>
+                </Button>
+              )
+            ) : kind === 'done' ? (
               <Button asChild data-autofocus className="h-10 flex-1 text-sm font-bold">
                 <a href={reportUrl ?? undefined} target="_blank" rel="noopener noreferrer">
                   Ver reporte
