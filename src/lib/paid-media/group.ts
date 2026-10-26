@@ -50,6 +50,8 @@ export function groupByClient(clients: PaidMediaClientRow[], accounts: AdAccount
         platforms,
         pmName: client.pm_name,
         operatorName: client.operator_name,
+        reportEmail: client.report_email,
+        reportCcEmails: client.report_cc_emails,
         budgetByCurrency,
       }
     })

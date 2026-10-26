@@ -5,6 +5,7 @@ import { createClient } from '@/app/utils/supabase/server'
 import type { Currency, Platform } from '@/lib/paid-media/types'
 import { normalizePersonName } from '@/lib/paid-media/names'
 import { normalizeWebsiteUrl } from '@/lib/paid-media/url'
+import { normalizeRecipients } from '@/lib/paid-media/emails'
 
 // Server Actions + RLS (D3), following `crm-actions.ts` exactly. Never the
 // `src/app/admin/create-client/` pattern (fetch → API route →
@@ -49,7 +50,9 @@ interface ClientActionResult {
   clientId?: string
   existingClient?: ExistingClientInfo
   // Set with `invalid_value` when one specific input is to blame.
-  field?: 'website_url'
+  field?: 'website_url' | 'report_email' | 'report_cc_emails'
+  // With `report_cc_emails`: the malformed addresses, for the form message.
+  invalidEmails?: string[]
 }
 
 export interface ClientInput {
@@ -59,6 +62,10 @@ export interface ClientInput {
   pm_name: string | null
   operator_name: string | null
   status: string | null
+  // Report recipients: the main email is required (the DB column is nullable
+  // only because legacy clients have none); CC is optional, max 10.
+  report_email: string
+  report_cc_emails: string[]
 }
 
 // `company_name` is optional on update: omit it (unchanged name) so a web/IG edit
@@ -217,6 +224,11 @@ export async function createClientAction(input: ClientInput): Promise<ClientActi
   const websiteUrl = normalizeWebsiteUrl(input.website_url)
   if (websiteUrl === undefined) return { success: false, error: 'invalid_value', field: 'website_url' }
 
+  const recipients = normalizeRecipients(input.report_email, input.report_cc_emails)
+  if (!recipients.ok) {
+    return { success: false, error: 'invalid_value', field: recipients.field, invalidEmails: recipients.invalid }
+  }
+
   const { data, error } = await supabase.rpc('create_paid_media_client', {
     p_company_name: companyName,
     p_website_url: websiteUrl,
@@ -224,6 +236,8 @@ export async function createClientAction(input: ClientInput): Promise<ClientActi
     p_pm_name: normalizePersonName(input.pm_name),
     p_operator_name: normalizePersonName(input.operator_name),
     p_status: input.status,
+    p_report_email: recipients.email,
+    p_report_cc_emails: recipients.cc,
   })
 
   if (error) {
@@ -249,6 +263,11 @@ export async function updateClientAction(id: string, input: ClientUpdateInput): 
 
   const websiteUrl = normalizeWebsiteUrl(input.website_url)
   if (websiteUrl === undefined) return { success: false, error: 'invalid_value', field: 'website_url' }
+
+  const recipients = normalizeRecipients(input.report_email, input.report_cc_emails)
+  if (!recipients.ok) {
+    return { success: false, error: 'invalid_value', field: recipients.field, invalidEmails: recipients.invalid }
+  }
 
   const { data: client, error: clientError } = await supabase
     .from('clients')
@@ -278,6 +297,10 @@ export async function updateClientAction(id: string, input: ClientUpdateInput): 
       pm_name: normalizePersonName(input.pm_name),
       operator_name: normalizePersonName(input.operator_name),
       status: input.status,
+      // Recipients live on the extension, not on `clients`: the guard trigger
+      // there only whitelists name/web/instagram for paid_media users.
+      report_email: recipients.email,
+      report_cc_emails: recipients.cc,
     })
     .eq('client_id', id)
     .select('client_id')
