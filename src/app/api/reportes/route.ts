@@ -90,6 +90,8 @@ export async function POST(req: NextRequest) {
         account_name: account.name,
         period_year: year,
         period_month: month,
+        report_type: 'summary',
+        version: 1,
         status: 'pending',
         report_url: null,
         error: null,
@@ -101,7 +103,8 @@ export async function POST(req: NextRequest) {
         requested_by: user.id,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: 'account_id,period_year,period_month' },
+      // The 3-column unique key was replaced by this 5-column one (migration 005).
+      { onConflict: 'account_id,period_year,period_month,report_type,version' },
     )
     .select('id')
     .single()
