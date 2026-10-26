@@ -15,6 +15,7 @@ import type { ReportStatus } from '@/lib/reportes/types'
 const STATUS: Record<ReportStatus | 'none', { label: string; token: string; spin?: boolean }> = {
   pending: { label: 'En cola', token: 'var(--status-pending)' },
   running: { label: 'Generando…', token: 'var(--status-running)', spin: true },
+  draft_ready: { label: 'Borrador listo', token: 'var(--status-draft)' },
   done: { label: 'Listo', token: 'var(--status-done)' },
   error: { label: 'Error', token: 'var(--status-error)' },
   // Absence of a report is not a status the pipeline can emit, so it has no

@@ -3,7 +3,11 @@
 // el front pollea `reports` hasta done/error. n8n escribe el estado final por
 // service_role.
 
-export type ReportStatus = 'pending' | 'running' | 'done' | 'error';
+// `draft_ready` is terminal only for complete reports (drafts generated, ready
+// to edit); render/send state lives on child rows, never on `reports`.
+export type ReportStatus = 'pending' | 'running' | 'draft_ready' | 'done' | 'error';
+
+export type ReportType = 'summary' | 'complete';
 
 // Fila de la tabla public.reports.
 export interface Report {
@@ -12,6 +16,8 @@ export interface Report {
   account_name: string; // snapshot, estable aunque la cuenta se renombre
   period_year: number;
   period_month: number; // 1-12
+  report_type: ReportType;
+  version: number; // summary is always 1; complete increments per regeneration
   status: ReportStatus;
   report_url: string | null;
   error: string | null;

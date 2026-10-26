@@ -159,6 +159,7 @@ body {
      bg-status-error, etc.) y como var(--color-status-*) para color-mix. */
   --color-status-pending: var(--status-pending);
   --color-status-running: var(--status-running);
+  --color-status-draft: var(--status-draft);
   --color-status-done: var(--status-done);
   --color-status-error: var(--status-error);
 }
@@ -206,6 +207,7 @@ body {
      no llegaban a 4.5:1 (running quedaba en ~3.9:1, error en ~4.0:1). */
   --status-pending: oklch(0.44 0.13 55);
   --status-running: oklch(0.44 0.11 75);
+  --status-draft: oklch(0.44 0.12 250);
   --status-done: oklch(0.44 0.12 160);
   --status-error: oklch(0.44 0.18 27);
 }
@@ -245,6 +247,7 @@ body {
      leer sobre --card: #111116. */
   --status-pending: oklch(0.78 0.14 55);
   --status-running: oklch(0.82 0.13 75);
+  --status-draft: oklch(0.78 0.12 250);
   --status-done: oklch(0.80 0.14 160);
   --status-error: oklch(0.72 0.17 27);
 }

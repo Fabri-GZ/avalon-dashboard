@@ -197,6 +197,8 @@ export function ReportesView({ accounts, initialHistory }: Props) {
       account_name: account?.name ?? accountId,
       period_year: year,
       period_month: month,
+      report_type: 'summary',
+      version: 1,
       status: 'pending',
       report_url: null,
       error: null,

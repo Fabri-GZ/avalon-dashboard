@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/app/utils/supabase/server'
+import { requireReportsAccess } from '@/lib/reportes/auth'
 import { supabaseAdmin } from '@/app/utils/supabase/admin'
 import type { GenerateReportRequest, GenerateReportWebhookPayload } from '@/lib/reportes/types'
 
@@ -8,6 +8,16 @@ import type { GenerateReportRequest, GenerateReportWebhookPayload } from '@/lib/
 // `jobId` (insights → manifiesto → HTML → FTP) y escribe el estado final por
 // service_role. El front pollea `reports` con useJobPolling<Report>.
 export async function POST(req: NextRequest) {
+  // Sección interna: requiere sesión Y rol (admin_global | paid_media). Va
+  // primero y antes de leer el body: el insert de abajo usa service_role, que
+  // ignora RLS, así que sin este chequeo cualquier usuario logueado podría
+  // encolar reportes. El userId ancla `requested_by`.
+  const access = await requireReportsAccess()
+  if (access.ok === false) {
+    return NextResponse.json({ error: access.error }, { status: access.status })
+  }
+  const user = { id: access.userId }
+
   let body: Partial<GenerateReportRequest>
 
   try {
@@ -35,16 +45,6 @@ export async function POST(req: NextRequest) {
   const curM = now.getMonth() + 1
   if (year > curY || (year === curY && month > curM)) {
     return NextResponse.json({ error: 'No se puede generar un período futuro' }, { status: 400 })
-  }
-
-  // Sección interna: requiere sesión. El user_id ancla `requested_by`.
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
 
   // Snapshot del nombre de la cuenta (estable aunque luego se renombre) + valida
@@ -80,7 +80,8 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Upsert idempotente por (account_id, year, month): regenerar PISA el registro
+  // Upsert idempotente por (account_id, year, month, report_type, version): el
+  // resumen es siempre `summary` v1, así que regenerar PISA el registro
   // (resetea estado a pending y limpia url/error/manifest) sin duplicar filas.
   const { data: job, error: upsertErr } = await supabaseAdmin
     .from('reports')
@@ -90,6 +91,8 @@ export async function POST(req: NextRequest) {
         account_name: account.name,
         period_year: year,
         period_month: month,
+        report_type: 'summary',
+        version: 1,
         status: 'pending',
         report_url: null,
         error: null,
@@ -101,7 +104,7 @@ export async function POST(req: NextRequest) {
         requested_by: user.id,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: 'account_id,period_year,period_month' },
+      { onConflict: 'account_id,period_year,period_month,report_type,version' },
     )
     .select('id')
     .single()
@@ -130,7 +133,14 @@ export async function POST(req: NextRequest) {
 
     const n8nRes = await fetch(webhookUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Shared secret (server-only): n8n rejects the call with 401 on mismatch.
+        // Omitted when unset so the live workflow keeps working until n8n checks it.
+        ...(process.env.N8N_REPORTES_WEBHOOK_SECRET && {
+          'x-avalon-webhook-secret': process.env.N8N_REPORTES_WEBHOOK_SECRET,
+        }),
+      },
       body: JSON.stringify(webhookPayload),
       signal: AbortSignal.timeout(10_000),
     })
