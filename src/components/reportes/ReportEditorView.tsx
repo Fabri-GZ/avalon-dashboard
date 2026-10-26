@@ -39,6 +39,8 @@ interface Props {
   initialTexts: ReportText[]
   versions: { id: string; version: number }[]
   initialRenders: RenderHistoryItem[]
+  /** `reports.report_data`, for the rationale metric chips. */
+  reportData?: unknown
 }
 
 /**
@@ -46,7 +48,7 @@ interface Props {
  * typing in one never delays another; the header aggregates them into a single
  * save state. Texts equal to the AI text are saved as `null` (not "edited").
  */
-export function ReportEditorView({ report, initialTexts, versions, initialRenders }: Props) {
+export function ReportEditorView({ report, initialTexts, versions, initialRenders, reportData }: Props) {
   const editable = report.status === 'draft_ready'
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialTexts.map((t) => [t.id, t.edited_text ?? t.ai_text])),
@@ -189,7 +191,7 @@ export function ReportEditorView({ report, initialTexts, versions, initialRender
   }, [initialTexts, persist])
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 text-foreground">
       <ReportEditorHeader
         accountName={report.account_name}
         year={report.period_year}
@@ -217,6 +219,7 @@ export function ReportEditorView({ report, initialTexts, versions, initialRender
             readOnly={!editable || rendering}
             onChange={(v) => schedule(text, v)}
             onRestore={() => schedule(text, text.ai_text)}
+            reportData={reportData}
           />
         ))
       )}

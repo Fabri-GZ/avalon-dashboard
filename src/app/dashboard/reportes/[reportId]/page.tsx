@@ -9,7 +9,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 type EditorReport = Pick<
   Report,
   'id' | 'account_id' | 'account_name' | 'period_year' | 'period_month' | 'report_type' | 'version' | 'status'
->
+> & { report_data: unknown }
 
 // Server Component: the prefix guard is the middleware (ROUTE_SECTION_MAP →
 // REPORTES) and RLS only lets admin_global/paid_media read reports, so any other
@@ -26,7 +26,7 @@ export default async function ReportEditorPage({
 
   const { data: report, error: reportErr } = await supabase
     .from('reports')
-    .select('id, account_id, account_name, period_year, period_month, report_type, version, status')
+    .select('id, account_id, account_name, period_year, period_month, report_type, version, status, report_data')
     .eq('id', reportId)
     .maybeSingle<EditorReport>()
 
@@ -65,6 +65,7 @@ export default async function ReportEditorPage({
       initialTexts={(textsRes.data ?? []) as unknown as ReportText[]}
       versions={versionsRes.data ?? []}
       initialRenders={(rendersRes.data ?? []) as RenderHistoryItem[]}
+      reportData={report.report_data}
     />
   )
 }

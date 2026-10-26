@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, useReducedMotion, type Variants } from 'framer-motion'
 import { toast } from 'react-toastify'
 import { useJobPolling } from '@/hooks/useJobPolling'
@@ -68,6 +69,7 @@ const COMPLETE_TTL_MS = 300_000
 
 export function ReportesView({ accounts, initialHistory, recipients, recipientsError = false }: Props) {
   const reducedMotion = useReducedMotion()
+  const router = useRouter()
   const [reports, setReports] = useState<Report[]>(initialHistory)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
   const [result, setResult] = useState<TerminalResult | null>(null)
@@ -103,6 +105,11 @@ export function ReportesView({ accounts, initialHistory, recipients, recipientsE
       onDone: (report) => {
         upsertLocal(report)
         setActiveJobId(null)
+        // A finished complete draft goes straight to the editor.
+        if (report.status === 'draft_ready') {
+          router.push(`/dashboard/reportes/${report.id}`)
+          return
+        }
         // El modal reemplaza al toast para los finales: es la superficie que
         // ofrece "Ver reporte" y "Reintentar". Dejar los dos duplicaba el
         // aviso y el toast se iba solo justo cuando había algo que decidir.

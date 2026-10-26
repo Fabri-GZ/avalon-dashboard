@@ -9,7 +9,7 @@ const SAVE_LABEL: Record<SaveState, string> = {
   idle: '',
   dirty: 'Cambios sin guardar…',
   saving: 'Guardando…',
-  saved: 'Guardado',
+  saved: '',
   error: 'No se pudo guardar',
 }
 
@@ -54,7 +54,7 @@ export function ReportEditorHeader({
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold leading-snug">{accountName}</h1>
+          <h1 className="text-lg font-semibold leading-snug text-foreground">{accountName}</h1>
           <p className="text-sm text-muted-foreground">
             {periodLabel(year, month)} · Versión {version}
           </p>
