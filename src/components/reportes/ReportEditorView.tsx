@@ -2,12 +2,27 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
-import { saveReportTextAction, type ReportActionError } from '@/app/actions/report-actions'
+import {
+  renderReportAction,
+  saveReportTextAction,
+  type ReportActionError,
+} from '@/app/actions/report-actions'
+import { useJobPolling } from '@/hooks/useJobPolling'
+import { periodLabel } from '@/lib/reportes/format'
 import type { Report, ReportText } from '@/lib/reportes/types'
+import { RenderResultModal } from './RenderResultModal'
 import { ReportEditorHeader, type SaveState } from './ReportEditorHeader'
+import { ReportRenderHistory, type RenderHistoryItem } from './ReportRenderHistory'
 import { ReportTextSection } from './ReportTextSection'
 
 const SAVE_DEBOUNCE_MS = 800
+const RENDER_TTL_MS = 180_000
+const isActive = (r: RenderHistoryItem) => r.status === 'pending' || r.status === 'running'
+
+interface RenderPollRow {
+  report_url: string | null
+  pdf_url: string | null
+}
 
 const SAVE_ERRORS: Partial<Record<ReportActionError, string>> = {
   not_editable: 'Este borrador ya no se puede editar',
@@ -23,6 +38,7 @@ interface Props {
   >
   initialTexts: ReportText[]
   versions: { id: string; version: number }[]
+  initialRenders: RenderHistoryItem[]
 }
 
 /**
@@ -30,7 +46,7 @@ interface Props {
  * typing in one never delays another; the header aggregates them into a single
  * save state. Texts equal to the AI text are saved as `null` (not "edited").
  */
-export function ReportEditorView({ report, initialTexts, versions }: Props) {
+export function ReportEditorView({ report, initialTexts, versions, initialRenders }: Props) {
   const editable = report.status === 'draft_ready'
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialTexts.map((t) => [t.id, t.edited_text ?? t.ai_text])),
@@ -39,6 +55,15 @@ export function ReportEditorView({ report, initialTexts, versions }: Props) {
     Object.fromEntries(initialTexts.map((t) => [t.id, t.edited_text !== null])),
   )
   const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [renders, setRenders] = useState(initialRenders)
+  const [starting, setStarting] = useState(false)
+  // Render being polled; resumes one that was already active on page load.
+  const [pollId, setPollId] = useState<string | null>(
+    () => initialRenders.find(isActive)?.id ?? null,
+  )
+  const [result, setResult] = useState<RenderPollRow | null>(null)
+  // Locked from the DB state of the renders, so it also holds after a poll timeout.
+  const rendering = starting || renders.some(isActive)
 
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const inflight = useRef(0)
@@ -46,27 +71,29 @@ export function ReportEditorView({ report, initialTexts, versions }: Props) {
   // Latest value per section, so a flush on unmount sends what is in the textarea.
   const latest = useRef<Record<string, string>>(values)
 
-  const persist = useCallback(
-    async (text: ReportText, value: string) => {
-      const next = value.trim() === '' || value === text.ai_text ? null : value
-      inflight.current += 1
-      setSaveState('saving')
-      const res = await saveReportTextAction(text.id, next)
-      inflight.current -= 1
+  const persist = useCallback(async (text: ReportText, value: string): Promise<boolean> => {
+    const next = value.trim() === '' || value === text.ai_text ? null : value
+    inflight.current += 1
+    setSaveState('saving')
+    // A thrown action (network) must not leave the state stuck in "Guardando…".
+    const res = await saveReportTextAction(text.id, next).catch(() => ({
+      success: false as const,
+      error: undefined,
+    }))
+    inflight.current -= 1
 
-      if (!res.success) {
-        failed.current = true
-        setSaveState('error')
-        toast.error((res.error && SAVE_ERRORS[res.error]) ?? 'No se pudo guardar el cambio')
-        return
-      }
-      setEdited((prev) => ({ ...prev, [text.id]: next !== null }))
-      if (inflight.current === 0 && Object.keys(timers.current).length === 0) {
-        setSaveState(failed.current ? 'error' : 'saved')
-      }
-    },
-    [],
-  )
+    if (!res.success) {
+      failed.current = true
+      setSaveState('error')
+      toast.error((res.error && SAVE_ERRORS[res.error]) ?? 'No se pudo guardar el cambio')
+      return false
+    }
+    setEdited((prev) => ({ ...prev, [text.id]: next !== null }))
+    if (inflight.current === 0 && Object.keys(timers.current).length === 0) {
+      setSaveState(failed.current ? 'error' : 'saved')
+    }
+    return true
+  }, [])
 
   function schedule(text: ReportText, value: string) {
     latest.current[text.id] = value
@@ -80,6 +107,72 @@ export function ReportEditorView({ report, initialTexts, versions }: Props) {
       void persist(text, value)
     }, SAVE_DEBOUNCE_MS)
   }
+
+  // Saves every pending debounce right now; false if any save failed.
+  async function flushPending() {
+    const saves = Object.keys(timers.current).map((id) => {
+      clearTimeout(timers.current[id])
+      delete timers.current[id]
+      const text = initialTexts.find((t) => t.id === id)
+      return text ? persist(text, latest.current[id]) : Promise.resolve(true)
+    })
+    return (await Promise.all(saves)).every(Boolean)
+  }
+
+  async function handleRender() {
+    setStarting(true)
+    try {
+      if (!(await flushPending())) return
+      const res = await renderReportAction(report.id).catch(() => null)
+      if (!res || !res.ok) {
+        toast.error(res?.message ?? 'No se pudo iniciar la generación')
+        return
+      }
+      setRenders((prev) => [
+        {
+          id: res.renderId,
+          public_id: res.publicId,
+          status: 'pending',
+          report_url: null,
+          pdf_url: null,
+          error: null,
+          created_at: new Date().toISOString(),
+        },
+        ...prev,
+      ])
+      setPollId(res.renderId)
+    } finally {
+      setStarting(false)
+    }
+  }
+
+  const finishRender = (patch: Partial<RenderHistoryItem>) =>
+    setRenders((prev) => prev.map((r) => (r.id === pollId ? { ...r, ...patch } : r)))
+
+  useJobPolling<RenderPollRow>(
+    pollId,
+    {
+      onDone: (row) => {
+        finishRender({ status: 'done', report_url: row.report_url, pdf_url: row.pdf_url })
+        setPollId(null)
+        setResult(row)
+      },
+      onError: (message, reason) => {
+        // On timeout the row is still pending in the DB: only stop watching.
+        if (reason === 'job') finishRender({ status: 'error', error: message })
+        setPollId(null)
+        toast.error(
+          reason === 'job' ? message : 'La generación tarda más de lo normal. Recargá en un rato.',
+        )
+      },
+    },
+    {
+      table: 'report_renders',
+      select: 'status, report_url, pdf_url, error',
+      getDone: (row) => row as unknown as RenderPollRow,
+      ttlMs: RENDER_TTL_MS,
+    },
+  )
 
   // Leaving the page with a pending debounce must not drop the edit.
   useEffect(() => {
@@ -106,6 +199,8 @@ export function ReportEditorView({ report, initialTexts, versions }: Props) {
         currentId={report.id}
         editable={editable}
         saveState={saveState}
+        rendering={rendering}
+        onRender={handleRender}
       />
 
       {initialTexts.length === 0 ? (
@@ -119,11 +214,23 @@ export function ReportEditorView({ report, initialTexts, versions }: Props) {
             text={text}
             value={values[text.id] ?? text.ai_text}
             edited={edited[text.id] ?? false}
-            readOnly={!editable}
+            readOnly={!editable || rendering}
             onChange={(v) => schedule(text, v)}
             onRestore={() => schedule(text, text.ai_text)}
           />
         ))
+      )}
+
+      <ReportRenderHistory renders={renders} />
+
+      {result?.report_url && (
+        <RenderResultModal
+          accountName={report.account_name}
+          periodLabel={periodLabel(report.period_year, report.period_month)}
+          reportUrl={result.report_url}
+          pdfUrl={result.pdf_url}
+          onClose={() => setResult(null)}
+        />
       )}
     </div>
   )
