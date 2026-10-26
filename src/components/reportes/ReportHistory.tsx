@@ -76,7 +76,7 @@ export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetr
                   plena el salto contra `--card` se percibe igual en ambos. Al
                   50% el delta en oscuro (#111116 → ~#191920) quedaba por debajo
                   del umbral de percepción y el hover parecía no existir. */}
-              {rows.map(({ account, latest, lastDone }) => (
+              {rows.map(({ account, latest, lastDone, latestComplete, latestDoneRender }) => (
                 <tr
                   key={account.id}
                   className="border-t border-border/60 transition-colors hover:bg-secondary/50"
@@ -108,6 +108,8 @@ export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetr
                     <ReportRowActions
                       latest={latest}
                       lastDone={lastDone}
+                      latestComplete={latestComplete}
+                      latestDoneRender={latestDoneRender}
                       accountId={account.id}
                       platform={account.platform}
                       busy={busy}
@@ -124,12 +126,14 @@ export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetr
 
       {rows.length > 0 && (
         <ul className="space-y-2.5 p-3 sm:hidden">
-          {rows.map(({ account, latest, lastDone }) => (
+          {rows.map(({ account, latest, lastDone, latestComplete, latestDoneRender }) => (
             <ReportCard
               key={account.id}
               account={account}
               latest={latest}
               lastDone={lastDone}
+              latestComplete={latestComplete}
+              latestDoneRender={latestDoneRender}
               busy={busy}
               onGenerateFor={onGenerateFor}
               onRetry={onRetry}

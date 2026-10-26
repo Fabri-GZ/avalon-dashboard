@@ -24,6 +24,8 @@ export function ReportCard({
   account,
   latest,
   lastDone,
+  latestComplete,
+  latestDoneRender,
   busy = false,
   onGenerateFor,
   onRetry,
@@ -55,6 +57,8 @@ export function ReportCard({
         <ReportRowActions
           latest={latest}
           lastDone={lastDone}
+          latestComplete={latestComplete}
+          latestDoneRender={latestDoneRender}
           accountId={account.id}
           platform={account.platform}
           busy={busy}
