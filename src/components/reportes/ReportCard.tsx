@@ -9,6 +9,7 @@ interface Props extends AccountRow {
   busy?: boolean
   onGenerateFor: (accountId: string) => void
   onRetry: (report: Report) => void
+  onSend: (accountId: string) => void
 }
 
 /**
@@ -29,6 +30,7 @@ export function ReportCard({
   busy = false,
   onGenerateFor,
   onRetry,
+  onSend,
 }: Props) {
   return (
     <li className="rounded-md border border-border bg-card px-4 py-3 shadow-sm transition-all duration-200 ease-in">
@@ -64,6 +66,7 @@ export function ReportCard({
           busy={busy}
           onGenerateFor={onGenerateFor}
           onRetry={onRetry}
+          onSend={onSend}
           variant="card"
         />
       </div>

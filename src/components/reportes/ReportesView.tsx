@@ -11,18 +11,20 @@ import {
 import type {
   AccountOption,
   AccountRow,
+  ClientRecipients,
   Report,
   ReportFilter,
   ReportType,
 } from '@/lib/reportes/types'
 import { periodLabel } from '@/lib/reportes/format'
-import { doneRenders } from '@/lib/reportes/renders'
+import { buildSendContext, doneRenders } from '@/lib/reportes/renders'
 import { ReportesTopbar } from './ReportesTopbar'
 import { ReportHistory } from './ReportHistory'
 import { ReportSheet } from './ReportSheet'
 import { GenerationBlocker } from './GenerationBlocker'
 import { GenerationResultModal } from './GenerationResultModal'
 import { RegenerateConfirmModal } from './RegenerateConfirmModal'
+import { SendReportModal } from './SendReportModal'
 
 const containerVariants = _container as Variants
 const cardVariants = _card as Variants
@@ -36,6 +38,8 @@ const norm = (s: string) =>
 interface Props {
   accounts: AccountOption[]
   initialHistory: Report[]
+  /** Fixed report recipients by `client_id`. */
+  recipients: Record<string, ClientRecipients>
 }
 
 /**
@@ -60,7 +64,7 @@ interface PendingRegenerate {
 // The drafts workflow (n8n + LLM) runs longer than the small report.
 const COMPLETE_TTL_MS = 300_000
 
-export function ReportesView({ accounts, initialHistory }: Props) {
+export function ReportesView({ accounts, initialHistory, recipients }: Props) {
   const reducedMotion = useReducedMotion()
   const [reports, setReports] = useState<Report[]>(initialHistory)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
@@ -70,6 +74,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [preselect, setPreselect] = useState<string | null>(null)
   const [regenerate, setRegenerate] = useState<PendingRegenerate | null>(null)
+  const [sendAccountId, setSendAccountId] = useState<string | null>(null)
 
   const upsertLocal = (r: Report) =>
     setReports((prev) => {
@@ -270,6 +275,25 @@ export function ReportesView({ accounts, initialHistory }: Props) {
     setActiveJobId(data.jobId)
   }
 
+  // Everything the send modal shows, derived from the loaded history. Null when
+  // the account has nothing sendable (e.g. state changed under an open menu).
+  const sendTarget = useMemo(() => {
+    if (!sendAccountId) return null
+    const account = accounts.find((a) => a.id === sendAccountId)
+    const done = completeByAccount.renders.get(sendAccountId)
+    if (!account || !done) return null
+    const client = account.client_id ? recipients[account.client_id] : undefined
+    return {
+      clientName: client?.name ?? account.name,
+      to: client?.reportEmail ?? null,
+      cc: client?.ccEmails ?? [],
+      ...buildSendContext(reports, sendAccountId, {
+        year: done.report.period_year,
+        month: done.report.period_month,
+      }),
+    }
+  }, [sendAccountId, accounts, completeByAccount, recipients, reports])
+
   function openSheet(accountId: string | null) {
     setPreselect(accountId)
     setSheetOpen(true)
@@ -297,6 +321,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
           onNew={() => openSheet(null)}
           onGenerateFor={(id) => openSheet(id)}
           onRetry={(r) => handleGenerate(r.account_id, r.period_year, r.period_month, r.report_type)}
+          onSend={setSendAccountId}
         />
       </motion.div>
 
@@ -326,6 +351,20 @@ export function ReportesView({ accounts, initialHistory }: Props) {
             handleGenerate(regenerate.accountId, regenerate.year, regenerate.month, 'complete', true)
           }}
           onCancel={() => setRegenerate(null)}
+        />
+      )}
+
+      {sendTarget && (
+        <SendReportModal
+          clientName={sendTarget.clientName}
+          year={sendTarget.year}
+          month={sendTarget.month}
+          versions={sendTarget.versions}
+          to={sendTarget.to}
+          cc={sendTarget.cc}
+          priorSentCount={sendTarget.priorSentCount}
+          onConfirm={() => setSendAccountId(null)}
+          onCancel={() => setSendAccountId(null)}
         />
       )}
 

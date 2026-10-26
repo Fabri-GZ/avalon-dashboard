@@ -16,9 +16,10 @@ interface Props {
   onNew: () => void
   onGenerateFor: (accountId: string) => void
   onRetry: (report: Report) => void
+  onSend: (accountId: string) => void
 }
 
-export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetry }: Props) {
+export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetry, onSend }: Props) {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       {/* Header */}
@@ -115,6 +116,7 @@ export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetr
                       busy={busy}
                       onGenerateFor={onGenerateFor}
                       onRetry={onRetry}
+                      onSend={onSend}
                     />
                   </td>
                 </tr>
@@ -137,6 +139,7 @@ export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetr
               busy={busy}
               onGenerateFor={onGenerateFor}
               onRetry={onRetry}
+              onSend={onSend}
             />
           ))}
         </ul>

@@ -170,6 +170,14 @@ export interface ReportRenderSummary {
   report_deliveries?: { id: string; status: DeliveryStatus }[];
 }
 
+// Where a complete report is sent: the client's fixed recipients (D6), read
+// from client_paid_media and edited only in the client form.
+export interface ClientRecipients {
+  name: string;
+  reportEmail: string | null;
+  ccEmails: string[];
+}
+
 // Body que la app postea al webhook de borradores (n8n).
 export interface DraftsWebhookPayload {
   jobId: string;
