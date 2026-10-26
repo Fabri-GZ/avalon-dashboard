@@ -130,6 +130,9 @@ export interface PaidMediaClientRow {
   pm_name: string | null
   operator_name: string | null
   status: string | null // key into `paid_media_client_status`
+  // Report recipients; `null` email = legacy client that still has none.
+  report_email: string | null
+  report_cc_emails: string[]
   // Portal clients (Grupo Norte, Viviera) keep an admin-only name (DB guard trigger).
   portal_enabled: boolean
 }
@@ -153,6 +156,8 @@ export interface ClientGroup {
   platforms: Platform[] // distinct, drives the platform chips
   pmName: string | null
   operatorName: string | null
+  reportEmail: string | null
+  reportCcEmails: string[]
   // Per-currency subtotals, not a single summed total (spec: "client totals
   // are per-currency subtotals"). ARS first when both are present.
   budgetByCurrency: { currency: Currency; total: number }[]
