@@ -17,6 +17,7 @@ interface Props extends Pick<AccountRow, 'latestComplete' | 'latestDoneRender'> 
   platform: Platform
   onGenerateFor: (accountId: string) => void
   onRetry: (report: Report) => void
+  onSend: (accountId: string) => void
   /**
    * A report is generating somewhere in the section. Only one job runs at a
    * time, so every primary control goes inert — not just this row's.
@@ -44,6 +45,7 @@ export function ReportRowActions({
   platform,
   onGenerateFor,
   onRetry,
+  onSend,
   busy = false,
   variant = 'table',
 }: Props) {
@@ -86,6 +88,7 @@ export function ReportRowActions({
           latestComplete={latestComplete}
           latestDoneRender={latestDoneRender}
           accountId={accountId}
+          onSend={onSend}
           className={iconClass}
         />
       ) : (
