@@ -1,6 +1,7 @@
 'use client'
 
-import { LuLoader, LuPlus, LuRotateCw } from 'react-icons/lu'
+import Link from 'next/link'
+import { LuLoader, LuPencil, LuPlus, LuRotateCw } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import type { Platform, Report } from '@/lib/reportes/types'
 import { periodLabel } from '@/lib/reportes/format'
@@ -45,6 +46,7 @@ export function ReportRowActions({
   variant = 'table',
 }: Props) {
   const isCard = variant === 'card'
+  const isDraft = latest?.status === 'draft_ready'
 
   // Acá vivía un override del hover, porque el `outline` de shadcn cambiaba el
   // color del texto contra un token invertido. Eso ahora lo resuelve la propia
@@ -71,10 +73,12 @@ export function ReportRowActions({
           y medio en que el usuario espera el reemplazo. */}
       {lastDone ? (
         <ViewButton report={lastDone} className={iconClass} />
-      ) : (
+      ) : !isDraft ? (
         // Reserved, not omitted: keeps the primary controls aligned.
         <span aria-hidden className={isCard ? 'size-11 shrink-0' : 'size-8 shrink-0'} />
-      )}
+      ) : null}
+      {/* A complete draft waiting for edits: the one case with a second icon. */}
+      {isDraft && latest && <EditButton report={latest} className={iconClass} />}
     </div>
   )
 }
@@ -137,6 +141,18 @@ function Primary({
       disabled={busy}
     >
       <LuPlus /> Generar
+    </Button>
+  )
+}
+
+function EditButton({ report, className }: { report: Report; className: string }) {
+  const label = `Editar borrador de ${periodLabel(report.period_year, report.period_month)}`
+
+  return (
+    <Button asChild size="icon-sm" variant="outline" className={className}>
+      <Link href={`/dashboard/reportes/${report.id}`} aria-label={label} title={label}>
+        <LuPencil />
+      </Link>
     </Button>
   )
 }

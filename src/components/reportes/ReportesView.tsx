@@ -315,6 +315,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
           reportUrl={result.report.report_url}
           message={result.report.error}
           draft={result.report.status === 'draft_ready'}
+          editHref={`/dashboard/reportes/${result.report.id}`}
           onRetry={() => {
             // El modal se cierra primero: si no, el blocker del job nuevo
             // aparecería debajo de un diálogo que habla del job anterior.
