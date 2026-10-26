@@ -19,6 +19,8 @@ export default async function ReportesPage() {
       .select(
         'id, account_id, account_name, period_year, period_month, status, report_url, error, created_at, updated_at',
       )
+      // Complete reports share the table but are not released yet.
+      .eq('report_type', 'summary')
       .order('created_at', { ascending: false })
       .limit(100),
   ])
