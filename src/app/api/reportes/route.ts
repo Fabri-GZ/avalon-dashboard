@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireReportsAccess } from '@/lib/reportes/auth'
+import { postToN8n } from '@/lib/reportes/dispatch'
 import { supabaseAdmin } from '@/app/utils/supabase/admin'
 import type {
   DraftsWebhookPayload,
@@ -22,32 +23,15 @@ async function dispatchToN8n(jobId: string, url: string, payload: unknown) {
       .update({ status: 'error', error, updated_at: new Date().toISOString() })
       .eq('id', jobId)
 
-  try {
-    const n8nRes = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Shared secret (server-only): n8n rejects the call with 401 on mismatch.
-        // Omitted when unset so the live workflow keeps working until n8n checks it.
-        ...(process.env.N8N_REPORTES_WEBHOOK_SECRET && {
-          'x-avalon-webhook-secret': process.env.N8N_REPORTES_WEBHOOK_SECRET,
-        }),
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(10_000),
-    })
+  const sent = await postToN8n(url, payload)
+  if (sent.ok === true) return null
 
-    if (!n8nRes.ok) {
-      console.error('[api/reportes] n8n ack no-ok:', n8nRes.status)
-      await markError(`n8n ${n8nRes.status}`)
-      return NextResponse.json({ error: `Error en n8n: ${n8nRes.status}` }, { status: 502 })
-    }
-  } catch (err) {
-    console.error('[api/reportes] n8n dispatch error:', err)
-    await markError('No se pudo despachar a n8n')
-    return NextResponse.json({ error: 'No se pudo iniciar la generación' }, { status: 502 })
-  }
-  return null
+  await markError(sent.error)
+  const isAck = sent.error.startsWith('n8n ')
+  return NextResponse.json(
+    { error: isAck ? `Error en n8n: ${sent.error.slice(4)}` : 'No se pudo iniciar la generación' },
+    { status: 502 },
+  )
 }
 
 // Encola la generación de un reporte de paid media. Espeja el patrón async de
