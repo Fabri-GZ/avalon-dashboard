@@ -7,7 +7,7 @@ const REPORTS_ROLES = ['admin_global', 'paid_media']
 
 export type ReportsAccess =
   | { ok: true; supabase: SupabaseClient; userId: string }
-  | { ok: false; status: 401 | 403; error: string }
+  | { ok: false; status: 401 | 403 | 500; error: string }
 
 // Server-side role gate shared by /api/reportes and the report server actions.
 // Needed because those paths write with `supabaseAdmin` (service role), which
@@ -21,11 +21,18 @@ export async function requireReportsAccess(): Promise<ReportsAccess> {
 
   if (!user) return { ok: false, status: 401, error: 'No autenticado' }
 
-  const { data: profile } = await supabase
+  // maybeSingle: a missing profile row is data=null (-> 403); a real query
+  // failure sets `error` (-> 500) so an outage is not reported as "no permission".
+  const { data: profile, error: profileErr } = await supabase
     .from('user_profiles')
     .select('role')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
+
+  if (profileErr) {
+    console.error('[reportes/auth] profile query error:', profileErr)
+    return { ok: false, status: 500, error: 'Error verificando permisos' }
+  }
 
   if (!profile || !REPORTS_ROLES.includes(profile.role)) {
     return { ok: false, status: 403, error: 'Sin permisos para generar reportes' }

@@ -85,6 +85,108 @@ export interface GenerateReportWebhookPayload {
   account: ReportWebhookAccount;
 }
 
+// --- Complete report (drafts -> edit -> render -> send) ---------------------
+
+// Fila de public.report_texts. `ai_text` is written only by n8n and never
+// changes; humans write `edited_text`. Effective text = edited_text ?? ai_text.
+export interface ReportText {
+  id: string;
+  report_id: string;
+  section_key: string;
+  section_label: string;
+  sort_order: number;
+  ai_text: string;
+  ai_rationale: string | null;
+  edited_text: string | null;
+  edited_by: string | null;
+  edited_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Entry of report_renders.texts_snapshot: the effective text frozen at render
+// time so a published version never changes when the draft is edited later.
+export interface ReportTextSnapshot {
+  section_key: string;
+  section_label: string;
+  sort_order: number;
+  text: string;
+  edited: boolean;
+}
+
+export type RenderStatus = 'pending' | 'running' | 'done' | 'error';
+
+// Fila de public.report_renders (one published URL per render).
+export interface ReportRender {
+  id: string;
+  report_id: string;
+  public_id: string; // 8 chars, part of the published URL
+  status: RenderStatus;
+  texts_snapshot: ReportTextSnapshot[];
+  report_url: string | null;
+  pdf_url: string | null;
+  error: string | null;
+  error_detail: Record<string, unknown> | null;
+  rendered_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DeliveryStatus = 'pending' | 'sending' | 'sent' | 'error';
+
+// Fila de public.report_deliveries (email + Drive send of one render).
+export interface ReportDelivery {
+  id: string;
+  render_id: string;
+  to_email: string;
+  cc_emails: string[];
+  drive_file_name: string;
+  status: DeliveryStatus;
+  drive_url: string | null;
+  error: string | null;
+  error_detail: Record<string, unknown> | null;
+  sent_by: string;
+  sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Body que la app postea al webhook de borradores (n8n).
+export interface DraftsWebhookPayload {
+  jobId: string;
+  accountId: string;
+  year: number;
+  month: number;
+  version: number;
+  account: ReportWebhookAccount;
+  client: { id: string; name: string };
+}
+
+// Webhook de render: n8n lee texts_snapshot y report_data desde las filas.
+export interface RenderWebhookPayload {
+  renderId: string;
+  reportId: string;
+  publicId: string;
+}
+
+// Webhook de envío: n8n lee destinatarios y nombre de archivo desde la fila.
+export interface SendWebhookPayload {
+  deliveryId: string;
+  renderId: string;
+}
+
+// Typed error codes returned by the complete-report route and server actions.
+export type EnqueueErrorCode =
+  | 'no_client'
+  | 'complete_exists'
+  | 'in_progress'
+  | 'not_editable'
+  | 'not_found'
+  | 'render_in_progress'
+  | 'missing_email'
+  | 'recipients_changed'
+  | 'send_in_progress';
+
 // Respuesta del enqueue: el route devuelve el jobId al toque, sin esperar el
 // resultado. El front pollea `reports` hasta done/error.
 export interface EnqueueResponse {
