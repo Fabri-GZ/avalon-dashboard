@@ -16,6 +16,7 @@ import type {
   ReportType,
 } from '@/lib/reportes/types'
 import { periodLabel } from '@/lib/reportes/format'
+import { doneRenders } from '@/lib/reportes/renders'
 import { ReportesTopbar } from './ReportesTopbar'
 import { ReportHistory } from './ReportHistory'
 import { ReportSheet } from './ReportSheet'
@@ -169,6 +170,25 @@ export function ReportesView({ accounts, initialHistory }: Props) {
     return map
   }, [reports])
 
+  // Complete versions: the newest draft to edit, and the newest finished render
+  // (with the version it belongs to) to view or send.
+  const completeByAccount = useMemo(() => {
+    const drafts = new Map<string, Report>()
+    const renders = new Map<string, NonNullable<AccountRow['latestDoneRender']>>()
+    for (const r of reports) {
+      if (r.report_type !== 'complete') continue
+      if (r.status === 'draft_ready') {
+        const cur = drafts.get(r.account_id)
+        if (!cur || r.created_at > cur.created_at) drafts.set(r.account_id, r)
+      }
+      const render = doneRenders(r)[0]
+      if (!render) continue
+      const cur = renders.get(r.account_id)
+      if (!cur || render.created_at > cur.render.created_at) renders.set(r.account_id, { report: r, render })
+    }
+    return { drafts, renders }
+  }, [reports])
+
   const rows: AccountRow[] = useMemo(() => {
     const q = norm(search)
     return accounts
@@ -176,6 +196,8 @@ export function ReportesView({ accounts, initialHistory }: Props) {
         account,
         latest: latestByAccount.get(account.id) ?? null,
         lastDone: lastDoneByAccount.get(account.id) ?? null,
+        latestComplete: completeByAccount.drafts.get(account.id) ?? null,
+        latestDoneRender: completeByAccount.renders.get(account.id) ?? null,
       }))
       .filter(({ account, latest }) => {
         if (q && !norm(account.name).includes(q)) return false
@@ -185,7 +207,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
         if (filter === 'proceso') return latest?.status === 'pending' || latest?.status === 'running'
         return true
       })
-  }, [accounts, latestByAccount, lastDoneByAccount, search, filter])
+  }, [accounts, latestByAccount, lastDoneByAccount, completeByAccount, search, filter])
 
   // Un solo job a la vez en toda la sección: el bloqueo real vive en la DB, así
   // que mientras uno corre no hay ningún trigger de generar/reintentar que

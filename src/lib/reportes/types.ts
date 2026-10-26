@@ -25,6 +25,9 @@ export interface Report {
   requested_by: string;
   created_at: string;
   updated_at: string;
+  // Only loaded by the reportes page for complete reports (embedded join); rows
+  // coming from polling or optimistic inserts do not carry it.
+  report_renders?: ReportRenderSummary[];
 }
 
 // Contrato del manifiesto: lo que emite el LLM. n8n lo renderiza sobre el
@@ -155,6 +158,18 @@ export interface ReportDelivery {
   updated_at: string;
 }
 
+// What the history needs from an embedded render: enough to open it and to
+// count past sends, without the heavy `texts_snapshot`.
+export interface ReportRenderSummary {
+  id: string;
+  status: RenderStatus;
+  report_url: string | null;
+  pdf_url: string | null;
+  public_id: string;
+  created_at: string;
+  report_deliveries?: { id: string; status: DeliveryStatus }[];
+}
+
 // Body que la app postea al webhook de borradores (n8n).
 export interface DraftsWebhookPayload {
   jobId: string;
@@ -226,4 +241,9 @@ export interface AccountRow {
    *  last good report would vanish from the table exactly while the user waits
    *  for its replacement. */
   lastDone: Report | null;
+  /** Most recent complete report that is a draft ready to edit. */
+  latestComplete: Report | null;
+  /** Most recent finished render of any complete version, with its version.
+   *  Drives "Ver reporte final" and "Enviar al cliente". */
+  latestDoneRender: { report: Report; render: ReportRenderSummary } | null;
 }

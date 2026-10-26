@@ -1,16 +1,16 @@
 'use client'
 
-import Link from 'next/link'
-import { LuLoader, LuPencil, LuPlus, LuRotateCw } from 'react-icons/lu'
+import { LuLoader, LuPlus, LuRotateCw } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
-import type { Platform, Report } from '@/lib/reportes/types'
+import type { AccountRow, Platform, Report } from '@/lib/reportes/types'
 import { periodLabel } from '@/lib/reportes/format'
+import { ReportRowMenu } from './ReportRowMenu'
 
 // Mismo mensaje que ReportSheet: el pipeline de n8n solo sabe leer insights de
 // Meta hoy, así que no hay generación posible para google/tiktok todavía.
 const NON_META_REASON = 'El pipeline de reportes solo soporta cuentas de Meta por ahora'
 
-interface Props {
+interface Props extends Pick<AccountRow, 'latestComplete' | 'latestDoneRender'> {
   latest: Report | null
   lastDone: Report | null
   accountId: string
@@ -38,6 +38,8 @@ interface Props {
 export function ReportRowActions({
   latest,
   lastDone,
+  latestComplete,
+  latestDoneRender,
   accountId,
   platform,
   onGenerateFor,
@@ -46,7 +48,7 @@ export function ReportRowActions({
   variant = 'table',
 }: Props) {
   const isCard = variant === 'card'
-  const isDraft = latest?.status === 'draft_ready'
+  const slotClass = isCard ? 'size-11 shrink-0' : 'size-8 shrink-0'
 
   // Acá vivía un override del hover, porque el `outline` de shadcn cambiaba el
   // color del texto contra un token invertido. Eso ahora lo resuelve la propia
@@ -73,12 +75,22 @@ export function ReportRowActions({
           y medio en que el usuario espera el reemplazo. */}
       {lastDone ? (
         <ViewButton report={lastDone} className={iconClass} />
-      ) : !isDraft ? (
+      ) : (
         // Reserved, not omitted: keeps the primary controls aligned.
-        <span aria-hidden className={isCard ? 'size-11 shrink-0' : 'size-8 shrink-0'} />
-      ) : null}
-      {/* A complete draft waiting for edits: the one case with a second icon. */}
-      {isDraft && latest && <EditButton report={latest} className={iconClass} />}
+        <span aria-hidden className={slotClass} />
+      )}
+      {/* Complete-report actions (edit draft, view final, send). Its slot is
+          reserved too, so rows without a complete report keep the same width. */}
+      {latestComplete || latestDoneRender ? (
+        <ReportRowMenu
+          latestComplete={latestComplete}
+          latestDoneRender={latestDoneRender}
+          accountId={accountId}
+          className={iconClass}
+        />
+      ) : (
+        <span aria-hidden className={slotClass} />
+      )}
     </div>
   )
 }
@@ -141,18 +153,6 @@ function Primary({
       disabled={busy}
     >
       <LuPlus /> Generar
-    </Button>
-  )
-}
-
-function EditButton({ report, className }: { report: Report; className: string }) {
-  const label = `Editar borrador de ${periodLabel(report.period_year, report.period_month)}`
-
-  return (
-    <Button asChild size="icon-sm" variant="outline" className={className}>
-      <Link href={`/dashboard/reportes/${report.id}`} aria-label={label} title={label}>
-        <LuPencil />
-      </Link>
     </Button>
   )
 }

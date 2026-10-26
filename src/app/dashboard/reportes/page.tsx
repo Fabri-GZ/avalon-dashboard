@@ -4,7 +4,8 @@ import type { Report } from '@/lib/reportes/types'
 
 // Server Component: el guard de ruta lo hace el middleware (ROUTE_SECTION_MAP →
 // REPORTES). Acá cargamos las cuentas (picker) y el historial; RLS deja ver
-// ad_accounts y reports al rol paid_media (+ admin).
+// ad_accounts y reports (con sus renders/deliveries embebidos) al rol paid_media
+// (+ admin).
 export default async function ReportesPage() {
   const supabase = await createClient()
 
@@ -17,7 +18,7 @@ export default async function ReportesPage() {
     supabase
       .from('reports')
       .select(
-        'id, account_id, account_name, period_year, period_month, report_type, version, status, report_url, error, created_at, updated_at',
+        'id, account_id, account_name, period_year, period_month, report_type, version, status, report_url, error, created_at, updated_at, report_renders(id, status, report_url, pdf_url, public_id, created_at, report_deliveries(id, status))',
       )
       .order('created_at', { ascending: false })
       .limit(100),
