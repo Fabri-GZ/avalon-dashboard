@@ -7,9 +7,11 @@ import {
   saveReportTextAction,
   type ReportActionError,
 } from '@/app/actions/report-actions'
+import { Button } from '@/components/ui/button'
 import { useJobPolling } from '@/hooks/useJobPolling'
 import { periodLabel } from '@/lib/reportes/format'
 import type { Report, ReportText } from '@/lib/reportes/types'
+import { GenerationBlocker } from './GenerationBlocker'
 import { RenderResultModal } from './RenderResultModal'
 import { ReportEditorHeader, type SaveState } from './ReportEditorHeader'
 import { ReportRenderHistory, type RenderHistoryItem } from './ReportRenderHistory'
@@ -66,6 +68,9 @@ export function ReportEditorView({ report, initialTexts, versions, initialRender
   const [result, setResult] = useState<RenderPollRow | null>(null)
   // Locked from the DB state of the renders, so it also holds after a poll timeout.
   const rendering = starting || renders.some(isActive)
+
+  // Only render what is already saved: the render snapshots the DB texts.
+  const renderDisabled = !editable || rendering || (saveState !== 'idle' && saveState !== 'saved')
 
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const inflight = useRef(0)
@@ -201,8 +206,6 @@ export function ReportEditorView({ report, initialTexts, versions, initialRender
         currentId={report.id}
         editable={editable}
         saveState={saveState}
-        rendering={rendering}
-        onRender={handleRender}
       />
 
       {initialTexts.length === 0 ? (
@@ -224,7 +227,28 @@ export function ReportEditorView({ report, initialTexts, versions, initialRender
         ))
       )}
 
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          Revisaste el borrador. Al generar se congela el texto actual y se publica el reporte final.
+        </p>
+        <Button
+          className="h-9 w-full shrink-0 text-sm font-bold sm:w-auto"
+          disabled={renderDisabled}
+          onClick={handleRender}
+        >
+          {rendering ? 'Generando…' : 'Generar reporte final'}
+        </Button>
+      </div>
+
       <ReportRenderHistory renders={renders} />
+
+      {rendering && (
+        <GenerationBlocker
+          label="Generando reporte final"
+          accountName={report.account_name}
+          periodLabel={periodLabel(report.period_year, report.period_month)}
+        />
+      )}
 
       {result?.report_url && (
         <RenderResultModal
