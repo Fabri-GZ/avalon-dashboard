@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/app/utils/supabase/server'
 import { ReportEditorView } from '@/components/reportes/ReportEditorView'
+import type { RenderHistoryItem } from '@/components/reportes/ReportRenderHistory'
 import type { Report, ReportText } from '@/lib/reportes/types'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -23,15 +24,17 @@ export default async function ReportEditorPage({
 
   const supabase = await createClient()
 
-  const { data: report } = await supabase
+  const { data: report, error: reportErr } = await supabase
     .from('reports')
     .select('id, account_id, account_name, period_year, period_month, report_type, version, status')
     .eq('id', reportId)
     .maybeSingle<EditorReport>()
 
+  // A query failure is not "not found": throw so the error boundary shows it.
+  if (reportErr) throw new Error(`No se pudo cargar el reporte: ${reportErr.message}`)
   if (!report || report.report_type !== 'complete') notFound()
 
-  const [textsRes, versionsRes] = await Promise.all([
+  const [textsRes, versionsRes, rendersRes] = await Promise.all([
     supabase
       .from('report_texts')
       .select('id, section_key, section_label, sort_order, ai_text, ai_rationale, edited_text')
@@ -47,13 +50,21 @@ export default async function ReportEditorPage({
       .eq('report_type', 'complete')
       .eq('status', 'draft_ready')
       .order('version', { ascending: false }),
+    supabase
+      .from('report_renders')
+      .select('id, public_id, status, report_url, pdf_url, error, created_at')
+      .eq('report_id', report.id)
+      .order('created_at', { ascending: false }),
   ])
+  const childErr = textsRes.error ?? versionsRes.error ?? rendersRes.error
+  if (childErr) throw new Error(`No se pudo cargar el reporte: ${childErr.message}`)
 
   return (
     <ReportEditorView
       report={report}
       initialTexts={(textsRes.data ?? []) as unknown as ReportText[]}
       versions={versionsRes.data ?? []}
+      initialRenders={(rendersRes.data ?? []) as RenderHistoryItem[]}
     />
   )
 }
