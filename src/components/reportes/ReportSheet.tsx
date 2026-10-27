@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { CheckBox } from '@/components/ui/check-box'
 import { SheetShell } from '@/components/ui/sheet-shell'
 import { MONTHS } from '@/lib/reportes/format'
 import type { AccountOption, ReportType } from '@/lib/reportes/types'
@@ -193,12 +194,11 @@ export function ReportSheet({ accounts, defaultAccountId, onGenerate, onClose }:
                     completeBlocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 size-4 accent-primary"
+                  <CheckBox
+                    className="mt-0.5"
                     checked={complete}
                     disabled={completeBlocked || selectedIsNonMeta}
-                    onChange={(e) => setCompleteChecked(e.target.checked)}
+                    onCheckedChange={setCompleteChecked}
                   />
                   <span>
                     <span className="font-medium">Reporte completo</span>

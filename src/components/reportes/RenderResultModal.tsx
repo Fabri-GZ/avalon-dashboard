@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'react-toastify'
-import { LuX as X } from 'react-icons/lu'
+import { LuCheck as Check, LuClipboard as Clipboard, LuX as X } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 
@@ -12,17 +12,20 @@ interface Props {
   periodLabel: string
   reportUrl: string
   pdfUrl?: string | null
+  /** Opens the send flow for this render. */
+  onSend: () => void
   onClose: () => void
 }
 
 const TITLE_ID = 'render-result-title'
 
 /**
- * Result of a finished render: the published link (copyable) and the PDF. It
- * has no send action on purpose — sending is a separate step. Same z-index and
- * close behavior as `GenerationResultModal`.
+ * Result of a finished render: the published link (copyable), the PDF and the
+ * entry point to the send flow, which the parent owns. Same z-index and close
+ * behavior as `GenerationResultModal`.
  */
-export function RenderResultModal({ accountName, periodLabel, reportUrl, pdfUrl, onClose }: Props) {
+export function RenderResultModal({ accountName, periodLabel, reportUrl, pdfUrl, onSend, onClose }: Props) {
+  const [copied, setCopied] = useState(false)
   const { containerRef, trapTab } = useFocusTrap<HTMLDivElement>()
 
   useEffect(() => {
@@ -36,6 +39,8 @@ export function RenderResultModal({ accountName, periodLabel, reportUrl, pdfUrl,
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(reportUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
       toast.success('Link copiado')
     } catch {
       toast.error('No se pudo copiar el link')
@@ -75,28 +80,39 @@ export function RenderResultModal({ accountName, periodLabel, reportUrl, pdfUrl,
         </div>
 
         <div className="space-y-4 px-5 py-4">
-          <p className="break-all rounded-lg bg-secondary px-3 py-2.5 text-[11.5px] text-muted-foreground">
-            {reportUrl}
-          </p>
+          <div className="flex items-center gap-2 rounded-lg bg-secondary py-1.5 pr-1.5 pl-3">
+            <p className="min-w-0 flex-1 truncate text-[11.5px] text-muted-foreground" title={reportUrl}>
+              {reportUrl}
+            </p>
+            <button
+              type="button"
+              onClick={copyLink}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label="Copiar link"
+              title="Copiar link"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Clipboard className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+
+          <Button data-autofocus className="h-10 w-full text-sm font-bold" onClick={onSend}>
+            Enviar al cliente
+          </Button>
 
           <div className="flex gap-2.5">
-            <Button asChild data-autofocus className="h-10 flex-1 text-sm font-bold">
+            <Button asChild variant="outline" className="h-10 flex-1 text-sm font-bold">
               <a href={reportUrl} target="_blank" rel="noopener noreferrer">
                 Ver reporte
               </a>
             </Button>
-            <Button variant="outline" className="h-10 flex-1 text-sm font-bold" onClick={copyLink}>
-              Copiar link
-            </Button>
+            {pdfUrl && (
+              <Button asChild variant="outline" className="h-10 flex-1 text-sm font-bold">
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                  Descargar PDF
+                </a>
+              </Button>
+            )}
           </div>
-
-          {pdfUrl && (
-            <Button asChild variant="outline" className="h-10 w-full text-sm font-bold">
-              <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-                Descargar PDF
-              </a>
-            </Button>
-          )}
         </div>
       </div>
     </div>,

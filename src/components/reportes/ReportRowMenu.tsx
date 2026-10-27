@@ -15,7 +15,7 @@ import { periodLabel } from '@/lib/reportes/format'
 // Mismo hover que el `outline` de Button (Generar / abrir link): tinte de
 // `--primary`, más fuerte en oscuro. `cn` desplaza el focus:bg-accent base.
 const ITEM_CLASS =
-  'focus:bg-primary/5 focus:text-foreground dark:focus:bg-primary/15'
+  'transition-all duration-200 ease-in focus:bg-primary/5 focus:text-foreground dark:focus:bg-primary/15'
 
 interface Props extends Pick<AccountRow, 'latestComplete' | 'latestDoneRender'> {
   accountId: string
