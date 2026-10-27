@@ -2,6 +2,7 @@
 
 import type { AccountRow, Report } from '@/lib/reportes/types'
 import { periodLabel, generatedAt } from '@/lib/reportes/format'
+import { displayStatus } from '@/lib/reportes/display-status'
 import { ReportRowActions } from './ReportRowActions'
 import { StatusBadge } from './StatusBadge'
 
@@ -45,7 +46,7 @@ export function ReportCard({
           {account.name}
         </span>
         <span className="shrink-0">
-          <StatusBadge status={latest?.status ?? 'none'} />
+          <StatusBadge status={latest ? displayStatus(latest) : 'none'} />
         </span>
       </div>
 

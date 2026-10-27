@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { LuArrowLeft } from 'react-icons/lu'
-import { Button } from '@/components/ui/button'
 import { periodLabel } from '@/lib/reportes/format'
 
 export type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
@@ -22,9 +21,6 @@ interface Props {
   currentId: string
   editable: boolean
   saveState: SaveState
-  /** A render is pending/running or being started: the draft is locked. */
-  rendering: boolean
-  onRender: () => void
 }
 
 export function ReportEditorHeader({
@@ -36,11 +32,7 @@ export function ReportEditorHeader({
   currentId,
   editable,
   saveState,
-  rendering,
-  onRender,
 }: Props) {
-  // Only render what is already saved: the render snapshots the DB texts.
-  const renderDisabled = !editable || rendering || (saveState !== 'idle' && saveState !== 'saved')
   const others = versions.filter((v) => v.id !== currentId)
 
   return (
@@ -59,25 +51,14 @@ export function ReportEditorHeader({
             {periodLabel(year, month)} · Versión {version}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <p
-            role="status"
-            aria-live="polite"
-            className={`text-xs ${saveState === 'error' ? 'text-destructive' : 'text-muted-foreground'}`}
-          >
-            {editable ? SAVE_LABEL[saveState] : ''}
-          </p>
-          <Button className="h-9 text-sm font-bold" disabled={renderDisabled} onClick={onRender}>
-            {rendering ? 'Generando…' : 'Generar reporte final'}
-          </Button>
-        </div>
-      </div>
-
-      {rendering && (
-        <p className="rounded-lg bg-secondary px-3 py-2.5 text-[11.5px] text-muted-foreground">
-          Se está generando el reporte final. El borrador queda en solo lectura hasta que termine.
+        <p
+          role="status"
+          aria-live="polite"
+          className={`text-xs ${saveState === 'error' ? 'text-destructive' : 'text-muted-foreground'}`}
+        >
+          {editable ? SAVE_LABEL[saveState] : ''}
         </p>
-      )}
+      </div>
 
       {!editable && (
         <p className="rounded-lg bg-secondary px-3 py-2.5 text-[11.5px] text-muted-foreground">

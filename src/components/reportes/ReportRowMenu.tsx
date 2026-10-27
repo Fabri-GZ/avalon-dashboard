@@ -12,6 +12,11 @@ import {
 import type { AccountRow } from '@/lib/reportes/types'
 import { periodLabel } from '@/lib/reportes/format'
 
+// Mismo hover que el `outline` de Button (Generar / abrir link): tinte de
+// `--primary`, más fuerte en oscuro. `cn` desplaza el focus:bg-accent base.
+const ITEM_CLASS =
+  'transition-all duration-200 ease-in focus:bg-primary/5 focus:text-foreground dark:focus:bg-primary/15'
+
 interface Props extends Pick<AccountRow, 'latestComplete' | 'latestDoneRender'> {
   accountId: string
   /** Without it the menu has no send item (sending is wired by the parent). */
@@ -51,9 +56,9 @@ export function ReportRowMenu({
           <LuEllipsisVertical />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="border-border">
         {latestComplete && (
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild className={ITEM_CLASS}>
             <Link href={`/dashboard/reportes/${latestComplete.id}`}>
               <LuPencil /> Editar borrador
               <span className="text-xs text-muted-foreground">
@@ -64,7 +69,7 @@ export function ReportRowMenu({
         )}
         {latestDoneRender && doneReport && (
           <>
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className={ITEM_CLASS}>
               <a href={latestDoneRender.render.report_url!} target="_blank" rel="noopener noreferrer">
                 <LuExternalLink /> Ver reporte final
                 <span className="text-xs text-muted-foreground">
@@ -73,7 +78,7 @@ export function ReportRowMenu({
               </a>
             </DropdownMenuItem>
             {onSend && (
-              <DropdownMenuItem onSelect={() => onSend(accountId)}>
+              <DropdownMenuItem className={ITEM_CLASS} onSelect={() => onSend(accountId)}>
                 <LuSend /> Enviar al cliente
               </DropdownMenuItem>
             )}

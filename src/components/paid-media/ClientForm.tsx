@@ -9,8 +9,9 @@ import { createClientAction, updateClientAction, type ActionError, type Existing
 import type { ClientGroup, ClientStatus } from '@/lib/paid-media/types'
 import { normalizePersonName } from '@/lib/paid-media/names'
 import { normalizeWebsiteUrl } from '@/lib/paid-media/url'
-import { MAX_CC_EMAILS, normalizeRecipients, splitEmailList } from '@/lib/paid-media/emails'
+import { MAX_CC_EMAILS, addEmails, normalizeRecipients } from '@/lib/paid-media/emails'
 import { createErrorMessage } from './ClientPicker'
+import { EmailChipsInput } from './EmailChipsInput'
 import { NameCombobox } from './NameCombobox'
 import { ToastCard, TOAST_CARD_OPTIONS } from './ToastCard'
 
@@ -64,7 +65,9 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
   const [operatorName, setOperatorName] = useState(client?.operatorName ?? '')
   const [status, setStatus] = useState(client?.status ?? '')
   const [reportEmail, setReportEmail] = useState(client?.reportEmail ?? '')
-  const [reportCc, setReportCc] = useState((client?.reportCcEmails ?? []).join(', '))
+  const [reportCc, setReportCc] = useState<string[]>(client?.reportCcEmails ?? [])
+  // Typed in the CC input but not added as a chip yet.
+  const [ccDraft, setCcDraft] = useState('')
   // Client-side recipient problem (instant feedback; the action re-validates).
   const [emailError, setEmailError] = useState<{ field: 'report_email' | 'report_cc_emails'; invalid?: string[] } | null>(null)
 
@@ -84,7 +87,20 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
     if (!trimmedName) return
     setError(null)
 
-    const recipients = normalizeRecipients(reportEmail, splitEmailList(reportCc))
+    // Flush a typed-but-not-added CC address so it is not silently lost.
+    let cc = reportCc
+    if (ccDraft.trim()) {
+      const added = addEmails(reportCc, ccDraft)
+      if (added.invalid.length || added.overflow.length) {
+        setEmailError({ field: 'report_cc_emails', invalid: added.invalid })
+        return
+      }
+      cc = added.list
+      setReportCc(cc)
+      setCcDraft('')
+    }
+
+    const recipients = normalizeRecipients(reportEmail, cc)
     if (!recipients.ok) {
       setEmailError({ field: recipients.field, invalid: recipients.invalid })
       return
@@ -281,22 +297,21 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
 
       <div>
         <label htmlFor="client-report-cc" className={LABEL_CLASS}>Con copia (CC)</label>
-        <input
+        <EmailChipsInput
           id="client-report-cc"
           value={reportCc}
-          onChange={(e) => setReportCc(e.target.value)}
-          autoComplete="off"
-          placeholder="uno@empresa.com, otro@empresa.com"
-          aria-invalid={ccFieldError ? true : undefined}
-          className={INPUT_CLASS}
+          onChange={(next) => {
+            setReportCc(next)
+            setEmailError(null)
+          }}
+          draft={ccDraft}
+          onDraftChange={(next) => {
+            setCcDraft(next)
+            setEmailError(null)
+          }}
+          error={ccFieldError}
+          placeholder="uno@empresa.com"
         />
-        {ccFieldError ? (
-          <p className="mt-1 text-[11px] text-destructive">{ccFieldError}</p>
-        ) : (
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Opcional. Separá los emails con coma. Máximo {MAX_CC_EMAILS}.
-          </p>
-        )}
       </div>
 
       <div>
