@@ -18,6 +18,34 @@ export function splitEmailList(raw: string): string[] {
     .filter(Boolean)
 }
 
+export interface AddEmailsResult {
+  /** The list with every valid, new address appended (up to `MAX_CC_EMAILS`). */
+  list: string[]
+  /** Malformed addresses, not added. */
+  invalid: string[]
+  /** Addresses already in the list (case-insensitive), not added. */
+  duplicates: string[]
+  /** Valid addresses left out because the list hit `MAX_CC_EMAILS`. */
+  overflow: string[]
+}
+
+/** Adds the addresses typed or pasted in `raw` to a CC list, one at a time. */
+export function addEmails(list: string[], raw: string): AddEmailsResult {
+  const next = [...list]
+  const seen = new Set(list.map(normalizeEmail))
+  const result: AddEmailsResult = { list: next, invalid: [], duplicates: [], overflow: [] }
+  for (const email of splitEmailList(raw)) {
+    if (!isValidEmail(email)) result.invalid.push(email)
+    else if (seen.has(email)) result.duplicates.push(email)
+    else if (next.length >= MAX_CC_EMAILS) result.overflow.push(email)
+    else {
+      next.push(email)
+      seen.add(email)
+    }
+  }
+  return result
+}
+
 // Flat shape on purpose: the repo runs without strictNullChecks, where a
 // `{ ok: true } | { ok: false }` union does not narrow.
 export interface RecipientsResult {
