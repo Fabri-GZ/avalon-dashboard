@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type { AccountRow, Report } from '@/lib/reportes/types'
 import { periodLabel, generatedAt } from '@/lib/reportes/format'
+import { displayStatus } from '@/lib/reportes/display-status'
 import { ReportCard } from './ReportCard'
 import { ReportRowActions } from './ReportRowActions'
 import { StatusBadge } from './StatusBadge'
@@ -103,7 +104,7 @@ export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetr
                     {latest ? generatedAt(latest.created_at) : '—'}
                   </td>
                   <td className="px-5 py-3.5">
-                    <StatusBadge status={latest?.status ?? 'none'} />
+                    <StatusBadge status={latest ? displayStatus(latest) : 'none'} />
                   </td>
                   <td className="w-px whitespace-nowrap px-5 py-3.5">
                     <ReportRowActions

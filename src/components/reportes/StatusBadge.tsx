@@ -1,5 +1,5 @@
 import { LuLoader } from 'react-icons/lu'
-import type { ReportStatus } from '@/lib/reportes/types'
+import type { ReportDisplayStatus } from '@/lib/reportes/types'
 
 /**
  * One `--status-*` token per state drives the label text, the dot, the badge
@@ -12,18 +12,20 @@ import type { ReportStatus } from '@/lib/reportes/types'
  * `color-mix` percentages come from the design: 12% for the fill, 28% for the
  * ring.
  */
-const STATUS: Record<ReportStatus | 'none', { label: string; token: string; spin?: boolean }> = {
+const STATUS: Record<ReportDisplayStatus | 'none', { label: string; token: string; spin?: boolean }> = {
   pending: { label: 'En cola', token: 'var(--status-pending)' },
   running: { label: 'Generando…', token: 'var(--status-running)', spin: true },
   draft_ready: { label: 'Borrador listo', token: 'var(--status-draft)' },
   done: { label: 'Listo', token: 'var(--status-done)' },
+  // Sent is a further success step of `done`, so it shares the success token.
+  sent: { label: 'Enviado', token: 'var(--status-done)' },
   error: { label: 'Error', token: 'var(--status-error)' },
   // Absence of a report is not a status the pipeline can emit, so it has no
   // --status-* token: it stays on the neutral muted colour on purpose.
   none: { label: 'Sin reporte', token: 'var(--muted-foreground)' },
 }
 
-export function StatusBadge({ status }: { status: ReportStatus | 'none' }) {
+export function StatusBadge({ status }: { status: ReportDisplayStatus | 'none' }) {
   const { label, token, spin } = STATUS[status]
 
   return (

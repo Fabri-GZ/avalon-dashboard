@@ -7,6 +7,10 @@
 // to edit); render/send state lives on child rows, never on `reports`.
 export type ReportStatus = 'pending' | 'running' | 'draft_ready' | 'done' | 'error';
 
+// What the history badge shows: the DB status plus `sent`, derived for complete
+// reports from their deliveries (see display-status.ts). Never written to the DB.
+export type ReportDisplayStatus = ReportStatus | 'sent';
+
 export type ReportType = 'summary' | 'complete';
 
 // Fila de la tabla public.reports.
