@@ -1,0 +1,328 @@
+'use server'
+
+import { supabaseAdmin } from '@/app/utils/supabase/admin'
+import { requireReportsAccess } from '@/lib/reportes/auth'
+import { postToN8n } from '@/lib/reportes/dispatch'
+import { periodLabel } from '@/lib/reportes/format'
+import type {
+  EnqueueErrorCode,
+  RenderWebhookPayload,
+  ReportTextSnapshot,
+  SendWebhookPayload,
+} from '@/lib/reportes/types'
+
+// Matches the DB check on report_texts.edited_text (char_length <= 10000).
+const MAX_TEXT_LENGTH = 10_000
+const PUBLIC_ID_ATTEMPTS = 3
+
+export type ReportActionError =
+  | EnqueueErrorCode
+  | 'unauthorized'
+  | 'invalid_value'
+  | 'db_error'
+  | 'not_configured'
+  | 'not_ready'
+  | 'dispatch_failed'
+
+interface SaveTextResult {
+  success: boolean
+  error?: ReportActionError
+}
+
+// Saves a human edit of one draft section. Goes through the RLS user client on
+// purpose (D2): the column grant limits the write to `edited_text` and the
+// `report_texts_stamp_edit` trigger stamps edited_by/edited_at and enforces
+// `draft_ready`, so none of that can be spoofed from here. `null` or blank
+// clears the edit and the AI text applies again.
+export async function saveReportTextAction(
+  textId: string,
+  editedText: string | null,
+): Promise<SaveTextResult> {
+  if (typeof textId !== 'string' || !textId) return { success: false, error: 'invalid_value' }
+  if (editedText !== null && typeof editedText !== 'string') {
+    return { success: false, error: 'invalid_value' }
+  }
+  if (editedText !== null && editedText.length > MAX_TEXT_LENGTH) {
+    return { success: false, error: 'invalid_value' }
+  }
+
+  const access = await requireReportsAccess()
+  if (!access.ok) return { success: false, error: 'unauthorized' }
+
+  // The trigger normalizes blank to null; sending null for blank keeps intent explicit.
+  const value = editedText === null || editedText.trim() === '' ? null : editedText
+
+  const { data, error } = await access.supabase
+    .from('report_texts')
+    .update({ edited_text: value })
+    .eq('id', textId)
+    .select('id')
+
+  if (error) {
+    // 42501 = trigger refused (report no longer draft_ready) or RLS denial.
+    if (error.code === '42501') return { success: false, error: 'not_editable' }
+    if (error.code === '23514') return { success: false, error: 'invalid_value' }
+    console.error('[report-actions] saveReportText error:', error)
+    return { success: false, error: 'db_error' }
+  }
+  // Zero rows: unknown id or filtered out by RLS.
+  if (!data || data.length === 0) return { success: false, error: 'not_found' }
+
+  return { success: true }
+}
+
+export type RenderReportResult =
+  | { ok: true; renderId: string; publicId: string }
+  | { ok: false; code: ReportActionError; message: string }
+
+function renderFail(code: ReportActionError, message: string): RenderReportResult {
+  return { ok: false, code, message }
+}
+
+// Starts the final render of a draft. The texts are frozen into the render row
+// (D3) so later edits never mutate a published version. Role check first, then
+// the job row is written with the service role (D1), same as /api/reportes.
+export async function renderReportAction(reportId: string): Promise<RenderReportResult> {
+  if (typeof reportId !== 'string' || !reportId) {
+    return renderFail('invalid_value', 'Reporte inválido')
+  }
+
+  const access = await requireReportsAccess()
+  if (access.ok === false) return renderFail('unauthorized', access.error)
+
+  const webhookUrl = process.env.N8N_REPORTES_RENDER_WEBHOOK_URL
+  if (!webhookUrl) {
+    return renderFail('not_configured', 'Reportes no configurado (falta N8N_REPORTES_RENDER_WEBHOOK_URL)')
+  }
+
+  const { data: report, error: reportErr } = await access.supabase
+    .from('reports')
+    .select('id, report_type, status')
+    .eq('id', reportId)
+    .maybeSingle()
+  if (reportErr) {
+    console.error('[report-actions] renderReport report error:', reportErr)
+    return renderFail('db_error', 'No se pudo leer el reporte')
+  }
+  if (!report) return renderFail('not_found', 'No se encontró el reporte')
+  if (report.report_type !== 'complete' || report.status !== 'draft_ready') {
+    return renderFail('not_ready', 'El borrador no está listo para generar el reporte final')
+  }
+
+  const { data: texts, error: textsErr } = await access.supabase
+    .from('report_texts')
+    .select('section_key, section_label, sort_order, ai_text, edited_text')
+    .eq('report_id', reportId)
+    .order('sort_order')
+  if (textsErr) {
+    console.error('[report-actions] renderReport texts error:', textsErr)
+    return renderFail('db_error', 'No se pudieron leer los textos')
+  }
+  if (!texts || texts.length === 0) {
+    return renderFail('not_ready', 'El borrador no tiene secciones de texto')
+  }
+
+  const snapshot: ReportTextSnapshot[] = texts.map((t) => ({
+    section_key: t.section_key,
+    section_label: t.section_label,
+    sort_order: t.sort_order,
+    text: t.edited_text ?? t.ai_text,
+    edited: t.edited_text !== null,
+  }))
+
+  // public_id is generated by the DB; retry only when it collides on its own
+  // unique constraint (the active-render index means something else).
+  let render: { id: string; public_id: string } | null = null
+  for (let attempt = 0; attempt < PUBLIC_ID_ATTEMPTS && !render; attempt++) {
+    const { data, error } = await supabaseAdmin
+      .from('report_renders')
+      .insert({ report_id: reportId, texts_snapshot: snapshot, rendered_by: access.userId })
+      .select('id, public_id')
+      .single()
+
+    if (!error && data) {
+      render = data
+      break
+    }
+    if (error?.code === '23505') {
+      if (error.message.includes('report_renders_one_active_uidx')) {
+        return renderFail('render_in_progress', 'Ya hay un reporte final en curso para este borrador')
+      }
+      if (error.message.includes('report_renders_public_id_key')) continue
+    }
+    console.error('[report-actions] renderReport insert error:', error)
+    return renderFail('db_error', 'No se pudo iniciar la generación')
+  }
+  if (!render) return renderFail('db_error', 'No se pudo iniciar la generación')
+
+  const payload: RenderWebhookPayload = {
+    renderId: render.id,
+    reportId,
+    publicId: render.public_id,
+  }
+  const sent = await postToN8n(webhookUrl, payload)
+  if (sent.ok === false) {
+    // Guarded so a fast n8n that already finished is not overwritten.
+    await supabaseAdmin
+      .from('report_renders')
+      .update({ status: 'error', error: sent.error })
+      .eq('id', render.id)
+      .in('status', ['pending', 'running'])
+    return renderFail('dispatch_failed', 'No se pudo iniciar la generación')
+  }
+
+  return { ok: true, renderId: render.id, publicId: render.public_id }
+}
+
+export type SendReportResult =
+  | { ok: true; deliveryId: string }
+  | { ok: false; code: ReportActionError; message: string }
+
+function sendFail(code: ReportActionError, message: string): SendReportResult {
+  return { ok: false, code, message }
+}
+
+const normEmail = (e: string) => e.trim().toLowerCase()
+// CC is a set: order and duplicates carry no meaning.
+const normCc = (list: string[]) => [...new Set(list.map(normEmail))].sort()
+
+// Emails a finished render to the client. Validation is server-side on purpose
+// instead of a `getSendContextAction`: the modal already gets everything it
+// shows (versions, recipients, prior sends) from the page load, and the only
+// data that can go stale is the recipients, which `recipients_changed` covers
+// authoritatively here. The recipients always come from `client_paid_media`
+// (D6); the submitted {to, cc} is only a confirmation of what the user saw.
+export async function sendReportAction(input: {
+  renderId: string
+  to: string
+  cc: string[]
+}): Promise<SendReportResult> {
+  const { renderId, to, cc } = input ?? {}
+  if (
+    typeof renderId !== 'string' || !renderId ||
+    typeof to !== 'string' ||
+    !Array.isArray(cc) || cc.some((e) => typeof e !== 'string')
+  ) {
+    return sendFail('invalid_value', 'Datos de envío inválidos')
+  }
+
+  const access = await requireReportsAccess()
+  if (access.ok === false) return sendFail('unauthorized', access.error)
+
+  const webhookUrl = process.env.N8N_REPORTES_SEND_WEBHOOK_URL
+  if (!webhookUrl) {
+    return sendFail('not_configured', 'Envío no configurado (falta N8N_REPORTES_SEND_WEBHOOK_URL)')
+  }
+
+  const { data: render, error: renderErr } = await access.supabase
+    .from('report_renders')
+    .select('id, status, reports(id, report_type, account_id, period_year, period_month)')
+    .eq('id', renderId)
+    .maybeSingle()
+  if (renderErr) {
+    console.error('[report-actions] sendReport render error:', renderErr)
+    return sendFail('db_error', 'No se pudo leer el reporte final')
+  }
+  if (!render) return sendFail('not_found', 'No se encontró el reporte final')
+  const report = render.reports as unknown as {
+    report_type: string
+    account_id: string
+    period_year: number
+    period_month: number
+  } | null
+  if (render.status !== 'done' || !report || report.report_type !== 'complete') {
+    return sendFail('not_ready', 'El reporte final todavía no está listo para enviar')
+  }
+
+  const { data: account, error: accountErr } = await access.supabase
+    .from('ad_accounts')
+    .select('client_id')
+    .eq('id', report.account_id)
+    .maybeSingle()
+  if (accountErr) {
+    console.error('[report-actions] sendReport account error:', accountErr)
+    return sendFail('db_error', 'No se pudo leer la cuenta')
+  }
+  if (!account?.client_id) return sendFail('no_client', 'La cuenta no tiene un cliente asociado')
+
+  const { data: client, error: clientErr } = await access.supabase
+    .from('client_paid_media')
+    .select('report_email, report_cc_emails, clients!inner(company_name)')
+    .eq('client_id', account.client_id)
+    .is('deleted_at', null)
+    .maybeSingle()
+  if (clientErr) {
+    console.error('[report-actions] sendReport client error:', clientErr)
+    return sendFail('db_error', 'No se pudieron leer los destinatarios')
+  }
+  const companyName = (client?.clients as unknown as { company_name: string } | null)?.company_name
+  if (!client || !client.report_email || !companyName) {
+    return sendFail('missing_email', 'El cliente no tiene mail para reportes')
+  }
+
+  const dbTo = normEmail(client.report_email)
+  const dbCc = normCc(client.report_cc_emails ?? [])
+  const sameCc = JSON.stringify(normCc(cc)) === JSON.stringify(dbCc)
+  if (normEmail(to) !== dbTo || !sameCc) {
+    return sendFail('recipients_changed', 'Los destinatarios cambiaron. Recargá la página y volvé a intentar')
+  }
+
+  // N = sends already made for this account+period across all its versions, +1.
+  const { data: siblings, error: siblingsErr } = await access.supabase
+    .from('reports')
+    .select('report_renders(report_deliveries(status))')
+    .eq('account_id', report.account_id)
+    .eq('period_year', report.period_year)
+    .eq('period_month', report.period_month)
+    .eq('report_type', 'complete')
+  if (siblingsErr) {
+    console.error('[report-actions] sendReport siblings error:', siblingsErr)
+    return sendFail('db_error', 'No se pudo leer el historial de envíos')
+  }
+  const priorSent = ((siblings ?? []) as unknown as {
+    report_renders: { report_deliveries: { status: string }[] }[]
+  }[]).reduce(
+    (total, r) =>
+      total +
+      r.report_renders.reduce(
+        (n, rn) => n + rn.report_deliveries.filter((d) => d.status === 'sent').length,
+        0,
+      ),
+    0,
+  )
+  const attempt = priorSent + 1
+  const driveFileName = `Reporte ${companyName} - ${periodLabel(report.period_year, report.period_month)}${attempt > 1 ? ` (v${attempt})` : ''}.pdf`
+
+  const { data: delivery, error: insertErr } = await supabaseAdmin
+    .from('report_deliveries')
+    .insert({
+      render_id: renderId,
+      to_email: dbTo,
+      cc_emails: dbCc,
+      drive_file_name: driveFileName,
+      sent_by: access.userId,
+    })
+    .select('id')
+    .single()
+  if (insertErr || !delivery) {
+    if (insertErr?.code === '23505' && insertErr.message.includes('report_deliveries_one_active_uidx')) {
+      return sendFail('send_in_progress', 'Ya hay un envío en curso para este reporte')
+    }
+    console.error('[report-actions] sendReport insert error:', insertErr)
+    return sendFail('db_error', 'No se pudo iniciar el envío')
+  }
+
+  const payload: SendWebhookPayload = { deliveryId: delivery.id, renderId }
+  const sent = await postToN8n(webhookUrl, payload)
+  if (sent.ok === false) {
+    // Guarded so a fast n8n that already moved the row is not overwritten.
+    await supabaseAdmin
+      .from('report_deliveries')
+      .update({ status: 'error', error: sent.error })
+      .eq('id', delivery.id)
+      .in('status', ['pending', 'sending'])
+    return sendFail('dispatch_failed', 'No se pudo iniciar el envío')
+  }
+
+  return { ok: true, deliveryId: delivery.id }
+}

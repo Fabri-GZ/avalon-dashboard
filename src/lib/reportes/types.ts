@@ -3,7 +3,15 @@
 // el front pollea `reports` hasta done/error. n8n escribe el estado final por
 // service_role.
 
-export type ReportStatus = 'pending' | 'running' | 'done' | 'error';
+// `draft_ready` is terminal only for complete reports (drafts generated, ready
+// to edit); render/send state lives on child rows, never on `reports`.
+export type ReportStatus = 'pending' | 'running' | 'draft_ready' | 'done' | 'error';
+
+// What the history badge shows: the DB status plus `sent`, derived for complete
+// reports from their deliveries (see display-status.ts). Never written to the DB.
+export type ReportDisplayStatus = ReportStatus | 'sent';
+
+export type ReportType = 'summary' | 'complete';
 
 // Fila de la tabla public.reports.
 export interface Report {
@@ -12,6 +20,8 @@ export interface Report {
   account_name: string; // snapshot, estable aunque la cuenta se renombre
   period_year: number;
   period_month: number; // 1-12
+  report_type: ReportType;
+  version: number; // summary is always 1; complete increments per regeneration
   status: ReportStatus;
   report_url: string | null;
   error: string | null;
@@ -19,6 +29,9 @@ export interface Report {
   requested_by: string;
   created_at: string;
   updated_at: string;
+  // Only loaded by the reportes page for complete reports (embedded join); rows
+  // coming from polling or optimistic inserts do not carry it.
+  report_renders?: ReportRenderSummary[];
 }
 
 // Contrato del manifiesto: lo que emite el LLM. n8n lo renderiza sobre el
@@ -49,6 +62,10 @@ export interface GenerateReportRequest {
   accountId: string;
   year: number;
   month: number; // 1-12
+  reportType?: ReportType; // default 'summary'
+  // Complete only: the user confirmed creating a new version although a draft
+  // already exists for the account+period (otherwise the route answers 409).
+  confirmRegenerate?: boolean;
 }
 
 // Config opt-in del modo "resultados de campaña" (ad_accounts.results_config).
@@ -79,10 +96,133 @@ export interface GenerateReportWebhookPayload {
   account: ReportWebhookAccount;
 }
 
+// --- Complete report (drafts -> edit -> render -> send) ---------------------
+
+// Fila de public.report_texts. `ai_text` is written only by n8n and never
+// changes; humans write `edited_text`. Effective text = edited_text ?? ai_text.
+export interface ReportText {
+  id: string;
+  report_id: string;
+  section_key: string;
+  section_label: string;
+  sort_order: number;
+  ai_text: string;
+  ai_rationale: string | null;
+  edited_text: string | null;
+  edited_by: string | null;
+  edited_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Entry of report_renders.texts_snapshot: the effective text frozen at render
+// time so a published version never changes when the draft is edited later.
+export interface ReportTextSnapshot {
+  section_key: string;
+  section_label: string;
+  sort_order: number;
+  text: string;
+  edited: boolean;
+}
+
+export type RenderStatus = 'pending' | 'running' | 'done' | 'error';
+
+// Fila de public.report_renders (one published URL per render).
+export interface ReportRender {
+  id: string;
+  report_id: string;
+  public_id: string; // 8 chars, part of the published URL
+  status: RenderStatus;
+  texts_snapshot: ReportTextSnapshot[];
+  report_url: string | null;
+  pdf_url: string | null;
+  error: string | null;
+  error_detail: Record<string, unknown> | null;
+  rendered_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DeliveryStatus = 'pending' | 'sending' | 'sent' | 'error';
+
+// Fila de public.report_deliveries (email + Drive send of one render).
+export interface ReportDelivery {
+  id: string;
+  render_id: string;
+  to_email: string;
+  cc_emails: string[];
+  drive_file_name: string;
+  status: DeliveryStatus;
+  drive_url: string | null;
+  error: string | null;
+  error_detail: Record<string, unknown> | null;
+  sent_by: string;
+  sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// What the history needs from an embedded render: enough to open it and to
+// count past sends, without the heavy `texts_snapshot`.
+export interface ReportRenderSummary {
+  id: string;
+  status: RenderStatus;
+  report_url: string | null;
+  pdf_url: string | null;
+  public_id: string;
+  created_at: string;
+  report_deliveries?: { id: string; status: DeliveryStatus }[];
+}
+
+// Where a complete report is sent: the client's fixed recipients (D6), read
+// from client_paid_media and edited only in the client form.
+export interface ClientRecipients {
+  name: string;
+  reportEmail: string | null;
+  ccEmails: string[];
+}
+
+// Body que la app postea al webhook de borradores (n8n).
+export interface DraftsWebhookPayload {
+  jobId: string;
+  accountId: string;
+  year: number;
+  month: number;
+  version: number;
+  account: ReportWebhookAccount;
+  client: { id: string; name: string };
+}
+
+// Webhook de render: n8n lee texts_snapshot y report_data desde las filas.
+export interface RenderWebhookPayload {
+  renderId: string;
+  reportId: string;
+  publicId: string;
+}
+
+// Webhook de envío: n8n lee destinatarios y nombre de archivo desde la fila.
+export interface SendWebhookPayload {
+  deliveryId: string;
+  renderId: string;
+}
+
+// Typed error codes returned by the complete-report route and server actions.
+export type EnqueueErrorCode =
+  | 'no_client'
+  | 'complete_exists'
+  | 'in_progress'
+  | 'not_editable'
+  | 'not_found'
+  | 'render_in_progress'
+  | 'missing_email'
+  | 'recipients_changed'
+  | 'send_in_progress';
+
 // Respuesta del enqueue: el route devuelve el jobId al toque, sin esperar el
 // resultado. El front pollea `reports` hasta done/error.
 export interface EnqueueResponse {
   jobId: string;
+  version: number; // version of the enqueued row (always 1 for summary)
 }
 
 // Plataforma de la cuenta. Solo 'meta' tiene pipeline de generación hoy —
@@ -95,6 +235,7 @@ export interface AccountOption {
   name: string;
   business_name?: string | null;
   platform: Platform;
+  client_id: string | null; // complete reports need a client (recipients live there)
 }
 
 // Filtro de estado del topbar.
@@ -112,4 +253,9 @@ export interface AccountRow {
    *  last good report would vanish from the table exactly while the user waits
    *  for its replacement. */
   lastDone: Report | null;
+  /** Most recent complete report that is a draft ready to edit. */
+  latestComplete: Report | null;
+  /** Most recent finished render of any complete version, with its version.
+   *  Drives "Ver reporte final" and "Enviar al cliente". */
+  latestDoneRender: { report: Report; render: ReportRenderSummary } | null;
 }

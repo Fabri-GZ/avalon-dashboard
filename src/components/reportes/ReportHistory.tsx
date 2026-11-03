@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type { AccountRow, Report } from '@/lib/reportes/types'
 import { periodLabel, generatedAt } from '@/lib/reportes/format'
+import { displayStatus } from '@/lib/reportes/display-status'
 import { ReportCard } from './ReportCard'
 import { ReportRowActions } from './ReportRowActions'
 import { StatusBadge } from './StatusBadge'
@@ -16,9 +17,10 @@ interface Props {
   onNew: () => void
   onGenerateFor: (accountId: string) => void
   onRetry: (report: Report) => void
+  onSend: (accountId: string) => void
 }
 
-export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetry }: Props) {
+export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetry, onSend }: Props) {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       {/* Header */}
@@ -76,7 +78,7 @@ export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetr
                   plena el salto contra `--card` se percibe igual en ambos. Al
                   50% el delta en oscuro (#111116 → ~#191920) quedaba por debajo
                   del umbral de percepción y el hover parecía no existir. */}
-              {rows.map(({ account, latest, lastDone }) => (
+              {rows.map(({ account, latest, lastDone, latestComplete, latestDoneRender }) => (
                 <tr
                   key={account.id}
                   className="border-t border-border/60 transition-colors hover:bg-secondary/50"
@@ -102,17 +104,20 @@ export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetr
                     {latest ? generatedAt(latest.created_at) : '—'}
                   </td>
                   <td className="px-5 py-3.5">
-                    <StatusBadge status={latest?.status ?? 'none'} />
+                    <StatusBadge status={latest ? displayStatus(latest) : 'none'} />
                   </td>
                   <td className="w-px whitespace-nowrap px-5 py-3.5">
                     <ReportRowActions
                       latest={latest}
                       lastDone={lastDone}
+                      latestComplete={latestComplete}
+                      latestDoneRender={latestDoneRender}
                       accountId={account.id}
                       platform={account.platform}
                       busy={busy}
                       onGenerateFor={onGenerateFor}
                       onRetry={onRetry}
+                      onSend={onSend}
                     />
                   </td>
                 </tr>
@@ -124,15 +129,18 @@ export function ReportHistory({ rows, busy = false, onNew, onGenerateFor, onRetr
 
       {rows.length > 0 && (
         <ul className="space-y-2.5 p-3 sm:hidden">
-          {rows.map(({ account, latest, lastDone }) => (
+          {rows.map(({ account, latest, lastDone, latestComplete, latestDoneRender }) => (
             <ReportCard
               key={account.id}
               account={account}
               latest={latest}
               lastDone={lastDone}
+              latestComplete={latestComplete}
+              latestDoneRender={latestDoneRender}
               busy={busy}
               onGenerateFor={onGenerateFor}
               onRetry={onRetry}
+              onSend={onSend}
             />
           ))}
         </ul>

@@ -9,7 +9,9 @@ import { createClientAction, updateClientAction, type ActionError, type Existing
 import type { ClientGroup, ClientStatus } from '@/lib/paid-media/types'
 import { normalizePersonName } from '@/lib/paid-media/names'
 import { normalizeWebsiteUrl } from '@/lib/paid-media/url'
+import { MAX_CC_EMAILS, addEmails, normalizeRecipients } from '@/lib/paid-media/emails'
 import { createErrorMessage } from './ClientPicker'
+import { EmailChipsInput } from './EmailChipsInput'
 import { NameCombobox } from './NameCombobox'
 import { ToastCard, TOAST_CARD_OPTIONS } from './ToastCard'
 
@@ -32,6 +34,8 @@ export interface SavedClient {
   pmName: string | null
   operatorName: string | null
   status: string | null
+  reportEmail: string | null
+  reportCcEmails: string[]
 }
 
 interface Props {
@@ -60,11 +64,18 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
   const [pmName, setPmName] = useState(client?.pmName ?? '')
   const [operatorName, setOperatorName] = useState(client?.operatorName ?? '')
   const [status, setStatus] = useState(client?.status ?? '')
+  const [reportEmail, setReportEmail] = useState(client?.reportEmail ?? '')
+  const [reportCc, setReportCc] = useState<string[]>(client?.reportCcEmails ?? [])
+  // Typed in the CC input but not added as a chip yet.
+  const [ccDraft, setCcDraft] = useState('')
+  // Client-side recipient problem (instant feedback; the action re-validates).
+  const [emailError, setEmailError] = useState<{ field: 'report_email' | 'report_cc_emails'; invalid?: string[] } | null>(null)
 
   const [error, setError] = useState<{
     code: ActionError
     existing?: ExistingClientInfo
-    field?: 'website_url'
+    field?: 'website_url' | 'report_email' | 'report_cc_emails'
+    invalid?: string[]
   } | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -76,12 +87,34 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
     if (!trimmedName) return
     setError(null)
 
+    // Flush a typed-but-not-added CC address so it is not silently lost.
+    let cc = reportCc
+    if (ccDraft.trim()) {
+      const added = addEmails(reportCc, ccDraft)
+      if (added.invalid.length || added.overflow.length) {
+        setEmailError({ field: 'report_cc_emails', invalid: added.invalid })
+        return
+      }
+      cc = added.list
+      setReportCc(cc)
+      setCcDraft('')
+    }
+
+    const recipients = normalizeRecipients(reportEmail, cc)
+    if (!recipients.ok) {
+      setEmailError({ field: recipients.field, invalid: recipients.invalid })
+      return
+    }
+    setEmailError(null)
+
     const fields = {
       website_url: blankToNull(websiteUrl),
       instagram_url: blankToNull(instagramUrl),
       pm_name: blankToNull(pmName),
       operator_name: blankToNull(operatorName),
       status: status || null,
+      report_email: recipients.email,
+      report_cc_emails: recipients.cc,
     }
 
     startTransition(async () => {
@@ -97,7 +130,12 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
 
       const clientId = mode === 'create' ? result.clientId : client!.clientId
       if (!result.success || !clientId) {
-        setError({ code: result.error ?? 'db_error', existing: result.existingClient, field: result.field })
+        setError({
+          code: result.error ?? 'db_error',
+          existing: result.existingClient,
+          field: result.field,
+          invalid: result.invalidEmails,
+        })
         return
       }
 
@@ -122,6 +160,8 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
         pmName: normalizePersonName(fields.pm_name),
         operatorName: normalizePersonName(fields.operator_name),
         status: fields.status,
+        reportEmail: fields.report_email,
+        reportCcEmails: fields.report_cc_emails,
       })
     })
   }
@@ -133,7 +173,17 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
     error?.code === 'invalid_value' && error.field === 'website_url'
       ? 'Ingresá una URL válida (http o https), por ejemplo www.ejemplo.com.'
       : null
-  const bannerError = !error || nameError || websiteError
+  // Client-side check first; the server error covers a hand-built call.
+  const recipientIssue = emailError ?? (error?.field === 'report_email' || error?.field === 'report_cc_emails' ? { field: error.field, invalid: error.invalid } : null)
+  const emailFieldError =
+    recipientIssue?.field === 'report_email' ? 'Ingresá un email válido, por ejemplo cliente@empresa.com.' : null
+  const ccFieldError =
+    recipientIssue?.field === 'report_cc_emails'
+      ? recipientIssue.invalid?.length
+        ? `Estos emails no son válidos: ${recipientIssue.invalid.join(', ')}.`
+        : `Podés cargar hasta ${MAX_CC_EMAILS} emails en copia.`
+      : null
+  const bannerError = !error || nameError || websiteError || emailFieldError || ccFieldError
     ? null
     : error.code === 'unauthorized'
       ? mode === 'edit'
@@ -225,6 +275,43 @@ export function ClientForm({ mode, client, clientStatuses, pmNames, operators, o
             nearMatchQuestion=" es la misma persona?"
           />
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="client-report-email" className={LABEL_CLASS}>
+          Email para reportes <span aria-hidden="true" className="text-destructive text-xs font-bold">*</span>
+        </label>
+        <input
+          id="client-report-email"
+          type="email"
+          value={reportEmail}
+          onChange={(e) => setReportEmail(e.target.value)}
+          required
+          autoComplete="off"
+          placeholder="cliente@empresa.com"
+          aria-invalid={emailFieldError ? true : undefined}
+          className={INPUT_CLASS}
+        />
+        {emailFieldError && <p className="mt-1 text-[11px] text-destructive">{emailFieldError}</p>}
+      </div>
+
+      <div>
+        <label htmlFor="client-report-cc" className={LABEL_CLASS}>Con copia (CC)</label>
+        <EmailChipsInput
+          id="client-report-cc"
+          value={reportCc}
+          onChange={(next) => {
+            setReportCc(next)
+            setEmailError(null)
+          }}
+          draft={ccDraft}
+          onDraftChange={(next) => {
+            setCcDraft(next)
+            setEmailError(null)
+          }}
+          error={ccFieldError}
+          placeholder="uno@empresa.com"
+        />
       </div>
 
       <div>

@@ -6,6 +6,7 @@ import { LuCheck as Check, LuPlus as Plus } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
 import { createClientAction, type ExistingClientInfo } from '@/app/actions/paid-media-actions'
 import { normalizePersonName } from '@/lib/paid-media/names'
+import { isValidEmail, normalizeEmail } from '@/lib/paid-media/emails'
 import type { ClientOption } from '@/lib/paid-media/types'
 import { NameCombobox } from './NameCombobox'
 
@@ -84,6 +85,7 @@ export function ClientPicker({ clients, value, onChange, onUncommittedChange, pm
   const [createName, setCreateName] = useState('')
   const [createPm, setCreatePm] = useState('')
   const [createOperator, setCreateOperator] = useState('')
+  const [createEmail, setCreateEmail] = useState('')
   const [createError, setCreateError] = useState<React.ReactNode>(null)
   const [pending, startTransition] = useTransition()
 
@@ -144,6 +146,7 @@ export function ClientPicker({ clients, value, onChange, onUncommittedChange, pm
     setCreateName(typed)
     setCreatePm('')
     setCreateOperator('')
+    setCreateEmail('')
     setCreateError(null)
     setCreating(true)
     setOpen(false)
@@ -186,6 +189,12 @@ export function ClientPicker({ clients, value, onChange, onUncommittedChange, pm
       setCreateError('Escribí el nombre del cliente.')
       return
     }
+    // Same rule as ClientForm: the report email is required at creation. CC can
+    // be added later by editing the client.
+    if (!isValidEmail(normalizeEmail(createEmail))) {
+      setCreateError('Ingresá un email válido para los reportes.')
+      return
+    }
     setCreateError(null)
 
     startTransition(async () => {
@@ -196,6 +205,8 @@ export function ClientPicker({ clients, value, onChange, onUncommittedChange, pm
         pm_name: normalizePersonName(createPm),
         operator_name: normalizePersonName(createOperator),
         status: null,
+        report_email: createEmail,
+        report_cc_emails: [],
       })
 
       if (!result.success || !result.clientId) {
@@ -291,6 +302,17 @@ export function ClientPicker({ clients, value, onChange, onUncommittedChange, pm
           <div>
             <label className={LABEL_CLASS}>Nombre</label>
             <input value={createName} onChange={(e) => setCreateName(e.target.value)} className={INPUT_CLASS} />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>Email para reportes</label>
+            <input
+              type="email"
+              value={createEmail}
+              onChange={(e) => setCreateEmail(e.target.value)}
+              placeholder="cliente@empresa.com"
+              autoComplete="off"
+              className={INPUT_CLASS}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

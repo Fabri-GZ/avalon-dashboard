@@ -6,6 +6,8 @@ import { LuLoader } from 'react-icons/lu'
 interface Props {
   accountName: string
   periodLabel: string
+  /** Headline before the account; defaults to the list's wording. */
+  label?: string
 }
 
 /**
@@ -21,7 +23,7 @@ interface Props {
  * live region que se actualiza cada 3s convierte al lector de pantalla en
  * un metrónomo. El ícono es puramente decorativo (`aria-hidden`).
  */
-export function GenerationBlocker({ accountName, periodLabel }: Props) {
+export function GenerationBlocker({ accountName, periodLabel, label = 'Generando reporte' }: Props) {
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-background/60 backdrop-blur-sm">
       <div
@@ -32,7 +34,7 @@ export function GenerationBlocker({ accountName, periodLabel }: Props) {
       >
         <LuLoader aria-hidden className="size-5 shrink-0 animate-spin text-primary motion-reduce:animate-none" />
         <p className="text-sm font-medium text-foreground">
-          Generando reporte: {accountName} · {periodLabel}
+          {label}: {accountName} · {periodLabel}
         </p>
       </div>
     </div>,

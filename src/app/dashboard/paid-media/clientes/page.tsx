@@ -51,7 +51,7 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
       // come from the full set so choosing one never locks the dropdown.
       supabase
         .from('client_paid_media')
-        .select('client_id, pm_name, operator_name, status, clients!inner(company_name, website_url, instagram_url, portal_enabled)')
+        .select('client_id, pm_name, operator_name, status, report_email, report_cc_emails, clients!inner(company_name, website_url, instagram_url, portal_enabled)')
         .is('deleted_at', null),
       supabase
         .from('ad_accounts')
@@ -97,6 +97,8 @@ export default async function PaidMediaClientesPage({ searchParams }: PageProps)
         pm_name: normalizePersonName(row.pm_name as string | null),
         operator_name: normalizePersonName(row.operator_name as string | null),
         status: row.status as string | null,
+        report_email: row.report_email as string | null,
+        report_cc_emails: (row.report_cc_emails as string[] | null) ?? [],
       },
     ]
   })

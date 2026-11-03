@@ -118,6 +118,8 @@ export function ClientDetailSheet({
           platforms: [],
           pmName: created.pmName,
           operatorName: created.operatorName,
+          reportEmail: created.reportEmail,
+          reportCcEmails: created.reportCcEmails,
           budgetByCurrency: [],
         }
       : null)
@@ -306,6 +308,15 @@ export function ClientDetailSheet({
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</p>
                   <p className="text-foreground">{clientStatusLabel(view.status) ?? '—'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Email de reportes
+                  </p>
+                  <p className="break-all text-foreground">{view.reportEmail ?? 'Sin email: editá el cliente para cargarlo'}</p>
+                  {view.reportCcEmails.length > 0 && (
+                    <p className="break-all text-[12px] text-muted-foreground">CC: {view.reportCcEmails.join(', ')}</p>
+                  )}
                 </div>
                 {view.websiteUrl && (
                   <div className="truncate">

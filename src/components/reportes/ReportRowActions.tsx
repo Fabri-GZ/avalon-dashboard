@@ -2,20 +2,22 @@
 
 import { LuLoader, LuPlus, LuRotateCw } from 'react-icons/lu'
 import { Button } from '@/components/ui/button'
-import type { Platform, Report } from '@/lib/reportes/types'
+import type { AccountRow, Platform, Report } from '@/lib/reportes/types'
 import { periodLabel } from '@/lib/reportes/format'
+import { ReportRowMenu } from './ReportRowMenu'
 
 // Mismo mensaje que ReportSheet: el pipeline de n8n solo sabe leer insights de
 // Meta hoy, así que no hay generación posible para google/tiktok todavía.
 const NON_META_REASON = 'El pipeline de reportes solo soporta cuentas de Meta por ahora'
 
-interface Props {
+interface Props extends Pick<AccountRow, 'latestComplete' | 'latestDoneRender'> {
   latest: Report | null
   lastDone: Report | null
   accountId: string
   platform: Platform
   onGenerateFor: (accountId: string) => void
   onRetry: (report: Report) => void
+  onSend: (accountId: string) => void
   /**
    * A report is generating somewhere in the section. Only one job runs at a
    * time, so every primary control goes inert — not just this row's.
@@ -37,14 +39,18 @@ interface Props {
 export function ReportRowActions({
   latest,
   lastDone,
+  latestComplete,
+  latestDoneRender,
   accountId,
   platform,
   onGenerateFor,
   onRetry,
+  onSend,
   busy = false,
   variant = 'table',
 }: Props) {
   const isCard = variant === 'card'
+  const slotClass = isCard ? 'size-11 shrink-0' : 'size-8 shrink-0'
 
   // Acá vivía un override del hover, porque el `outline` de shadcn cambiaba el
   // color del texto contra un token invertido. Eso ahora lo resuelve la propia
@@ -73,7 +79,20 @@ export function ReportRowActions({
         <ViewButton report={lastDone} className={iconClass} />
       ) : (
         // Reserved, not omitted: keeps the primary controls aligned.
-        <span aria-hidden className={isCard ? 'size-11 shrink-0' : 'size-8 shrink-0'} />
+        <span aria-hidden className={slotClass} />
+      )}
+      {/* Complete-report actions (edit draft, view final, send). Its slot is
+          reserved too, so rows without a complete report keep the same width. */}
+      {latestComplete || latestDoneRender ? (
+        <ReportRowMenu
+          latestComplete={latestComplete}
+          latestDoneRender={latestDoneRender}
+          accountId={accountId}
+          onSend={onSend}
+          className={iconClass}
+        />
+      ) : (
+        <span aria-hidden className={slotClass} />
       )}
     </div>
   )

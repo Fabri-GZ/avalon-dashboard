@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, useReducedMotion, type Variants } from 'framer-motion'
 import { toast } from 'react-toastify'
 import { useJobPolling } from '@/hooks/useJobPolling'
@@ -8,19 +9,29 @@ import {
   containerVariants as _container,
   cardVariants as _card,
 } from '@/app/components/Dashboard/data/dataProcessors'
-import type { AccountOption, AccountRow, Report, ReportFilter } from '@/lib/reportes/types'
+import type {
+  AccountOption,
+  AccountRow,
+  ClientRecipients,
+  Report,
+  ReportFilter,
+  ReportType,
+} from '@/lib/reportes/types'
 import { periodLabel } from '@/lib/reportes/format'
+import { buildSendContext, doneRenders } from '@/lib/reportes/renders'
 import { ReportesTopbar } from './ReportesTopbar'
 import { ReportHistory } from './ReportHistory'
 import { ReportSheet } from './ReportSheet'
 import { GenerationBlocker } from './GenerationBlocker'
 import { GenerationResultModal } from './GenerationResultModal'
+import { RegenerateConfirmModal } from './RegenerateConfirmModal'
+import { SendReportDialog } from './SendReportDialog'
 
 const containerVariants = _container as Variants
 const cardVariants = _card as Variants
 
 const POLL_SELECT =
-  'id, account_id, account_name, period_year, period_month, status, report_url, error, created_at, updated_at'
+  'id, account_id, account_name, period_year, period_month, report_type, version, status, report_url, error, created_at, updated_at'
 
 const norm = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
@@ -28,6 +39,10 @@ const norm = (s: string) =>
 interface Props {
   accounts: AccountOption[]
   initialHistory: Report[]
+  /** Fixed report recipients by `client_id`. */
+  recipients: Record<string, ClientRecipients>
+  /** The recipients query failed: sending is blocked instead of showing "sin mail". */
+  recipientsError?: boolean
 }
 
 /**
@@ -40,8 +55,21 @@ interface TerminalResult {
   report: Report
 }
 
-export function ReportesView({ accounts, initialHistory }: Props) {
+// A complete generation that hit an existing draft, waiting for the user to
+// confirm creating a new version (nothing has been created yet).
+interface PendingRegenerate {
+  accountId: string
+  year: number
+  month: number
+  latestVersion: number
+}
+
+// The drafts workflow (n8n + LLM) runs longer than the small report.
+const COMPLETE_TTL_MS = 300_000
+
+export function ReportesView({ accounts, initialHistory, recipients, recipientsError = false }: Props) {
   const reducedMotion = useReducedMotion()
+  const router = useRouter()
   const [reports, setReports] = useState<Report[]>(initialHistory)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
   const [result, setResult] = useState<TerminalResult | null>(null)
@@ -49,15 +77,27 @@ export function ReportesView({ accounts, initialHistory }: Props) {
   const [filter, setFilter] = useState<ReportFilter>('todas')
   const [sheetOpen, setSheetOpen] = useState(false)
   const [preselect, setPreselect] = useState<string | null>(null)
+  const [regenerate, setRegenerate] = useState<PendingRegenerate | null>(null)
+  const [sendAccountId, setSendAccountId] = useState<string | null>(null)
 
   const upsertLocal = (r: Report) =>
     setReports((prev) => {
       const i = prev.findIndex((x) => x.id === r.id)
       if (i === -1) return [r, ...prev]
       const next = [...prev]
-      next[i] = r
+      // Polled rows come without the embedded renders: keep the ones we have.
+      next[i] = { ...r, report_renders: r.report_renders ?? prev[i].report_renders }
       return next
     })
+
+  // La fila que se está generando, para que el blocker pueda nombrar cuenta y
+  // período. Sale de `reports` y no de un state aparte porque `handleGenerate`
+  // ya la inserta ahí antes de arrancar el polling: duplicarla en otro state
+  // sería una segunda fuente de verdad que hay que mantener sincronizada.
+  const activeReport = useMemo(
+    () => (activeJobId ? (reports.find((r) => r.id === activeJobId) ?? null) : null),
+    [activeJobId, reports],
+  )
 
   useJobPolling<Report>(
     activeJobId,
@@ -65,6 +105,11 @@ export function ReportesView({ accounts, initialHistory }: Props) {
       onDone: (report) => {
         upsertLocal(report)
         setActiveJobId(null)
+        // A finished complete draft goes straight to the editor.
+        if (report.status === 'draft_ready') {
+          router.push(`/dashboard/reportes/${report.id}`)
+          return
+        }
         // El modal reemplaza al toast para los finales: es la superficie que
         // ofrece "Ver reporte" y "Reintentar". Dejar los dos duplicaba el
         // aviso y el toast se iba solo justo cuando había algo que decidir.
@@ -101,16 +146,23 @@ export function ReportesView({ accounts, initialHistory }: Props) {
     {
       table: 'reports',
       select: POLL_SELECT,
+      // `draft_ready` is terminal for polling: a complete report stops here
+      // until the user renders it (summary rows only ever reach `done`).
+      isDone: (row) => row.status === 'done' || row.status === 'draft_ready',
+      ttlMs: activeReport?.report_type === 'complete' ? COMPLETE_TTL_MS : undefined,
       getDone: (row) => row as unknown as Report,
       getError: (row) => (row.error as string | null) ?? null,
     },
   )
 
+  // By `updated_at`, not `created_at`: the small report is upserted in place
+  // (its `created_at` never moves), so with complete versions in the same list
+  // a regenerated small report would otherwise lose to an older-created row.
   const latestByAccount = useMemo(() => {
     const map = new Map<string, Report>()
     for (const r of reports) {
       const cur = map.get(r.account_id)
-      if (!cur || r.created_at > cur.created_at) map.set(r.account_id, r)
+      if (!cur || r.updated_at > cur.updated_at) map.set(r.account_id, r)
     }
     return map
   }, [reports])
@@ -133,6 +185,25 @@ export function ReportesView({ accounts, initialHistory }: Props) {
     return map
   }, [reports])
 
+  // Complete versions: the newest draft to edit, and the newest finished render
+  // (with the version it belongs to) to view or send.
+  const completeByAccount = useMemo(() => {
+    const drafts = new Map<string, Report>()
+    const renders = new Map<string, NonNullable<AccountRow['latestDoneRender']>>()
+    for (const r of reports) {
+      if (r.report_type !== 'complete') continue
+      if (r.status === 'draft_ready') {
+        const cur = drafts.get(r.account_id)
+        if (!cur || r.created_at > cur.created_at) drafts.set(r.account_id, r)
+      }
+      const render = doneRenders(r)[0]
+      if (!render) continue
+      const cur = renders.get(r.account_id)
+      if (!cur || render.created_at > cur.render.created_at) renders.set(r.account_id, { report: r, render })
+    }
+    return { drafts, renders }
+  }, [reports])
+
   const rows: AccountRow[] = useMemo(() => {
     const q = norm(search)
     return accounts
@@ -140,25 +211,18 @@ export function ReportesView({ accounts, initialHistory }: Props) {
         account,
         latest: latestByAccount.get(account.id) ?? null,
         lastDone: lastDoneByAccount.get(account.id) ?? null,
+        latestComplete: completeByAccount.drafts.get(account.id) ?? null,
+        latestDoneRender: completeByAccount.renders.get(account.id) ?? null,
       }))
       .filter(({ account, latest }) => {
         if (q && !norm(account.name).includes(q)) return false
         if (filter === 'todas') return true
-        if (filter === 'done') return latest?.status === 'done'
+        if (filter === 'done') return latest?.status === 'done' || latest?.status === 'draft_ready'
         if (filter === 'error') return latest?.status === 'error'
         if (filter === 'proceso') return latest?.status === 'pending' || latest?.status === 'running'
         return true
       })
-  }, [accounts, latestByAccount, lastDoneByAccount, search, filter])
-
-  // La fila que se está generando, para que el blocker pueda nombrar cuenta y
-  // período. Sale de `reports` y no de un state aparte porque `handleGenerate`
-  // ya la inserta ahí antes de arrancar el polling: duplicarla en otro state
-  // sería una segunda fuente de verdad que hay que mantener sincronizada.
-  const activeReport = useMemo(
-    () => (activeJobId ? (reports.find((r) => r.id === activeJobId) ?? null) : null),
-    [activeJobId, reports],
-  )
+  }, [accounts, latestByAccount, lastDoneByAccount, completeByAccount, search, filter])
 
   // Un solo job a la vez en toda la sección: el bloqueo real vive en la DB, así
   // que mientras uno corre no hay ningún trigger de generar/reintentar que
@@ -166,7 +230,13 @@ export function ReportesView({ accounts, initialHistory }: Props) {
   // — `disabled` es lo que también detiene al teclado.
   const busy = activeJobId !== null
 
-  async function handleGenerate(accountId: string, year: number, month: number) {
+  async function handleGenerate(
+    accountId: string,
+    year: number,
+    month: number,
+    reportType: ReportType = 'summary',
+    confirmRegenerate = false,
+  ) {
     if (activeJobId) {
       toast.info('Esperá a que termine el reporte en curso')
       return
@@ -178,7 +248,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
       res = await fetch('/api/reportes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId, year, month }),
+        body: JSON.stringify({ accountId, year, month, reportType, confirmRegenerate }),
       })
     } catch {
       toast.error('No se pudo conectar con el servidor')
@@ -186,6 +256,11 @@ export function ReportesView({ accounts, initialHistory }: Props) {
     }
 
     const data = await res.json().catch(() => ({}))
+    if (res.status === 409 && data.code === 'complete_exists') {
+      // The server found a draft for this period: ask before creating a new version.
+      setRegenerate({ accountId, year, month, latestVersion: data.latestVersion })
+      return
+    }
     if (!res.ok) {
       toast.error(data.error ?? 'No se pudo generar el reporte')
       return
@@ -197,6 +272,8 @@ export function ReportesView({ accounts, initialHistory }: Props) {
       account_name: account?.name ?? accountId,
       period_year: year,
       period_month: month,
+      report_type: reportType,
+      version: data.version ?? 1,
       status: 'pending',
       report_url: null,
       error: null,
@@ -206,6 +283,56 @@ export function ReportesView({ accounts, initialHistory }: Props) {
       updated_at: new Date().toISOString(),
     })
     setActiveJobId(data.jobId)
+  }
+
+  // Everything the send modal shows, derived from the loaded history. Null when
+  // the account has nothing sendable (e.g. state changed under an open menu).
+  const sendTarget = useMemo(() => {
+    if (!sendAccountId) return null
+    const account = accounts.find((a) => a.id === sendAccountId)
+    const done = completeByAccount.renders.get(sendAccountId)
+    if (!account || !done) return null
+    const client = account.client_id ? recipients[account.client_id] : undefined
+    return {
+      clientName: client?.name ?? account.name,
+      to: client?.reportEmail ?? null,
+      cc: client?.ccEmails ?? [],
+      ...buildSendContext(reports, sendAccountId, {
+        year: done.report.period_year,
+        month: done.report.period_month,
+      }),
+    }
+  }, [sendAccountId, accounts, completeByAccount, recipients, reports])
+
+  function handleSend(accountId: string) {
+    // Without the recipients the modal would wrongly say the client has no mail.
+    if (recipientsError) {
+      toast.error('No se pudieron cargar los destinatarios. Recargá la página.')
+      return
+    }
+    setSendAccountId(accountId)
+  }
+
+  // Records a finished delivery on its render so the resend warning and file
+  // suffix are right without reloading.
+  function markSent(renderId: string, deliveryId: string) {
+    setReports((prev) =>
+      prev.map((r) =>
+        r.report_renders?.some((rn) => rn.id === renderId)
+          ? {
+              ...r,
+              report_renders: r.report_renders.map((rn) =>
+                rn.id === renderId
+                  ? {
+                      ...rn,
+                      report_deliveries: [...(rn.report_deliveries ?? []), { id: deliveryId, status: 'sent' as const }],
+                    }
+                  : rn,
+              ),
+            }
+          : r,
+      ),
+    )
   }
 
   function openSheet(accountId: string | null) {
@@ -234,7 +361,8 @@ export function ReportesView({ accounts, initialHistory }: Props) {
           busy={busy}
           onNew={() => openSheet(null)}
           onGenerateFor={(id) => openSheet(id)}
-          onRetry={(r) => handleGenerate(r.account_id, r.period_year, r.period_month)}
+          onRetry={(r) => handleGenerate(r.account_id, r.period_year, r.period_month, r.report_type)}
+          onSend={handleSend}
         />
       </motion.div>
 
@@ -254,6 +382,27 @@ export function ReportesView({ accounts, initialHistory }: Props) {
         />
       )}
 
+      {regenerate && (
+        <RegenerateConfirmModal
+          accountName={accounts.find((a) => a.id === regenerate.accountId)?.name ?? regenerate.accountId}
+          periodLabel={periodLabel(regenerate.year, regenerate.month)}
+          latestVersion={regenerate.latestVersion}
+          onConfirm={() => {
+            setRegenerate(null)
+            handleGenerate(regenerate.accountId, regenerate.year, regenerate.month, 'complete', true)
+          }}
+          onCancel={() => setRegenerate(null)}
+        />
+      )}
+
+      {sendTarget && (
+        <SendReportDialog
+          {...sendTarget}
+          onSent={markSent}
+          onClose={() => setSendAccountId(null)}
+        />
+      )}
+
       {result && (
         <GenerationResultModal
           kind={result.kind}
@@ -261,6 +410,8 @@ export function ReportesView({ accounts, initialHistory }: Props) {
           periodLabel={periodLabel(result.report.period_year, result.report.period_month)}
           reportUrl={result.report.report_url}
           message={result.report.error}
+          draft={result.report.status === 'draft_ready'}
+          editHref={`/dashboard/reportes/${result.report.id}`}
           onRetry={() => {
             // El modal se cierra primero: si no, el blocker del job nuevo
             // aparecería debajo de un diálogo que habla del job anterior.
@@ -269,6 +420,7 @@ export function ReportesView({ accounts, initialHistory }: Props) {
               result.report.account_id,
               result.report.period_year,
               result.report.period_month,
+              result.report.report_type,
             )
           }}
           onClose={() => setResult(null)}

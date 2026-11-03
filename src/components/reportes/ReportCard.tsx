@@ -2,6 +2,7 @@
 
 import type { AccountRow, Report } from '@/lib/reportes/types'
 import { periodLabel, generatedAt } from '@/lib/reportes/format'
+import { displayStatus } from '@/lib/reportes/display-status'
 import { ReportRowActions } from './ReportRowActions'
 import { StatusBadge } from './StatusBadge'
 
@@ -9,6 +10,7 @@ interface Props extends AccountRow {
   busy?: boolean
   onGenerateFor: (accountId: string) => void
   onRetry: (report: Report) => void
+  onSend: (accountId: string) => void
 }
 
 /**
@@ -24,9 +26,12 @@ export function ReportCard({
   account,
   latest,
   lastDone,
+  latestComplete,
+  latestDoneRender,
   busy = false,
   onGenerateFor,
   onRetry,
+  onSend,
 }: Props) {
   return (
     <li className="rounded-md border border-border bg-card px-4 py-3 shadow-sm transition-all duration-200 ease-in">
@@ -41,7 +46,7 @@ export function ReportCard({
           {account.name}
         </span>
         <span className="shrink-0">
-          <StatusBadge status={latest?.status ?? 'none'} />
+          <StatusBadge status={latest ? displayStatus(latest) : 'none'} />
         </span>
       </div>
 
@@ -55,11 +60,14 @@ export function ReportCard({
         <ReportRowActions
           latest={latest}
           lastDone={lastDone}
+          latestComplete={latestComplete}
+          latestDoneRender={latestDoneRender}
           accountId={account.id}
           platform={account.platform}
           busy={busy}
           onGenerateFor={onGenerateFor}
           onRetry={onRetry}
+          onSend={onSend}
           variant="card"
         />
       </div>
