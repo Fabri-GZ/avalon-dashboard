@@ -25,6 +25,18 @@ export const maxDuration = 60
 
 const MAX_HTML_BYTES = 8 * 1024 * 1024
 
+const HOSTS_PERMITIDOS = new Set(['fonts.googleapis.com', 'fonts.gstatic.com'])
+
+function requestPermitida(url: string): boolean {
+  if (url.startsWith('data:') || url === 'about:blank') return true
+  try {
+    const { protocol, hostname } = new URL(url)
+    return protocol === 'https:' && HOSTS_PERMITIDOS.has(hostname)
+  } catch {
+    return false
+  }
+}
+
 // Comparación en tiempo constante para que el token no se pueda reconstruir
 // midiendo la respuesta. El largo se compara antes porque timingSafeEqual tira
 // si difiere, y ese throw filtraría el largo.
@@ -94,6 +106,18 @@ export async function POST(request: Request) {
     // el reporte tiene un breakpoint `max-width: 980px`, así que con un
     // viewport más ancho se maquetaría de una forma y se imprimiría de otra.
     await page.setViewport({ width: 960, height: 540, deviceScaleFactor: 1 })
+
+    // El HTML viene de afuera: si el token se filtrara, cualquiera podría pedirle
+    // a este Chromium URLs internas o `file://` y leerlas en el PDF. El reporte
+    // solo necesita data: (logo) y Google Fonts, así que todo lo demás se corta.
+    await page.setRequestInterception(true)
+    page.on('request', (req) => {
+      if (requestPermitida(req.url())) {
+        void req.continue()
+      } else {
+        void req.abort('blockedbyclient')
+      }
+    })
 
     // `load` espera a la hoja de estilos de Google Fonts, porque un <link> de
     // CSS bloquea ese evento. Pero NO espera a los archivos .woff2 que esa hoja

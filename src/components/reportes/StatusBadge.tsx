@@ -26,7 +26,8 @@ const STATUS: Record<ReportDisplayStatus | 'none', { label: string; token: strin
 }
 
 export function StatusBadge({ status }: { status: ReportDisplayStatus | 'none' }) {
-  const { label, token, spin } = STATUS[status]
+  // A status this build does not know must not take the whole page down.
+  const { label, token, spin } = STATUS[status] ?? STATUS.none
 
   return (
     <span

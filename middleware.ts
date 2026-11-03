@@ -118,6 +118,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // api/reportes/pdf is called server-to-server by n8n with its own bearer
+    // token; the session redirect to /login turned its POST into a 405.
+    '/((?!_next/static|_next/image|favicon.ico|api/reportes/pdf$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

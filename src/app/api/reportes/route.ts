@@ -143,6 +143,7 @@ export async function POST(req: NextRequest) {
         requested_by: user.id,
         updated_at: new Date().toISOString(),
       },
+      // The 3-column unique key was replaced by this 5-column one (migration 005).
       { onConflict: 'account_id,period_year,period_month,report_type,version' },
     )
     .select('id')
